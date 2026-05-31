@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useGame } from "../GameProvider";
 import { BOARD_SPACES } from "../data/board";
@@ -219,7 +219,7 @@ export function GameBoard() {
                     <span
                       key={i}
                       className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-100 rounded text-[10px]"
-                      title={`${item.item.name} (${formatWon(item.item.basePrice)})`}
+                      title={`${item.item.name} (${formatWon(item.item.marketPrice)})`}
                     >
                       {item.item.emoji} {item.item.name}
                     </span>

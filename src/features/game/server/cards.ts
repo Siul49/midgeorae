@@ -1,4 +1,4 @@
-import { ALL_ITEMS } from "../data/items";
+﻿import { ALL_ITEMS } from "../data/items";
 import type { ActionCardSnapshot, ServerItemCard } from "./types";
 
 const CARDS_PER_PLAYER = 5;
@@ -82,7 +82,10 @@ export function makeItemDeck() {
   const normalCards = ALL_ITEMS.map((item) => ({
     id: item.id,
     name: item.name,
-    marketPrice: item.basePrice,
+    marketPrice: item.marketPrice,
+    category: item.category,
+    condition: item.condition,
+    acquiredPrice: null,
     isBrick: false,
     imagePath: ITEM_IMAGE_BY_ID[item.id] ?? "/game-cards/backs/item-back.svg",
   }));
@@ -90,6 +93,9 @@ export function makeItemDeck() {
     id: `brick-${index + 1}`,
     name: "벽돌",
     marketPrice: 0,
+    category: null,
+    condition: null,
+    acquiredPrice: null,
     isBrick: true,
     imagePath: "/game-cards/actions/brick.svg",
   }));

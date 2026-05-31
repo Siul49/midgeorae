@@ -130,6 +130,23 @@ describe("room-store", () => {
     expect(p3View.me?.hand).toHaveLength(5);
   });
 
+  it("includes item category, condition, and empty acquired price in private hands", () => {
+    const host = createRoom("경수");
+    joinRoom(host.room.code, "유현");
+    joinRoom(host.room.code, "윤식");
+
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const hostView = getRoomSnapshot(host.room.code, host.playerToken);
+    const firstItem = hostView.me!.hand!.find((item) => !item.isBrick);
+
+    expect(firstItem).toBeDefined();
+    expect(firstItem!.category).toMatch(/electronics|fashion|hobby|living/);
+    expect(firstItem!.condition).toMatch(/mint|used|defective|broken/);
+    expect(firstItem!.acquiredPrice).toBeNull();
+    expect(hostView.players.every((player) => player.hand === undefined)).toBe(true);
+  });
+
   it("lets the host add automatic bot players for solo testing", () => {
     const host = createRoom("경수", "botTest");
 
@@ -285,6 +302,10 @@ describe("room-store", () => {
     expect(buyerView.me?.hand?.some((owned) => owned.instanceId === item.instanceId)).toBe(
       true,
     );
+    const boughtItem = buyerView.me?.hand?.find(
+      (owned) => owned.instanceId === item.instanceId,
+    );
+    expect(boughtItem?.acquiredPrice).toBe(120000);
     expect(buyerView.pendingReviews).toHaveLength(1);
     expect(sellerView.pendingReviews).toHaveLength(1);
   });

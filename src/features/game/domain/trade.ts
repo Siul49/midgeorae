@@ -27,6 +27,7 @@ export function settleAcceptedDeal({
 
   const transferredItem: ServerItemCard = {
     ...item,
+    acquiredPrice: deal.askingPrice,
     revealed: true,
     revealedToPlayerIds: Array.from(
       new Set([...item.revealedToPlayerIds, seller.id, buyer.id]),

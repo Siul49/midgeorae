@@ -110,6 +110,28 @@ function playerName(snapshot: RoomSnapshot, playerId: string) {
   );
 }
 
+const CATEGORY_LABELS = {
+  electronics: "전자기기",
+  fashion: "패션",
+  hobby: "취미",
+  living: "생활",
+} as const;
+
+const CONDITION_LABELS = {
+  mint: "민트급",
+  used: "사용감 있음",
+  defective: "하자 있음",
+  broken: "파손",
+} as const;
+
+function categoryLabel(category: ItemCardSnapshot["category"]) {
+  return category ? CATEGORY_LABELS[category] : "미공개";
+}
+
+function conditionLabel(condition: ItemCardSnapshot["condition"]) {
+  return condition ? CONDITION_LABELS[condition] : "미공개";
+}
+
 function actionIcon(type: ActionCardType) {
   switch (type) {
     case "freeGive":
@@ -887,6 +909,11 @@ function TableHandCard({
         <div className="mt-1 text-xs font-black text-orange-700">
           {item.revealed ? moneyLabel(item.marketPrice) : "비공개"}
         </div>
+        {item.revealed && item.category && item.condition && (
+          <div className="mt-2 text-[10px] font-black text-stone-500">
+            {categoryLabel(item.category)} · {conditionLabel(item.condition)}
+          </div>
+        )}
         {item.isBrick && (
           <div className="mt-2 inline-flex rounded bg-red-700 px-2 py-0.5 text-[10px] font-black text-white">
             벽돌
@@ -1296,6 +1323,11 @@ function PendingDealPanel({
           <div className="mt-2 text-sm font-bold text-stone-500">
             시장가 {item?.revealed ? moneyLabel(item.marketPrice) : "비공개"}
           </div>
+          {item?.revealed && item.category && item.condition && (
+            <div className="mt-2 text-xs font-black text-stone-500">
+              {categoryLabel(item.category)} · {conditionLabel(item.condition)}
+            </div>
+          )}
 
           {isDealParty ? (
             myChoice ? (
@@ -1502,7 +1534,8 @@ function ActionPanel({
               >
                 {myHand.map((item) => (
                   <option key={item.instanceId} value={item.instanceId}>
-                    {item.name} · 시장가 {moneyLabel(item.marketPrice)}
+                    {item.name} · {categoryLabel(item.category)} ·{" "}
+                    {conditionLabel(item.condition)} · 시장가 {moneyLabel(item.marketPrice)}
                   </option>
                 ))}
               </select>

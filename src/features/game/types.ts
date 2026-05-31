@@ -21,12 +21,16 @@ export interface BoardSpace {
   emoji: string;
 }
 
+export type ItemCategory = "electronics" | "fashion" | "hobby" | "living";
+export type ItemCondition = "mint" | "used" | "defective" | "broken";
+
 export interface Item {
   id: string;
   name: string;
   emoji: string;
-  basePrice: number; // in 원
-  category: "electronics" | "fashion" | "hobby" | "living";
+  marketPrice: number; // in 원
+  category: ItemCategory;
+  condition: ItemCondition;
 }
 
 export interface OwnedItem {

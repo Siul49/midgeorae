@@ -1,3 +1,5 @@
+import type { ItemCategory, ItemCondition } from "../types";
+
 export type RoomStatus = "waiting" | "playing" | "voting" | "finished";
 export type RoomMode = "real" | "botTest";
 export type PlayerRole = "citizen" | "villain";
@@ -21,7 +23,10 @@ export interface ItemCardSnapshot {
   instanceId: string;
   id: string;
   name: string;
+  category: ItemCategory | null;
+  condition: ItemCondition | null;
   marketPrice: number;
+  acquiredPrice: number | null;
   isBrick: boolean;
   imagePath: string;
   revealed: boolean;

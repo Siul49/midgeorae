@@ -1,4 +1,4 @@
-import type { GameState, GameAction, Player, TradeState, GameLog } from "../types";
+﻿import type { GameState, GameAction, Player, TradeState, GameLog } from "../types";
 import {
   PLAYER_COLORS,
   STARTING_MONEY,
@@ -80,7 +80,7 @@ function isNewRound(state: GameState): boolean {
 }
 
 function calculateScore(player: Player): number {
-  const itemsValue = player.items.reduce((sum, o) => sum + o.item.basePrice, 0);
+  const itemsValue = player.items.reduce((sum, o) => sum + o.item.marketPrice, 0);
   const totalAssets = player.money + itemsValue;
   const dislikePenalty = player.dislikes * DISLIKE_SCORE_PENALTY;
   let mannerBonus = 0;
@@ -243,7 +243,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const item = state.marketItems.find((i) => i.id === action.itemId);
       if (!item) return state;
 
-      let price = item.basePrice;
+      let price = item.marketPrice;
       const space = BOARD_SPACES[player.position];
       if (space.type === "nego") {
         price = Math.round(price * (0.7 + Math.random() * 0.6)); // ±30%
@@ -254,8 +254,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       if (player.money < price) return state;
 
-      const isHardNego = price < item.basePrice * 0.7;
-      const isCheapBuy = price < item.basePrice * 0.5;
+      const isHardNego = price < item.marketPrice * 0.7;
+      const isCheapBuy = price < item.marketPrice * 0.5;
 
       const newLogs = [
         ...state.logs,
@@ -263,10 +263,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       ];
 
       if (isHardNego) {
-        newLogs.push(addLog(state, player.id, "hardNego", `하드 네고 성공! (${Math.round((1 - price / item.basePrice) * 100)}% 할인)`));
+        newLogs.push(addLog(state, player.id, "hardNego", `하드 네고 성공! (${Math.round((1 - price / item.marketPrice) * 100)}% 할인)`));
       }
       if (isCheapBuy) {
-        newLogs.push(addLog(state, player.id, "cheapBuy", `초저가 구매! (${formatWon(price)} / 원가 ${formatWon(item.basePrice)})`));
+        newLogs.push(addLog(state, player.id, "cheapBuy", `초저가 구매! (${formatWon(price)} / 원가 ${formatWon(item.marketPrice)})`));
       }
 
       const newMarket = state.marketItems.filter((i) => i.id !== item.id);
@@ -304,7 +304,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         sellerId: player.id,
         buyerId: null,
         item: ownedItem,
-        askingPrice: ownedItem.item.basePrice,
+        askingPrice: ownedItem.item.marketPrice,
         currentOffer: 0,
         phase: "listing",
         negoCount: 0,
@@ -350,8 +350,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       if (buyer.money < finalPrice) return state;
 
-      const isHardNego = finalPrice < trade.item.item.basePrice * 0.7;
-      const isCheapBuy = finalPrice < trade.item.item.basePrice * 0.5;
+      const isHardNego = finalPrice < trade.item.item.marketPrice * 0.7;
+      const isCheapBuy = finalPrice < trade.item.item.marketPrice * 0.5;
 
       const newLogs = [
         ...state.logs,

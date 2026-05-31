@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useGame } from "../GameProvider";
@@ -65,7 +65,7 @@ export function FreeGrab() {
         <div className="bg-white p-6 rounded-2xl shadow-lg mb-6 inline-block">
           <div className="text-4xl mb-2">{item.emoji}</div>
           <div className="font-bold text-lg">{item.name}</div>
-          <div className="text-green-600 font-bold">시장가 {formatWon(item.basePrice)} → 무료!</div>
+          <div className="text-green-600 font-bold">시장가 {formatWon(item.marketPrice)} → 무료!</div>
         </div>
 
         {countdown > 0 ? (

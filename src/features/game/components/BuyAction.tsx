@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { useGame } from "../GameProvider";
@@ -19,7 +19,7 @@ export function BuyAction() {
   // Memoize prices so they don't change on re-render
   const itemsWithPrices = useMemo(() => {
     return state.marketItems.map((item) => {
-      let price = item.basePrice;
+      let price = item.marketPrice;
       if (isNego) {
         const seed = Array.from(item.id).reduce(
           (sum, char) => sum + char.charCodeAt(0),
@@ -81,7 +81,7 @@ export function BuyAction() {
                 <div className="text-right">
                   {isNego && (
                     <div className="text-xs text-gray-400 line-through">
-                      {formatWon(item.basePrice)}
+                      {formatWon(item.marketPrice)}
                     </div>
                   )}
                   <div className={`font-bold text-lg ${canAfford ? "text-green-600" : "text-gray-400"}`}>
@@ -164,7 +164,7 @@ export function SellAction() {
                     </div>
                   </div>
                   <div className="text-amber-600 font-bold">
-                    {formatWon(owned.item.basePrice)}
+                    {formatWon(owned.item.marketPrice)}
                   </div>
                 </button>
               ))}

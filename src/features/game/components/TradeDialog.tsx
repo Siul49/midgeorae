@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useGame } from "../GameProvider";
@@ -113,7 +113,7 @@ export function TradeDialog() {
               <div className="flex-1">
                 <div className="font-bold">{trade.item.item.name}</div>
                 <div className="text-sm text-gray-400">
-                  시장가: {formatWon(trade.item.item.basePrice)}
+                  시장가: {formatWon(trade.item.item.marketPrice)}
                 </div>
               </div>
               <div className="text-amber-600 font-bold text-lg">
