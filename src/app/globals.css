@@ -128,3 +128,1029 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .game-shell {
+    min-height: 100dvh;
+    width: 100vw;
+    overflow-x: hidden;
+    overflow-y: auto;
+    word-break: keep-all;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      repeating-linear-gradient(
+        7deg,
+        rgba(255, 255, 255, 0.018) 0,
+        rgba(255, 255, 255, 0.018) 2px,
+        transparent 2px,
+        transparent 9px
+      ),
+      linear-gradient(135deg, #20221f 0%, #171a18 52%, #25352f 100%);
+    background-size: 34px 34px, 34px 34px, auto, auto;
+  }
+
+  .game-play-shell {
+    display: flex;
+    height: 100dvh;
+    align-items: stretch;
+    justify-content: center;
+    overflow: hidden;
+    padding: clamp(6px, 1vw, 16px);
+  }
+
+  .game-screen-viewport {
+    display: flex;
+    width: 100%;
+    max-width: 1540px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .game-top-strip {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(44, 44, 42, 0.98), rgba(22, 24, 23, 0.98));
+    color: #fffaf0;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+  }
+
+  .game-top-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .game-top-strip::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 0,
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 1px,
+        transparent 6px
+      );
+    opacity: 0.5;
+  }
+
+  .game-frame-shell {
+    display: flex;
+    min-width: min(1240px, 100%);
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(160, 122, 74, 0.45);
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, rgba(39, 39, 36, 0.98), rgba(17, 19, 18, 0.99)),
+      repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.025) 0,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 7px
+      );
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.045),
+      inset 0 0 0 8px rgba(0, 0, 0, 0.24),
+      0 28px 80px rgba(0, 0, 0, 0.38);
+    padding: clamp(8px, 0.8vw, 12px);
+  }
+
+  .frame-stat {
+    min-width: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    padding-left: 18px;
+  }
+
+  .frame-icon-button {
+    display: inline-flex;
+    min-height: 54px;
+    min-width: 58px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(72, 65, 54, 0.85), rgba(27, 27, 25, 0.92));
+    color: #f9e8c8;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 5px 0 rgba(0, 0, 0, 0.26);
+  }
+
+  .game-table-layout {
+    display: grid;
+    flex: 1;
+    min-height: 0;
+    grid-template-areas: "social board actions";
+    grid-template-columns: clamp(156px, 13vw, 190px) minmax(0, 1fr) clamp(250px, 21vw, 310px);
+    gap: 14px;
+    overflow: hidden;
+    padding-top: 14px;
+  }
+
+  .game-left-rail,
+  .game-right-rail,
+  .game-deck-rail {
+    min-width: 0;
+  }
+
+  .game-left-rail {
+    display: flex;
+    grid-area: social;
+    min-height: 0;
+    flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+  }
+
+  .game-board-stage {
+    grid-area: board;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .game-right-rail {
+    display: flex;
+    grid-area: actions;
+    min-height: 0;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+  }
+
+  .play-cockpit-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    gap: 14px;
+    align-items: start;
+  }
+
+  .play-action-dock {
+    position: sticky;
+    top: 14px;
+    min-width: 0;
+  }
+
+  .game-deck-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid rgba(160, 122, 74, 0.28);
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(35, 36, 32, 0.98), rgba(18, 19, 17, 0.98));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 9px 0 rgba(0, 0, 0, 0.24);
+    padding: 10px;
+  }
+
+  .game-log-drawer {
+    min-height: 86px;
+    border: 1px solid rgba(160, 122, 74, 0.25);
+    border-radius: 10px;
+    background:
+      linear-gradient(180deg, rgba(32, 31, 28, 0.98), rgba(14, 15, 14, 0.98));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+      0 6px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .deck-rail-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #f7ddb0;
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .deck-rail-title::before,
+  .deck-rail-title::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: rgba(247, 221, 176, 0.34);
+  }
+
+  .market-card-table {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(246, 216, 168, 0.66);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 252, 242, 0.98), rgba(250, 240, 218, 0.97)),
+      repeating-linear-gradient(
+        0deg,
+        rgba(116, 79, 36, 0.035) 0,
+        rgba(116, 79, 36, 0.035) 1px,
+        transparent 1px,
+        transparent 5px
+      ),
+      linear-gradient(90deg, rgba(249, 115, 22, 0.08) 1px, transparent 1px);
+    background-size: auto, auto, 24px 24px;
+    box-shadow:
+      0 10px 0 rgba(0, 0, 0, 0.24),
+      0 26px 54px rgba(0, 0, 0, 0.28),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+  }
+
+  .market-card-table::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent),
+      repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.18) 0,
+        rgba(255, 255, 255, 0.18) 1px,
+        transparent 1px,
+        transparent 5px
+      );
+    opacity: 0.48;
+  }
+
+  .market-card-lane {
+    position: relative;
+    border: 1px solid rgba(168, 132, 82, 0.42);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 249, 235, 0.9), rgba(244, 228, 202, 0.78));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 4px 0 rgba(120, 53, 15, 0.08);
+  }
+
+  .market-card-slot {
+    border: 1px dashed rgba(120, 113, 108, 0.52);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 247, 237, 0.64));
+  }
+
+  .market-board-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(128px, 170px) minmax(0, 1fr) minmax(112px, 148px);
+    gap: 16px;
+    animation: card-table-enter 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .table-center-board {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(188, 137, 61, 0.46);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 251, 238, 0.98), rgba(249, 231, 196, 0.9)),
+      repeating-linear-gradient(
+        90deg,
+        rgba(120, 53, 15, 0.038) 0,
+        rgba(120, 53, 15, 0.038) 1px,
+        transparent 1px,
+        transparent 12px
+      );
+    background-size: auto, auto;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.78),
+      0 12px 0 rgba(120, 53, 15, 0.16);
+  }
+
+  .table-center-board::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    pointer-events: none;
+    border: 1px solid rgba(180, 83, 9, 0.24);
+    border-radius: 7px;
+  }
+
+  .turn-command-bar {
+    border: 1px solid rgba(21, 80, 40, 0.72);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, #5f8b3e 0%, #2d6b3f 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+      0 8px 0 rgba(22, 101, 52, 0.22);
+  }
+
+  .table-side-rail {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .table-player-mat {
+    border: 1px solid rgba(125, 93, 55, 0.34);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 251, 239, 0.92), rgba(246, 232, 205, 0.84));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.58),
+      0 5px 0 rgba(28, 25, 23, 0.12);
+  }
+
+  .table-deck-rail {
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(37, 39, 36, 0.96), rgba(24, 25, 23, 0.96));
+    padding: 10px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 8px 0 rgba(0, 0, 0, 0.22);
+  }
+
+  .table-deck-rail .market-card-lane {
+    border-color: rgba(255, 255, 255, 0.16);
+    background:
+      linear-gradient(180deg, rgba(60, 61, 56, 0.92), rgba(38, 39, 36, 0.92));
+    color: #fff7ed;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .public-market-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(92px, 1fr));
+    gap: 10px;
+  }
+
+  .my-status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .my-status-strip > * {
+    flex: 1 1 118px;
+  }
+
+  .my-status-strip > :first-child {
+    flex: 0 0 auto;
+  }
+
+  .my-role-chip {
+    display: flex;
+    min-height: 64px;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    border: 1px solid rgba(168, 132, 82, 0.42);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, rgba(255, 249, 235, 0.94), rgba(244, 228, 202, 0.8));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 4px 0 rgba(120, 53, 15, 0.08);
+  }
+
+  .my-role-chip span {
+    color: #a3410d;
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .my-role-chip strong {
+    overflow: hidden;
+    color: #1c1917;
+    font-size: 18px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .my-role-chip-villain {
+    border-color: rgba(248, 113, 113, 0.56);
+    background: linear-gradient(180deg, rgba(254, 242, 242, 0.96), rgba(254, 226, 226, 0.86));
+  }
+
+  .my-role-chip-citizen {
+    border-color: rgba(74, 222, 128, 0.36);
+    background: linear-gradient(180deg, rgba(240, 253, 244, 0.96), rgba(220, 252, 231, 0.82));
+  }
+
+  .my-role-chip-job {
+    border-color: rgba(251, 146, 60, 0.44);
+  }
+
+  .player-hand-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+    gap: 10px;
+  }
+
+  .hand-item-card {
+    min-height: 214px;
+  }
+
+  .hand-product-art {
+    display: flex;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    max-height: 118px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(168, 132, 82, 0.28);
+    border-radius: 8px;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.92), rgba(255, 247, 237, 0.4) 52%, rgba(245, 158, 11, 0.14) 100%);
+    color: #164e63;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+      0 4px 0 rgba(82, 50, 20, 0.08);
+  }
+
+  .hand-product-art svg {
+    height: 66%;
+    width: 100%;
+    max-width: 82px;
+    filter: drop-shadow(0 5px 0 rgba(15, 23, 42, 0.08));
+  }
+
+  .hand-product-art-brick {
+    background:
+      radial-gradient(circle at 50% 38%, rgba(254, 242, 242, 0.98), rgba(254, 226, 226, 0.52) 55%, rgba(220, 38, 38, 0.18) 100%);
+    color: #991b1b;
+  }
+
+  .action-draw-pad {
+    border: 1px dashed rgba(194, 65, 12, 0.34);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 247, 237, 0.86), rgba(254, 215, 170, 0.45));
+    padding: 10px;
+  }
+
+  .table-card {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    border: 1px solid rgba(120, 78, 38, 0.34);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 250, 238, 0.98), rgba(244, 225, 194, 0.94)),
+      repeating-linear-gradient(
+        0deg,
+        rgba(120, 53, 15, 0.04) 0,
+        rgba(120, 53, 15, 0.04) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+      0 7px 0 rgba(82, 50, 20, 0.16);
+    transform-origin: center bottom;
+  }
+
+  .table-card::after {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    border: 1px solid rgba(214, 211, 209, 0.85);
+    border-radius: 6px;
+  }
+
+  .table-card-accent-orange {
+    border-color: rgba(234, 88, 12, 0.84);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.76),
+      0 7px 0 rgba(234, 88, 12, 0.28);
+  }
+
+  .table-card-accent-green {
+    border-color: rgba(46, 125, 50, 0.74);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.76),
+      0 7px 0 rgba(46, 125, 50, 0.2);
+  }
+
+  .table-card-image {
+    aspect-ratio: 1 / 0.72;
+    width: 100%;
+    object-fit: contain;
+  }
+
+  .table-chip {
+    display: inline-flex;
+    min-height: 30px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(74, 54, 34, 0.38);
+    border-radius: 999px;
+    background:
+      linear-gradient(180deg, rgba(247, 220, 150, 0.98), rgba(150, 96, 43, 0.94));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.36),
+      0 4px 0 rgba(28, 25, 23, 0.18);
+    color: #2d1b0f;
+  }
+
+  .deal-note {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(117, 78, 38, 0.28);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 250, 232, 0.98), rgba(235, 214, 176, 0.95)),
+      repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 28px,
+        rgba(120, 53, 15, 0.12) 29px
+      );
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.68),
+      0 8px 0 rgba(82, 50, 20, 0.14);
+    padding: 18px;
+  }
+
+  .deal-note::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 96px;
+    height: 24px;
+    transform: translateX(-50%) rotate(-2deg);
+    border: 1px solid rgba(120, 53, 15, 0.18);
+    background: rgba(224, 196, 145, 0.76);
+    box-shadow: 0 2px 0 rgba(82, 50, 20, 0.1);
+  }
+
+  .card-stack {
+    position: relative;
+    border-radius: 8px;
+    transform: rotate(1.8deg);
+    filter: drop-shadow(0 8px 0 rgba(28, 25, 23, 0.12));
+  }
+
+  .card-stack::before,
+  .card-stack::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border: 1px solid rgba(68, 64, 60, 0.22);
+    border-radius: 8px;
+    background: rgba(255, 247, 237, 0.88);
+  }
+
+  .card-stack::before {
+    transform: translate(5px, -4px) rotate(2deg);
+  }
+
+  .card-stack::after {
+    transform: translate(9px, -8px) rotate(3.2deg);
+  }
+
+  .card-stack > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hand-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+    gap: 12px;
+  }
+
+  .deal-card-lift {
+    animation: deal-card-lift 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: center bottom;
+  }
+
+  .player-lane {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .player-lane:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 9px 0 rgba(21, 128, 61, 0.08);
+  }
+
+  .motion-panel {
+    animation: panel-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    box-shadow: 0 10px 0 rgba(0, 0, 0, 0.16);
+  }
+
+  .motion-panel-strong {
+    animation: panel-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both,
+      deal-glow 1800ms ease-in-out infinite;
+    box-shadow: 0 12px 0 rgba(154, 52, 18, 0.12);
+  }
+
+  .motion-button {
+    transform: translateY(0);
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease,
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .motion-button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 rgba(28, 25, 23, 0.14);
+  }
+
+  .motion-button:not(:disabled):active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(28, 25, 23, 0.18);
+  }
+
+  .deck-idle {
+    animation: deck-breathe 1800ms ease-in-out infinite;
+  }
+
+  .game-card-drawn {
+    animation: card-draw 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: center bottom;
+  }
+
+  .game-card-hover {
+    transform: translateY(0) rotate(0deg);
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .game-card-hover:hover {
+    transform: translateY(-6px) rotate(-1deg);
+    box-shadow: 0 12px 0 rgba(28, 25, 23, 0.12);
+  }
+
+  .token-pop {
+    animation: token-pop 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .log-item {
+    animation: log-in 300ms ease-out both;
+  }
+
+  .status-tile {
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .status-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 rgba(28, 25, 23, 0.08);
+  }
+
+  .turn-badge {
+    animation: badge-pulse 1500ms ease-in-out infinite;
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes deal-glow {
+  0%,
+  100% {
+    box-shadow: 0 12px 0 rgba(154, 52, 18, 0.1);
+  }
+  50% {
+    box-shadow: 0 12px 0 rgba(154, 52, 18, 0.24);
+  }
+}
+
+@keyframes deck-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-0.6deg);
+  }
+}
+
+@keyframes card-draw {
+  0% {
+    opacity: 0;
+    transform: translateY(34px) rotate(5deg) scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-8px) rotate(-2deg) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes token-pop {
+  0% {
+    transform: scale(0.92);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes deal-card-lift {
+  0% {
+    opacity: 0;
+    transform: translateY(26px) rotate(2deg) scale(0.96);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-7px) rotate(-1.2deg) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes card-table-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 1120px) {
+  .game-table-layout {
+    grid-template-areas:
+      "social board"
+      "actions actions";
+    grid-template-columns: minmax(156px, 200px) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .game-right-rail,
+  .game-deck-rail {
+    grid-column: 1 / -1;
+  }
+
+  .game-right-rail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .game-deck-rail-playing {
+    display: none;
+  }
+
+  .market-board-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-side-rail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .game-play-shell {
+    height: auto;
+    min-height: 100dvh;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .game-screen-viewport {
+    height: auto;
+    min-height: calc(100dvh - 16px);
+  }
+
+  .game-frame-shell {
+    min-width: 0;
+    height: auto;
+    min-height: calc(100dvh - 16px);
+    overflow: visible;
+    border-radius: 12px;
+    padding: 8px;
+  }
+
+  .game-top-grid {
+    grid-template-areas:
+      "brand actions"
+      "stats stats";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .game-top-grid > :nth-child(1) {
+    grid-area: brand;
+    border-right: 0;
+    padding-right: 0;
+  }
+
+  .game-top-grid > :nth-child(1) h1 {
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+
+  .game-top-grid > :nth-child(2) {
+    grid-area: stats;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .game-top-grid > :nth-child(3) {
+    grid-area: actions;
+    justify-content: flex-end;
+  }
+
+  .frame-stat {
+    min-height: 56px;
+    border-left: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 8px;
+  }
+
+  .frame-stat > :last-child {
+    font-size: 1rem;
+  }
+
+  .frame-icon-button {
+    min-height: 46px;
+    min-width: 46px;
+    padding: 4px;
+  }
+
+  .frame-icon-button span:last-child {
+    display: none;
+  }
+
+  .game-table-layout,
+  .play-cockpit-grid {
+    grid-template-areas:
+      "actions"
+      "board"
+      "social";
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .game-left-rail,
+  .game-board-stage,
+  .game-right-rail {
+    overflow: visible;
+  }
+
+  .play-action-dock {
+    position: static;
+  }
+
+  .game-right-rail {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .game-left-rail {
+    gap: 10px;
+  }
+
+  .game-log-drawer {
+    min-height: 0;
+  }
+
+  .game-log-drawer > div:last-child {
+    max-height: 120px;
+  }
+
+  .player-hand-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hand-item-card {
+    min-height: 176px;
+    padding: 12px 8px 10px;
+  }
+
+  .hand-product-art {
+    max-height: 88px;
+  }
+
+  .hand-product-art svg {
+    max-width: 64px;
+  }
+
+  .my-status-strip > * {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .table-center-board .w-24 {
+    width: 48px;
+  }
+
+  .table-center-board .text-xl {
+    font-size: 1.08rem;
+    line-height: 1.35rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .public-market-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hand-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-panel,
+  .motion-panel-strong,
+  .market-board-grid,
+  .deck-idle,
+  .game-card-drawn,
+  .deal-card-lift,
+  .token-pop,
+  .log-item,
+  .turn-badge {
+    animation: none;
+  }
+
+  .motion-button,
+  .table-card,
+  .card-stack,
+  .game-card-hover,
+  .player-lane,
+  .status-tile {
+    transition: none;
+  }
+
+  .motion-button:not(:disabled):hover,
+  .motion-button:not(:disabled):active,
+  .game-card-hover:hover,
+  .player-lane:hover,
+  .status-tile:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
