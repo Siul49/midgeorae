@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WhenToMeet - AI 캘린더 스케줄링",
+  title: "믿거래 - 중고거래 추론 게임",
   description:
-    "캘린더 연동 한 번, 링크 하나로 모두의 빈 시간을 자동으로 찾아주는 스케줄링 웹앱",
+    "각자 기기로 접속해 거래하고 숨어 있는 빌런을 찾는 3-5인 중고거래 추론 게임",
 };
 
 export default function RootLayout({

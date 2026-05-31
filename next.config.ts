@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
+import { buildAllowedDevOrigins } from "./src/features/game/server/network";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: buildAllowedDevOrigins(),
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 export default nextConfig;
