@@ -1,6 +1,6 @@
 import type { ItemCategory, ItemCondition } from "../types";
 
-export type RoomStatus = "waiting" | "playing" | "voting" | "finished";
+export type RoomStatus = "waiting" | "playing" | "reporting" | "finished";
 export type RoomMode = "real" | "botTest";
 export type PlayerRole = "citizen" | "villain";
 export type ActionCardType =
@@ -113,7 +113,7 @@ export interface RoomResult {
   winnerId: string;
   winningSide?: "citizens" | "villain";
   eliminatedPlayerId?: string;
-  votes: Record<string, number>;
+  reports: Record<string, number>;
 }
 
 export interface Room {
@@ -124,15 +124,15 @@ export interface Room {
   players: ServerPlayer[];
   currentTurnPlayerId: string | null;
   turnCount: number;
-  round: number;
-  maxRounds: number;
+  usedActionCount: number;
+  marketActionLimit: number;
   logs: string[];
   actionDeck: ActionCardSnapshot[];
   discardPile: ActionCardSnapshot[];
   currentActionCard: ActionCardSnapshot | null;
   pendingDeal: PendingDeal | null;
   pendingReviews: PendingReview[];
-  votes: Record<string, string>;
+  reports: Record<string, string>;
   result: RoomResult | null;
   version: number;
   createdAt: number;
@@ -164,10 +164,10 @@ export interface RoomSnapshot {
   pendingDeal: PendingDeal | null;
   pendingDealItem: ItemCardSnapshot | null;
   pendingReviews: PendingReview[];
-  round: number;
-  maxRounds: number;
+  usedActionCount: number;
+  marketActionLimit: number;
   logs: string[];
-  votesCast: number;
+  reportsCast: number;
   result: RoomResult | null;
   version: number;
 }
@@ -196,8 +196,8 @@ export type RoomAction =
   | { type: "sellItem"; itemName: string; targetPlayerId: string; price: number }
   | { type: "ratePlayer"; targetPlayerId: string; rating: "like" | "dislike" }
   | { type: "endTurn" }
-  | { type: "startVoting" }
-  | { type: "voteVillain"; targetPlayerId: string };
+  | { type: "startReporting" }
+  | { type: "reportSuspiciousPlayer"; targetPlayerId: string };
 
 export interface RoomSessionResult {
   room: RoomSnapshot;

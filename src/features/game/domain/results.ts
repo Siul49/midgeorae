@@ -1,9 +1,9 @@
 import type { RoomResult, ServerPlayer } from "../server/types";
 
-export function countVotes(
-  votes: Record<string, string>,
+export function countReports(
+  reports: Record<string, string>,
 ): Record<string, number> {
-  return Object.values(votes).reduce<Record<string, number>>((acc, targetId) => {
+  return Object.values(reports).reduce<Record<string, number>>((acc, targetId) => {
     acc[targetId] = (acc[targetId] ?? 0) + 1;
     return acc;
   }, {});
@@ -16,15 +16,15 @@ export function calculateAsset(player: ServerPlayer) {
   );
 }
 
-export function calculateVoteResult(
+export function calculateReportResult(
   players: ServerPlayer[],
-  votes: Record<string, string>,
+  reports: Record<string, string>,
   villainId: string,
 ): RoomResult {
-  const countedVotes = countVotes(votes);
-  const mostVotedId =
-    Object.entries(countedVotes).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
-  const villainCaught = mostVotedId === villainId;
+  const countedReports = countReports(reports);
+  const mostReportedId =
+    Object.entries(countedReports).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+  const villainCaught = mostReportedId === villainId;
 
   const eligiblePlayers = villainCaught
     ? players.filter((player) => player.id !== villainId)
@@ -38,7 +38,7 @@ export function calculateVoteResult(
     villainCaught,
     winnerId,
     winningSide: villainCaught ? "citizens" : "villain",
-    votes: countedVotes,
+    reports: countedReports,
   };
 }
 
@@ -59,6 +59,6 @@ export function calculateReputationEliminationResult(
     winnerId: villainCaught ? citizenWinner : (villain?.id ?? eliminatedPlayer.id),
     winningSide: villainCaught ? "citizens" : "villain",
     eliminatedPlayerId: eliminatedPlayer.id,
-    votes: {},
+    reports: {},
   };
 }

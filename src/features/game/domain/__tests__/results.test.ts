@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateAsset,
+  calculateReportResult,
   calculateReputationEliminationResult,
-  calculateVoteResult,
-  countVotes,
+  countReports,
 } from "../results";
 import type { ServerPlayer } from "../../server/types";
 
@@ -45,9 +45,9 @@ function makePlayer(
 }
 
 describe("game result domain", () => {
-  it("counts votes by target player id", () => {
+  it("counts final reports by target player id", () => {
     expect(
-      countVotes({
+      countReports({
         alice: "villain",
         bob: "villain",
         chris: "alice",
@@ -64,14 +64,14 @@ describe("game result domain", () => {
     expect(calculateAsset(player)).toBe(150_000);
   });
 
-  it("returns citizen victory when the villain gets the most votes", () => {
+  it("returns citizen victory when the villain gets the most final reports", () => {
     const players = [
       makePlayer("citizen-a", 100_000, [50_000]),
       makePlayer("citizen-b", 300_000, [10_000]),
       makePlayer("villain", 500_000, [100_000], "villain"),
     ];
 
-    const result = calculateVoteResult(
+    const result = calculateReportResult(
       players,
       {
         "citizen-a": "villain",
@@ -86,7 +86,7 @@ describe("game result domain", () => {
       villainCaught: true,
       winnerId: "citizen-b",
       winningSide: "citizens",
-      votes: {
+      reports: {
         villain: 2,
         "citizen-a": 1,
       },
@@ -107,7 +107,7 @@ describe("game result domain", () => {
       winnerId: "villain",
       winningSide: "villain",
       eliminatedPlayerId: "citizen-a",
-      votes: {},
+      reports: {},
     });
   });
 });

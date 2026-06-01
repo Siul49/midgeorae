@@ -44,7 +44,6 @@ import {
   ThumbsDown,
   ThumbsUp,
   Users,
-  Vote,
   Watch,
 } from "lucide-react";
 import Image from "next/image";
@@ -130,6 +129,11 @@ function categoryLabel(category: ItemCardSnapshot["category"]) {
 
 function conditionLabel(condition: ItemCardSnapshot["condition"]) {
   return condition ? CONDITION_LABELS[condition] : "상태 미확인";
+}
+
+function marketProgressLabel(snapshot: RoomSnapshot) {
+  if (snapshot.marketActionLimit <= 0) return "-";
+  return `${snapshot.usedActionCount}/${snapshot.marketActionLimit}`;
 }
 
 function actionIcon(type: ActionCardType) {
@@ -595,7 +599,7 @@ export function MidgeoraeOnlineGame() {
               </div>
               <div className="grid gap-2 sm:grid-cols-4">
                 <FrameStat label="Room code" value={snapshot.code} />
-                <FrameStat label="Round" value={`${snapshot.round}/${snapshot.maxRounds}`} />
+                <FrameStat label="Market" value={marketProgressLabel(snapshot)} />
                 <FrameStat label="My money" value={moneyLabel(me?.money ?? 0)} />
                 <FrameStat
                   label="Turn"
@@ -683,12 +687,12 @@ export function MidgeoraeOnlineGame() {
             </div>
           )}
 
-          {snapshot.status === "voting" && (
-            <VotePanel
+          {snapshot.status === "reporting" && (
+            <ReportPanel
               snapshot={snapshot}
               otherPlayers={otherPlayers}
-              onVote={(targetPlayerId) =>
-                submitAction({ type: "voteVillain", targetPlayerId })
+              onReport={(targetPlayerId) =>
+                submitAction({ type: "reportSuspiciousPlayer", targetPlayerId })
               }
             />
           )}
@@ -752,7 +756,6 @@ export function MidgeoraeOnlineGame() {
                   snapshot.players.length <= MAX_PLAYERS
                 }
                 onStart={() => submitAction({ type: "startGame" })}
-                onStartVoting={() => submitAction({ type: "startVoting" })}
                 onEndTurn={() => submitAction({ type: "endTurn" })}
               />
             </div>
@@ -826,7 +829,6 @@ function DeckRail({
   loading,
   canStart,
   onStart,
-  onStartVoting,
   onEndTurn,
 }: {
   mode: RoomMode;
@@ -835,15 +837,16 @@ function DeckRail({
   loading: boolean;
   canStart: boolean;
   onStart: () => void;
-  onStartVoting: () => void;
   onEndTurn: () => void;
 }) {
   const statusCopy = {
     waiting: ["대기", `${MIN_PLAYERS}-${MAX_PLAYERS}명 모이면 시작`],
     playing: ["진행", "턴 종료만 남김"],
-    voting: ["투표", "빌런 지목 단계"],
     finished: ["종료", "결과 확인"],
-  }[status];
+  }[status as Exclude<RoomSnapshot["status"], "reporting">] ?? [
+    "신고",
+    "분쟁 심사 단계",
+  ];
 
   return (
     <aside className={`game-deck-rail game-deck-rail-${status}`}>
@@ -881,14 +884,14 @@ function DeckRail({
           <RefreshCw size={18} />
           턴 종료
         </button>
-      ) : status === "voting" && isHost ? (
+      ) : status === "reporting" ? (
         <button
           type="button"
-          onClick={onStartVoting}
+          disabled
           className="motion-button mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-4 text-base font-black text-white shadow-[0_7px_0_rgba(124,45,18,0.55)] hover:bg-orange-500"
         >
-          <Vote size={18} />
-          투표 진행
+          <AlertTriangle size={18} />
+          최종 신고 접수 중
         </button>
       ) : null}
     </aside>
@@ -1725,36 +1728,36 @@ function TargetAction({
   );
 }
 
-function VotePanel({
+function ReportPanel({
   snapshot,
   otherPlayers,
-  onVote,
+  onReport,
 }: {
   snapshot: RoomSnapshot;
   otherPlayers: PublicPlayer[];
-  onVote: (targetPlayerId: string) => void;
+  onReport: (targetPlayerId: string) => void;
 }) {
   return (
     <section className="motion-panel market-card-table p-5">
       <div className="relative">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black">빌런 투표</h2>
+          <h2 className="text-xl font-black">최종 신고</h2>
           <p className="mt-1 text-sm font-bold text-stone-500">
-            {snapshot.votesCast}/{snapshot.players.length}명 투표 완료
+            {snapshot.reportsCast}/{snapshot.players.length}명 신고 접수
           </p>
         </div>
-        <Vote className="text-orange-600" size={26} />
+        <AlertTriangle className="text-orange-600" size={26} />
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         {otherPlayers.map((player) => (
           <button
             key={player.id}
-            onClick={() => onVote(player.id)}
+            onClick={() => onReport(player.id)}
             className="motion-button flex items-center justify-between border border-stone-300 px-3 py-3 text-left font-black hover:bg-stone-100"
           >
             {player.name}
-            <Vote size={16} />
+            <AlertTriangle size={16} />
           </button>
         ))}
       </div>

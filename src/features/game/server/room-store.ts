@@ -1,17 +1,17 @@
 import { randomUUID } from "node:crypto";
 import {
-  DEFAULT_MAX_ROUNDS,
   JOB_CARDS,
   LOBBY_MONEY,
   MAX_PLAYERS,
+  getMarketActionLimit,
   MIN_PLAYERS,
   STARTING_MANNER,
   STARTING_REPUTATION,
   VILLAIN_MISSIONS,
 } from "../rules/game-rules";
 import {
+  calculateReportResult,
   calculateReputationEliminationResult,
-  calculateVoteResult,
 } from "../domain/results";
 import { calculateTradeReviewOutcome } from "../domain/reputation";
 import { settleAcceptedDeal } from "../domain/trade";
@@ -275,10 +275,10 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
     pendingReviews: viewer
       ? room.pendingReviews.filter((review) => review.reviewerId === viewer.id)
       : [],
-    round: room.round,
-    maxRounds: room.maxRounds,
+    usedActionCount: room.usedActionCount,
+    marketActionLimit: room.marketActionLimit,
     logs: room.logs.slice(-20),
-    votesCast: Object.keys(room.votes).length,
+    reportsCast: Object.keys(room.reports).length,
     result: room.result,
     version: room.version,
   };
@@ -303,8 +303,28 @@ function assertPlaying(room: Room) {
   }
 }
 
+function enterReporting(room: Room, message = "시장 마감입니다. 최종 신고를 시작합니다.") {
+  room.status = "reporting";
+  room.currentTurnPlayerId = null;
+  room.currentActionCard = null;
+  room.pendingDeal = null;
+  room.logs.push(message);
+}
+
 function nextTurn(room: Room) {
   room.turnCount += 1;
+  room.usedActionCount = Math.min(
+    room.marketActionLimit,
+    room.usedActionCount + 1,
+  );
+
+  if (
+    room.marketActionLimit > 0 &&
+    room.usedActionCount >= room.marketActionLimit
+  ) {
+    enterReporting(room);
+    return;
+  }
 
   if (!room.currentTurnPlayerId) {
     room.currentTurnPlayerId = room.players[0]?.id ?? null;
@@ -315,14 +335,6 @@ function nextTurn(room: Room) {
     (player) => player.id === room.currentTurnPlayerId,
   );
   const nextIndex = (currentIndex + 1) % room.players.length;
-  if (nextIndex === 0) room.round += 1;
-
-  if (room.round > room.maxRounds) {
-    room.status = "voting";
-    room.currentTurnPlayerId = null;
-    room.logs.push("모든 라운드가 끝났습니다. 빌런 투표를 시작합니다.");
-    return;
-  }
 
   room.currentTurnPlayerId = room.players[nextIndex]?.id ?? null;
   room.currentActionCard = null;
@@ -372,10 +384,14 @@ function startGame(room: Room, actor: ServerPlayer) {
   });
   room.status = "playing";
   room.currentTurnPlayerId = room.players[0]?.id ?? null;
+  room.usedActionCount = 0;
+  room.marketActionLimit = getMarketActionLimit(room.players.length);
   room.actionDeck = makeActionDeck();
   room.discardPile = [];
   room.currentActionCard = null;
-  room.logs.push("게임이 시작되었습니다. 역할 카드와 물건 카드 5장을 확인하세요.");
+  room.logs.push(
+    `게임이 시작되었습니다. 역할 카드와 물건 카드 5장을 확인하세요. 시장 행동 예산은 ${room.marketActionLimit}회입니다.`,
+  );
 }
 
 function drawActionCard(room: Room, actor: ServerPlayer) {
@@ -600,26 +616,30 @@ function swapRandomItem(room: Room, actor: ServerPlayer, targetPlayerId: string)
   nextTurn(room);
 }
 
-function voteVillain(room: Room, actor: ServerPlayer, targetPlayerId: string) {
-  if (room.status !== "playing" && room.status !== "voting") {
-    throw new Error("투표할 수 없는 상태입니다.");
+function reportSuspiciousPlayer(
+  room: Room,
+  actor: ServerPlayer,
+  targetPlayerId: string,
+) {
+  if (room.status !== "reporting") {
+    throw new Error("신고할 수 없는 상태입니다.");
   }
   if (!room.players.some((player) => player.id === targetPlayerId)) {
-    throw new Error("투표 대상이 존재하지 않습니다.");
+    throw new Error("신고 대상이 존재하지 않습니다.");
   }
-  if (room.votes[actor.id]) throw new Error("이미 투표했습니다.");
+  if (room.reports[actor.id]) throw new Error("이미 신고했습니다.");
 
-  room.status = "voting";
+  room.status = "reporting";
   room.currentTurnPlayerId = null;
-  room.votes[actor.id] = targetPlayerId;
-  room.logs.push(`${actor.name}님이 빌런 투표를 마쳤습니다.`);
+  room.reports[actor.id] = targetPlayerId;
+  room.logs.push(`${actor.name}님이 사기 의심 계정을 신고했습니다.`);
 
-  if (Object.keys(room.votes).length === room.players.length) {
+  if (Object.keys(room.reports).length === room.players.length) {
     const villain = room.players.find((player) => player.role === "villain");
     if (!villain) throw new Error("빌런 정보가 없습니다.");
-    room.result = calculateVoteResult(room.players, room.votes, villain.id);
+    room.result = calculateReportResult(room.players, room.reports, villain.id);
     room.status = "finished";
-    room.logs.push("투표가 종료되었습니다. 결과를 공개합니다.");
+    room.logs.push("최종 신고가 접수되었습니다. 분쟁 심사 결과를 공개합니다.");
   }
 }
 
@@ -686,15 +706,15 @@ function autoReviewBotTrades(room: Room) {
   return changed;
 }
 
-function autoVoteBots(room: Room) {
-  if (room.status !== "voting") return false;
+function autoReportBots(room: Room) {
+  if (room.status !== "reporting") return false;
 
   let changed = false;
   for (const bot of room.players.filter((player) => player.isBot)) {
-    if (room.votes[bot.id]) continue;
+    if (room.reports[bot.id]) continue;
     const target = chooseBotTarget(room, bot);
     if (!target) continue;
-    voteVillain(room, bot, target.id);
+    reportSuspiciousPlayer(room, bot, target.id);
     changed = true;
     if ((room.status as RoomStatus) === "finished") break;
   }
@@ -799,7 +819,7 @@ function autoPlayBots(room: Room) {
     const stepped =
       autoResolveBotDeal(room) ||
       autoReviewBotTrades(room) ||
-      autoVoteBots(room) ||
+      autoReportBots(room) ||
       autoRunCurrentBotTurn(room);
     if (!stepped) break;
     changed = true;
@@ -819,8 +839,8 @@ export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionRe
     players: [player],
     currentTurnPlayerId: null,
     turnCount: 0,
-    round: 1,
-    maxRounds: DEFAULT_MAX_ROUNDS,
+    usedActionCount: 0,
+    marketActionLimit: 0,
     logs: [
       `${player.name}님이 ${
         mode === "botTest" ? "봇 테스트 방" : "실제 플레이 방"
@@ -831,7 +851,7 @@ export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionRe
     currentActionCard: null,
     pendingDeal: null,
     pendingReviews: [],
-    votes: {},
+    reports: {},
     result: null,
     version: 1,
     createdAt: now(),
@@ -930,15 +950,13 @@ export function submitRoomAction(
       room.pendingDeal = null;
       nextTurn(room);
       break;
-    case "startVoting":
-      if (!actor.isHost) throw new Error("호스트만 투표를 시작할 수 있습니다.");
-      if (room.status !== "playing") throw new Error("투표를 시작할 수 없는 상태입니다.");
-      room.status = "voting";
-      room.currentTurnPlayerId = null;
-      room.logs.push("호스트가 빌런 투표를 시작했습니다.");
+    case "startReporting":
+      if (!actor.isHost) throw new Error("호스트만 최종 신고를 시작할 수 있습니다.");
+      if (room.status !== "playing") throw new Error("최종 신고를 시작할 수 없는 상태입니다.");
+      enterReporting(room, "호스트가 최종 신고를 시작했습니다.");
       break;
-    case "voteVillain":
-      voteVillain(room, actor, action.targetPlayerId);
+    case "reportSuspiciousPlayer":
+      reportSuspiciousPlayer(room, actor, action.targetPlayerId);
       break;
   }
 
