@@ -575,7 +575,8 @@ describe("room-store", () => {
 
     const beforeRequester = getRoomSnapshot(host.room.code, host.playerToken);
     const beforeOwner = getRoomSnapshot(host.room.code, p2.playerToken);
-    const item = beforeOwner.me!.hand![0];
+    const item = beforeOwner.me!.hand!.find((owned) => owned.category !== null);
+    if (!item) throw new Error("expected owner to have a non-brick item");
     submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
