@@ -1,0 +1,12 @@
+<svg width="420" height="600" viewBox="0 0 420 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="420" height="600" rx="28" fill="#fef2f2"/>
+  <rect x="18" y="18" width="384" height="564" rx="22" stroke="#991b1b" stroke-width="8"/>
+  <text x="210" y="94" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#7f1d1d">벽돌</text>
+  <g stroke="#7f1d1d" stroke-width="6">
+    <rect x="82" y="184" width="256" height="76" rx="10" fill="#ef4444"/>
+    <rect x="82" y="260" width="128" height="76" rx="10" fill="#dc2626"/>
+    <rect x="210" y="260" width="128" height="76" rx="10" fill="#b91c1c"/>
+    <rect x="82" y="336" width="256" height="76" rx="10" fill="#ef4444"/>
+  </g>
+  <text x="210" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#7f1d1d">시장가 0만원</text>
+</svg>

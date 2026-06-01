@@ -1,0 +1,10 @@
+<svg width="420" height="600" viewBox="0 0 420 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="420" height="600" rx="28" fill="#fff7ed"/>
+  <rect x="18" y="18" width="384" height="564" rx="22" stroke="#c2410c" stroke-width="8"/>
+  <text x="210" y="94" text-anchor="middle" font-family="Malgun Gothic, Noto Sans KR, Arial, sans-serif" font-size="44" font-weight="700" fill="#9a3412">거래 신청</text>
+  <rect x="88" y="158" width="244" height="220" rx="20" fill="#fed7aa" stroke="#fb923c" stroke-width="6"/>
+  <path d="M130 250h160M130 296h110" stroke="#9a3412" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="300" cy="376" r="62" fill="#facc15" stroke="#ca8a04" stroke-width="8"/>
+  <text x="300" y="393" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="700" fill="#713f12">₩</text>
+  <text x="210" y="500" text-anchor="middle" font-family="Malgun Gothic, Noto Sans KR, Arial, sans-serif" font-size="28" font-weight="700" fill="#9a3412">가격을 제시하세요</text>
+</svg>

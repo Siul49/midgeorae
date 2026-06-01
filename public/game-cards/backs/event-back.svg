@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="63mm" height="88mm" viewBox="0 0 630 880" role="img" aria-label="이벤트 뒷면">
+  <defs>
+    <linearGradient id="backBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5f3ff"/>
+      <stop offset="100%" stop-color="#ddd6fe"/>
+    </linearGradient>
+    <pattern id="dots" width="54" height="54" patternUnits="userSpaceOnUse">
+      <circle cx="12" cy="12" r="5" fill="#7c3aed" opacity="0.20"/>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="630" height="880" rx="8" fill="url(#backBg)"/>
+  <rect x="22" y="22" width="586" height="836" rx="8" fill="url(#dots)" opacity="0.85"/>
+  <rect x="44" y="44" width="542" height="792" rx="8" fill="#ffffff" fill-opacity="0.55" stroke="#7c3aed" stroke-width="5"/>
+  <circle cx="315" cy="392" r="150" fill="#7c3aed" opacity="0.82"/>
+  <text x="315" y="435" text-anchor="middle" font-size="146" font-weight="900" letter-spacing="0" fill="#ffffff" font-family="Malgun Gothic, Noto Sans KR, Arial, sans-serif">?</text>
+  <text x="315" y="620" text-anchor="middle" font-size="48" font-weight="900" letter-spacing="0" fill="#2e1065" font-family="Malgun Gothic, Noto Sans KR, Arial, sans-serif">이벤트</text>
+  <text x="315" y="678" text-anchor="middle" font-size="28" font-weight="800" letter-spacing="0" fill="#6d28d9" font-family="Malgun Gothic, Noto Sans KR, Arial, sans-serif">믿거래</text>
+</svg>
