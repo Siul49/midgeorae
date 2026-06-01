@@ -24,15 +24,15 @@ const ITEM_IMAGE_BY_ID: Record<string, string> = {
 
 export const ACTION_CARDS: ActionCardSnapshot[] = [
   {
-    type: "sell",
-    title: "판매",
-    description: "물건 카드 1장을 뒤집어 가격을 제시합니다.",
-    imagePath: "/game-cards/actions/sell.svg",
+    type: "tradeRequest",
+    title: "거래 신청",
+    description: "다른 플레이어의 물건 카드 1장에 구매 요청을 보냅니다.",
+    imagePath: "/game-cards/actions/trade-request.svg",
   },
   {
     type: "freeGive",
     title: "무료나눔",
-    description: "물건 카드 1장을 0원에 거래 제안합니다.",
+    description: "다른 플레이어의 물건 카드 1장에 0원 거래 신청을 보냅니다.",
     imagePath: "/game-cards/actions/free-give.svg",
   },
   {

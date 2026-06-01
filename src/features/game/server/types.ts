@@ -4,7 +4,7 @@ export type RoomStatus = "waiting" | "playing" | "voting" | "finished";
 export type RoomMode = "real" | "botTest";
 export type PlayerRole = "citizen" | "villain";
 export type ActionCardType =
-  | "sell"
+  | "tradeRequest"
   | "freeGive"
   | "directTrade"
   | "badReview"
@@ -50,9 +50,9 @@ export interface DealCards {
 
 export interface PendingDeal {
   id: string;
-  actionType: "sell" | "freeGive" | "directTrade";
-  sellerId: string;
-  buyerId: string;
+  actionType: "tradeRequest" | "freeGive" | "directTrade";
+  requesterId: string;
+  ownerId: string;
   itemInstanceId: string;
   askingPrice: number;
   revealedBeforeDeal: boolean;
@@ -97,6 +97,7 @@ export interface PublicPlayer {
   dislikes: number;
   position: number;
   itemCount: number;
+  publicItems: ItemCardSnapshot[];
   money?: never;
   job?: never;
   hand?: never;
@@ -173,10 +174,10 @@ export type RoomAction =
   | { type: "startGame" }
   | { type: "drawActionCard" }
   | {
-      type: "listItemForSale";
+      type: "requestTrade";
+      ownerId: string;
       itemInstanceId: string;
-      askingPrice: number;
-      targetPlayerId: string;
+      offerPrice: number;
     }
   | { type: "chooseDealCard"; choice: DealCardChoice }
   | {

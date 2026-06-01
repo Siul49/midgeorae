@@ -14,6 +14,50 @@ describe("room-store", () => {
     return names.map((name) => joinRoom(code, name));
   }
 
+  function advanceTurnTo(
+    code: string,
+    sessions: ReturnType<typeof createRoom>[],
+    playerId: string,
+  ) {
+    for (let index = 0; index < sessions.length; index += 1) {
+      const currentTurnPlayerId = getRoomSnapshot(
+        code,
+        sessions[0]!.playerToken,
+      ).currentTurnPlayerId;
+      if (currentTurnPlayerId === playerId) return;
+      const currentSession = sessions.find(
+        (session) => session.playerId === currentTurnPlayerId,
+      );
+      expect(currentSession).toBeDefined();
+      submitRoomAction(code, currentSession!.playerToken, { type: "endTurn" });
+    }
+  }
+
+  function drawUntilActionType(
+    code: string,
+    sessions: ReturnType<typeof createRoom>[],
+    actionType: "tradeRequest" | "freeGive" | "directTrade",
+  ) {
+    for (let index = 0; index < 12; index += 1) {
+      const currentTurnPlayerId = getRoomSnapshot(
+        code,
+        sessions[0]!.playerToken,
+      ).currentTurnPlayerId;
+      const currentSession = sessions.find(
+        (session) => session.playerId === currentTurnPlayerId,
+      );
+      expect(currentSession).toBeDefined();
+      const drawn = submitRoomAction(code, currentSession!.playerToken, {
+        type: "drawActionCard",
+      });
+      if (drawn.currentActionCard?.type === actionType) {
+        return { session: currentSession!, snapshot: drawn };
+      }
+      submitRoomAction(code, currentSession!.playerToken, { type: "endTurn" });
+    }
+
+    throw new Error(`Could not draw ${actionType}`);
+  }
   it("creates a room and lets up to five players join", () => {
     const host = createRoom("경수");
 
@@ -199,88 +243,186 @@ describe("room-store", () => {
     ).toThrow("3명 이상 모여야 시작할 수 있습니다.");
   });
 
-  it("keeps a listed brick face down during a normal sale", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    const p3 = joinRoom(host.room.code, "윤식");
-    const p4 = joinRoom(host.room.code, "환희");
+  it("starts a trade request from the current player for another player's item", () => {
+    const requester = createRoom("A");
+    const owner = joinRoom(requester.room.code, "B");
+    joinRoom(requester.room.code, "C");
+    joinRoom(requester.room.code, "D");
+    submitRoomAction(requester.room.code, requester.playerToken, { type: "startGame" });
+    submitRoomAction(requester.room.code, requester.playerToken, { type: "drawActionCard" });
+
+    const ownerItem = getRoomSnapshot(
+      requester.room.code,
+      owner.playerToken,
+    ).me!.hand![0];
+
+    const requested = submitRoomAction(requester.room.code, requester.playerToken, {
+      type: "requestTrade",
+      ownerId: owner.playerId,
+      itemInstanceId: ownerItem.instanceId,
+      offerPrice: 120000,
+    });
+
+    expect(requested.pendingDeal).toMatchObject({
+      actionType: "tradeRequest",
+      requesterId: requester.playerId,
+      ownerId: owner.playerId,
+      itemInstanceId: ownerItem.instanceId,
+      askingPrice: 120000,
+    });
+    expect(requested.pendingDeal).not.toHaveProperty("sellerId");
+    expect(requested.pendingDeal).not.toHaveProperty("buyerId");
+  });
+
+  it("treats free give as a zero-price trade request", () => {
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    const p3 = joinRoom(host.room.code, "C");
+    const p4 = joinRoom(host.room.code, "D");
+    const sessions = [host, p2, p3, p4];
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const { session: requesterSession } = drawUntilActionType(
+      host.room.code,
+      sessions,
+      "freeGive",
+    );
+    const ownerSession = sessions.find(
+      (session) => session.playerId !== requesterSession.playerId,
+    );
+    expect(ownerSession).toBeDefined();
+    const ownerItem = getRoomSnapshot(
+      host.room.code,
+      ownerSession!.playerToken,
+    ).me!.hand![0];
+
+    const requested = submitRoomAction(host.room.code, requesterSession.playerToken, {
+      type: "requestTrade",
+      ownerId: ownerSession!.playerId,
+      itemInstanceId: ownerItem.instanceId,
+      offerPrice: 120000,
+    });
+
+    expect(requested.pendingDeal).toMatchObject({
+      actionType: "freeGive",
+      requesterId: requesterSession.playerId,
+      ownerId: ownerSession!.playerId,
+      itemInstanceId: ownerItem.instanceId,
+      askingPrice: 0,
+    });
+  });
+
+  it("reveals the requested item for direct trade requests", () => {
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    const p3 = joinRoom(host.room.code, "C");
+    const p4 = joinRoom(host.room.code, "D");
+    const sessions = [host, p2, p3, p4];
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const { session: requesterSession } = drawUntilActionType(
+      host.room.code,
+      sessions,
+      "directTrade",
+    );
+    const ownerSession = sessions.find(
+      (session) => session.playerId !== requesterSession.playerId,
+    );
+    expect(ownerSession).toBeDefined();
+    const ownerItem = getRoomSnapshot(
+      host.room.code,
+      ownerSession!.playerToken,
+    ).me!.hand![0];
+
+    const requested = submitRoomAction(host.room.code, requesterSession.playerToken, {
+      type: "requestTrade",
+      ownerId: ownerSession!.playerId,
+      itemInstanceId: ownerItem.instanceId,
+      offerPrice: 120000,
+    });
+
+    expect(requested.pendingDeal).toMatchObject({
+      actionType: "directTrade",
+      revealedBeforeDeal: true,
+    });
+    expect(requested.pendingDealItem).toMatchObject({
+      instanceId: ownerItem.instanceId,
+      id: ownerItem.id,
+      revealed: true,
+    });
+  });
+
+  it("keeps a requested brick face down during a normal trade request", () => {
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    const p3 = joinRoom(host.room.code, "C");
+    const p4 = joinRoom(host.room.code, "D");
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     const sessions = [host, p2, p3, p4];
-    const sellerSession = sessions.find((session) =>
+    const ownerSession = sessions.find((session) =>
       getRoomSnapshot(host.room.code, session.playerToken).me!.hand!.some(
         (item) => item.isBrick,
       ),
     );
-    expect(sellerSession).toBeDefined();
+    expect(ownerSession).toBeDefined();
+    const requesterSession = sessions.find(
+      (session) => session.playerId !== ownerSession!.playerId,
+    );
+    expect(requesterSession).toBeDefined();
+    advanceTurnTo(host.room.code, sessions, requesterSession!.playerId);
 
-    for (let index = 0; index < sessions.length; index += 1) {
-      const currentTurnPlayerId = getRoomSnapshot(
-        host.room.code,
-        host.playerToken,
-      ).currentTurnPlayerId;
-      if (currentTurnPlayerId === sellerSession!.playerId) break;
-      const currentSession = sessions.find(
-        (session) => session.playerId === currentTurnPlayerId,
-      );
-      expect(currentSession).toBeDefined();
-      submitRoomAction(host.room.code, currentSession!.playerToken, {
-        type: "endTurn",
-      });
-    }
-
-    submitRoomAction(host.room.code, sellerSession!.playerToken, {
+    submitRoomAction(host.room.code, requesterSession!.playerToken, {
       type: "drawActionCard",
     });
 
-    const sellerSnapshot = getRoomSnapshot(
+    const ownerSnapshot = getRoomSnapshot(
       host.room.code,
-      sellerSession!.playerToken,
+      ownerSession!.playerToken,
     );
-    const brick = sellerSnapshot.me!.hand!.find((item) => item.isBrick);
+    const brick = ownerSnapshot.me!.hand!.find((item) => item.isBrick);
     expect(brick).toBeDefined();
-    const buyerSession = sessions.find(
-      (session) => session.playerId !== sellerSession!.playerId,
-    );
-    expect(buyerSession).toBeDefined();
 
-    submitRoomAction(host.room.code, sellerSession!.playerToken, {
-      type: "listItemForSale",
+    submitRoomAction(host.room.code, requesterSession!.playerToken, {
+      type: "requestTrade",
+      ownerId: ownerSession!.playerId,
       itemInstanceId: brick!.instanceId,
-      askingPrice: 120000,
-      targetPlayerId: buyerSession!.playerId,
+      offerPrice: 120000,
     });
 
-    const sellerView = getRoomSnapshot(host.room.code, sellerSession!.playerToken);
-    const buyerView = getRoomSnapshot(host.room.code, buyerSession!.playerToken);
+    const requesterView = getRoomSnapshot(
+      host.room.code,
+      requesterSession!.playerToken,
+    );
+    const ownerView = getRoomSnapshot(host.room.code, ownerSession!.playerToken);
 
-    expect(sellerView.pendingDealItem).toMatchObject({
-      name: "뒤집힌 물건",
+    expect(requesterView.pendingDealItem).toMatchObject({
       isBrick: false,
+      marketPrice: 0,
       revealed: false,
     });
-    expect(buyerView.pendingDealItem).toMatchObject({
-      name: "뒤집힌 물건",
+    expect(ownerView.pendingDealItem).toMatchObject({
       isBrick: false,
+      marketPrice: 0,
       revealed: false,
     });
   });
 
-  it("completes a sale only when seller and buyer both choose cool deal", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+  it("completes a trade request only when requester and owner both choose cool deal", () => {
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    joinRoom(host.room.code, "C");
+    joinRoom(host.room.code, "D");
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const beforeSale = getRoomSnapshot(host.room.code, host.playerToken);
-    const beforeBuyer = getRoomSnapshot(host.room.code, p2.playerToken);
-    const item = beforeSale.me!.hand![0];
+    const beforeRequester = getRoomSnapshot(host.room.code, host.playerToken);
+    const beforeOwner = getRoomSnapshot(host.room.code, p2.playerToken);
+    const item = beforeOwner.me!.hand![0];
     submitRoomAction(host.room.code, host.playerToken, {
-      type: "listItemForSale",
+      type: "requestTrade",
+      ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
-      askingPrice: 120000,
-      targetPlayerId: p2.playerId,
+      offerPrice: 120000,
     });
     submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
@@ -291,41 +433,41 @@ describe("room-store", () => {
       choice: "cool",
     });
 
-    const sellerView = getRoomSnapshot(host.room.code, host.playerToken);
-    const buyerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
 
     expect(completed.pendingDeal).toBeNull();
-    expect(sellerView.me?.money).toBe((beforeSale.me?.money ?? 0) + 120000);
-    expect(sellerView.me?.hand).toHaveLength(4);
-    expect(buyerView.me?.money).toBe((beforeBuyer.me?.money ?? 0) - 120000);
-    expect(buyerView.me?.hand).toHaveLength(6);
-    expect(buyerView.me?.hand?.some((owned) => owned.instanceId === item.instanceId)).toBe(
-      true,
-    );
-    const boughtItem = buyerView.me?.hand?.find(
+    expect(requesterView.me?.money).toBe((beforeRequester.me?.money ?? 0) - 120000);
+    expect(requesterView.me?.hand).toHaveLength(6);
+    expect(ownerView.me?.money).toBe((beforeOwner.me?.money ?? 0) + 120000);
+    expect(ownerView.me?.hand).toHaveLength(4);
+    expect(
+      requesterView.me?.hand?.some((owned) => owned.instanceId === item.instanceId),
+    ).toBe(true);
+    const boughtItem = requesterView.me?.hand?.find(
       (owned) => owned.instanceId === item.instanceId,
     );
     expect(boughtItem?.acquiredPrice).toBe(120000);
-    expect(buyerView.pendingReviews).toHaveLength(1);
-    expect(sellerView.pendingReviews).toHaveLength(1);
+    expect(requesterView.pendingReviews).toHaveLength(1);
+    expect(ownerView.pendingReviews).toHaveLength(1);
   });
 
-  it("cancels a sale when either side chooses cancel", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+  it("cancels a trade request when either side chooses cancel", () => {
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    joinRoom(host.room.code, "C");
+    joinRoom(host.room.code, "D");
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const beforeSale = getRoomSnapshot(host.room.code, host.playerToken);
-    const beforeBuyer = getRoomSnapshot(host.room.code, p2.playerToken);
-    const item = beforeSale.me!.hand![0];
+    const beforeRequester = getRoomSnapshot(host.room.code, host.playerToken);
+    const beforeOwner = getRoomSnapshot(host.room.code, p2.playerToken);
+    const item = beforeOwner.me!.hand![0];
     submitRoomAction(host.room.code, host.playerToken, {
-      type: "listItemForSale",
+      type: "requestTrade",
+      ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
-      askingPrice: 120000,
-      targetPlayerId: p2.playerId,
+      offerPrice: 120000,
     });
     submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
@@ -336,59 +478,59 @@ describe("room-store", () => {
       choice: "cancel",
     });
 
-    const sellerView = getRoomSnapshot(host.room.code, host.playerToken);
-    const buyerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
 
-    expect(sellerView.me?.money).toBe(beforeSale.me?.money);
-    expect(sellerView.me?.hand).toHaveLength(5);
-    expect(buyerView.me?.money).toBe(beforeBuyer.me?.money);
-    expect(buyerView.me?.hand).toHaveLength(5);
-    expect(sellerView.pendingDeal).toBeNull();
+    expect(requesterView.me?.money).toBe(beforeRequester.me?.money);
+    expect(requesterView.me?.hand).toHaveLength(5);
+    expect(ownerView.me?.money).toBe(beforeOwner.me?.money);
+    expect(ownerView.me?.hand).toHaveLength(5);
+    expect(requesterView.pendingDeal).toBeNull();
   });
 
   it("hides deal card choices from the other trading player", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    joinRoom(host.room.code, "C");
+    joinRoom(host.room.code, "D");
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const item = getRoomSnapshot(host.room.code, host.playerToken).me!.hand![0];
+    const item = getRoomSnapshot(host.room.code, p2.playerToken).me!.hand![0];
     submitRoomAction(host.room.code, host.playerToken, {
-      type: "listItemForSale",
+      type: "requestTrade",
+      ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
-      askingPrice: 120000,
-      targetPlayerId: p2.playerId,
+      offerPrice: 120000,
     });
     submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
 
-    const sellerView = getRoomSnapshot(host.room.code, host.playerToken);
-    const buyerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
 
-    expect(sellerView.pendingDeal?.choices).toEqual({
+    expect(requesterView.pendingDeal?.choices).toEqual({
       [host.playerId]: "cool",
     });
-    expect(buyerView.pendingDeal?.choices).toEqual({});
+    expect(ownerView.pendingDeal?.choices).toEqual({});
   });
 
   it("moves or destroys reputation tokens through post-trade reviews", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    joinRoom(host.room.code, "C");
+    joinRoom(host.room.code, "D");
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const item = getRoomSnapshot(host.room.code, host.playerToken).me!.hand![0];
+    const item = getRoomSnapshot(host.room.code, p2.playerToken).me!.hand![0];
     submitRoomAction(host.room.code, host.playerToken, {
-      type: "listItemForSale",
+      type: "requestTrade",
+      ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
-      askingPrice: 120000,
-      targetPlayerId: p2.playerId,
+      offerPrice: 120000,
     });
     submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
@@ -410,15 +552,14 @@ describe("room-store", () => {
       satisfied: false,
     });
 
-    const sellerView = getRoomSnapshot(host.room.code, host.playerToken);
-    const buyerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
 
-    expect(sellerView.me?.reputationTokens).toBe(3);
-    expect(buyerView.me?.reputationTokens).toBe(6);
-    expect(sellerView.pendingReviews).toHaveLength(0);
-    expect(buyerView.pendingReviews).toHaveLength(0);
+    expect(requesterView.me?.reputationTokens).toBe(3);
+    expect(ownerView.me?.reputationTokens).toBe(6);
+    expect(requesterView.pendingReviews).toHaveLength(0);
+    expect(ownerView.pendingReviews).toHaveLength(0);
   });
-
   it("returns the host role in the start game response", () => {
     const host = createRoom("경수");
     joinRoom(host.room.code, "유현");

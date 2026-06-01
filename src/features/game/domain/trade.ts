@@ -1,28 +1,28 @@
 import type { PendingDeal, PendingReview, ServerItemCard, ServerPlayer } from "../server/types";
 
 export interface AcceptedDealSettlement {
-  sellerMoney: number;
-  buyerMoney: number;
-  sellerHand: ServerItemCard[];
-  buyerHand: ServerItemCard[];
+  ownerMoney: number;
+  requesterMoney: number;
+  ownerHand: ServerItemCard[];
+  requesterHand: ServerItemCard[];
   pendingReviews: PendingReview[];
 }
 
 export function settleAcceptedDeal({
   deal,
-  seller,
-  buyer,
+  owner,
+  requester,
 }: {
   deal: PendingDeal;
-  seller: ServerPlayer;
-  buyer: ServerPlayer;
+  owner: ServerPlayer;
+  requester: ServerPlayer;
 }): AcceptedDealSettlement {
-  const item = seller.hand.find(
+  const item = owner.hand.find(
     (owned) => owned.instanceId === deal.itemInstanceId,
   );
   if (!item) throw new Error("거래 물건을 찾을 수 없습니다.");
-  if (buyer.money < deal.askingPrice) {
-    throw new Error("구매자의 금액이 부족합니다.");
+  if (requester.money < deal.askingPrice) {
+    throw new Error("신청자의 금액이 부족합니다.");
   }
 
   const transferredItem: ServerItemCard = {
@@ -30,27 +30,27 @@ export function settleAcceptedDeal({
     acquiredPrice: deal.askingPrice,
     revealed: true,
     revealedToPlayerIds: Array.from(
-      new Set([...item.revealedToPlayerIds, seller.id, buyer.id]),
+      new Set([...item.revealedToPlayerIds, owner.id, requester.id]),
     ),
   };
 
   return {
-    sellerMoney: seller.money + deal.askingPrice,
-    buyerMoney: buyer.money - deal.askingPrice,
-    sellerHand: seller.hand.filter(
+    ownerMoney: owner.money + deal.askingPrice,
+    requesterMoney: requester.money - deal.askingPrice,
+    ownerHand: owner.hand.filter(
       (owned) => owned.instanceId !== deal.itemInstanceId,
     ),
-    buyerHand: [...buyer.hand, transferredItem],
+    requesterHand: [...requester.hand, transferredItem],
     pendingReviews: [
       {
         tradeId: deal.id,
-        reviewerId: seller.id,
-        targetPlayerId: buyer.id,
+        reviewerId: owner.id,
+        targetPlayerId: requester.id,
       },
       {
         tradeId: deal.id,
-        reviewerId: buyer.id,
-        targetPlayerId: seller.id,
+        reviewerId: requester.id,
+        targetPlayerId: owner.id,
       },
     ],
   };

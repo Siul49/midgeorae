@@ -105,7 +105,10 @@ function touch(room: Room) {
   room.updatedAt = now();
 }
 
-function toPublicPlayer(player: ServerPlayer): PublicPlayer {
+function toPublicPlayer(
+  player: ServerPlayer,
+  viewer: ServerPlayer | null,
+): PublicPlayer {
   return {
     id: player.id,
     name: player.name,
@@ -117,6 +120,9 @@ function toPublicPlayer(player: ServerPlayer): PublicPlayer {
     dislikes: player.dislikes,
     position: player.position,
     itemCount: player.hand.length,
+    publicItems: viewer
+      ? player.hand.map((item) => toItemSnapshot(item, viewer))
+      : [],
   };
 }
 
@@ -168,8 +174,8 @@ function visiblePendingDeal(
 
   if (
     !viewer ||
-    deal.sellerId === viewer.id ||
-    deal.buyerId === viewer.id ||
+    deal.ownerId === viewer.id ||
+    deal.requesterId === viewer.id ||
     deal.revealedBeforeDeal
   ) {
     return {
@@ -191,8 +197,8 @@ function visiblePendingDealItem(
 ): ItemCardSnapshot | null {
   if (!room.pendingDeal || !viewer) return null;
   const deal = room.pendingDeal;
-  const seller = room.players.find((player) => player.id === deal.sellerId);
-  const item = seller?.hand.find(
+  const owner = room.players.find((player) => player.id === deal.ownerId);
+  const item = owner?.hand.find(
     (candidate) => candidate.instanceId === deal.itemInstanceId,
   );
   if (!item) return null;
@@ -207,7 +213,7 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
     code: room.code,
     mode: room.mode,
     status: room.status,
-    players: room.players.map(toPublicPlayer),
+    players: room.players.map((player) => toPublicPlayer(player, viewer)),
     me: viewer
       ? {
           id: viewer.id,
@@ -346,54 +352,58 @@ function drawActionCard(room: Room, actor: ServerPlayer) {
   room.logs.push(`${actor.name}님이 행동카드 '${card.title}'을(를) 뽑았습니다.`);
 }
 
-function assertSaleAction(
+function assertTradeAction(
   card: ActionCardSnapshot | null,
 ): asserts card is ActionCardSnapshot & { type: PendingDeal["actionType"] } {
-  if (!isSaleAction(card)) {
-    throw new Error("판매 행동카드에서만 거래를 제안할 수 있습니다.");
+  if (!isTradeAction(card)) {
+    throw new Error("거래 행동카드에서만 거래를 신청할 수 있습니다.");
   }
 }
 
-function isSaleAction(
+function isTradeAction(
   card: ActionCardSnapshot | null,
 ): card is ActionCardSnapshot & { type: PendingDeal["actionType"] } {
-  return Boolean(card && ["sell", "freeGive", "directTrade"].includes(card.type));
+  return Boolean(
+    card && ["tradeRequest", "freeGive", "directTrade"].includes(card.type),
+  );
 }
 
-function listItemForSale(
+function requestTrade(
   room: Room,
   actor: ServerPlayer,
+  ownerId: string,
   itemInstanceId: string,
-  askingPrice: number,
-  targetPlayerId: string,
+  offerPrice: number,
 ) {
   assertPlaying(room);
   assertCurrentTurn(room, actor);
   const actionCard = room.currentActionCard;
-  assertSaleAction(actionCard);
+  assertTradeAction(actionCard);
   if (room.pendingDeal) throw new Error("이미 진행 중인 거래가 있습니다.");
 
-  const item = actor.hand.find((owned) => owned.instanceId === itemInstanceId);
-  if (!item) throw new Error("판매할 물건을 찾을 수 없습니다.");
-  const buyer = findPlayerById(room, targetPlayerId);
-  if (buyer.id === actor.id) throw new Error("자기 자신에게 판매할 수 없습니다.");
-  const price = actionCard.type === "freeGive" ? 0 : askingPrice;
+  const owner = findPlayerById(room, ownerId);
+  if (owner.id === actor.id) {
+    throw new Error("자기 자신에게 거래를 신청할 수 없습니다.");
+  }
+  const item = owner.hand.find((owned) => owned.instanceId === itemInstanceId);
+  if (!item) throw new Error("거래 신청할 물건을 찾을 수 없습니다.");
+  const price = actionCard.type === "freeGive" ? 0 : offerPrice;
   if (price < 0) throw new Error("가격이 올바르지 않습니다.");
-  if (buyer.money < price) throw new Error("구매자의 금액이 부족합니다.");
+  if (actor.money < price) throw new Error("신청자의 금액이 부족합니다.");
 
   const revealedBeforeDeal = actionCard.type === "directTrade";
   if (revealedBeforeDeal) {
     item.revealed = true;
     item.revealedToPlayerIds = Array.from(
-      new Set([...item.revealedToPlayerIds, buyer.id]),
+      new Set([...item.revealedToPlayerIds, actor.id]),
     );
   }
 
   room.pendingDeal = {
     id: randomUUID(),
     actionType: actionCard.type,
-    sellerId: actor.id,
-    buyerId: buyer.id,
+    requesterId: actor.id,
+    ownerId: owner.id,
     itemInstanceId,
     askingPrice: price,
     revealedBeforeDeal,
@@ -401,29 +411,29 @@ function listItemForSale(
     resolved: false,
   };
   room.logs.push(
-    `${actor.name}님이 ${buyer.name}님에게 ${formatWon(price)} 거래를 제안했습니다.`,
+    `${actor.name}님이 ${owner.name}님의 물건에 ${formatWon(price)} 거래를 신청했습니다.`,
   );
 }
 
 function resolveDeal(room: Room, deal: PendingDeal) {
-  const seller = findPlayerById(room, deal.sellerId);
-  const buyer = findPlayerById(room, deal.buyerId);
-  const sellerChoice = deal.choices[seller.id];
-  const buyerChoice = deal.choices[buyer.id];
-  if (!sellerChoice || !buyerChoice) return;
+  const owner = findPlayerById(room, deal.ownerId);
+  const requester = findPlayerById(room, deal.requesterId);
+  const ownerChoice = deal.choices[owner.id];
+  const requesterChoice = deal.choices[requester.id];
+  if (!ownerChoice || !requesterChoice) return;
 
-  if (sellerChoice === "cool" && buyerChoice === "cool") {
-    const settlement = settleAcceptedDeal({ deal, seller, buyer });
-    seller.money = settlement.sellerMoney;
-    buyer.money = settlement.buyerMoney;
-    seller.hand = settlement.sellerHand;
-    buyer.hand = settlement.buyerHand;
+  if (ownerChoice === "cool" && requesterChoice === "cool") {
+    const settlement = settleAcceptedDeal({ deal, owner, requester });
+    owner.money = settlement.ownerMoney;
+    requester.money = settlement.requesterMoney;
+    owner.hand = settlement.ownerHand;
+    requester.hand = settlement.requesterHand;
     room.pendingReviews.push(...settlement.pendingReviews);
     room.logs.push(
-      `${seller.name}님과 ${buyer.name}님의 쿨거래가 성사되었습니다.`,
+      `${requester.name}님과 ${owner.name}님의 쿨거래가 성사되었습니다.`,
     );
   } else {
-    room.logs.push(`${seller.name}님과 ${buyer.name}님의 거래가 취소되었습니다.`);
+    room.logs.push(`${requester.name}님과 ${owner.name}님의 거래가 취소되었습니다.`);
   }
 
   if (room.currentActionCard) room.discardPile.push(room.currentActionCard);
@@ -440,7 +450,7 @@ function chooseDealCard(
   assertPlaying(room);
   const deal = room.pendingDeal;
   if (!deal) throw new Error("진행 중인 거래가 없습니다.");
-  if (actor.id !== deal.sellerId && actor.id !== deal.buyerId) {
+  if (actor.id !== deal.ownerId && actor.id !== deal.requesterId) {
     throw new Error("거래 당사자만 선택할 수 있습니다.");
   }
   deal.choices[actor.id] = choice;
@@ -600,7 +610,7 @@ function autoResolveBotDeal(room: Room) {
   if (!deal) return false;
 
   let changed = false;
-  for (const playerId of [deal.sellerId, deal.buyerId]) {
+  for (const playerId of [deal.ownerId, deal.requesterId]) {
     const player = room.players.find((candidate) => candidate.id === playerId);
     if (player?.isBot && !deal.choices[player.id]) {
       deal.choices[player.id] = "cool";
@@ -653,28 +663,40 @@ function autoRunCurrentBotTurn(room: Room) {
   }
 
   const card = room.currentActionCard;
-  if (isSaleAction(card)) {
-    const item = actor.hand.find((owned) => !owned.isBrick) ?? actor.hand[0];
-    if (!item) {
+  if (isTradeAction(card)) {
+    const tradeOption = room.players
+      .filter((player) => player.id !== actor.id && player.hand.length > 0)
+      .sort((a, b) => Number(b.isBot) - Number(a.isBot))
+      .map((owner) => {
+        const item = owner.hand.find((owned) => !owned.isBrick) ?? owner.hand[0];
+        if (!item) return null;
+        const offerPrice =
+          card.type === "freeGive"
+            ? 0
+            : Math.max(0, Math.round((item.marketPrice * 0.8) / 10000) * 10000);
+        return { owner, item, offerPrice };
+      })
+      .find(
+        (
+          option,
+        ): option is {
+          owner: ServerPlayer;
+          item: ServerItemCard;
+          offerPrice: number;
+        } => Boolean(option && actor.money >= option.offerPrice),
+      );
+    if (!tradeOption) {
       botEndTurn(room, actor);
       return true;
     }
 
-    const askingPrice =
-      card.type === "freeGive"
-        ? 0
-        : Math.max(0, Math.round(item.marketPrice * 0.8 / 10000) * 10000);
-    const target = chooseBotTarget(
+    requestTrade(
       room,
       actor,
-      (player) => player.money >= askingPrice,
+      tradeOption.owner.id,
+      tradeOption.item.instanceId,
+      tradeOption.offerPrice,
     );
-    if (!target) {
-      botEndTurn(room, actor);
-      return true;
-    }
-
-    listItemForSale(room, actor, item.instanceId, askingPrice, target.id);
     return true;
   }
 
@@ -817,13 +839,13 @@ export function submitRoomAction(
     case "drawActionCard":
       drawActionCard(room, actor);
       break;
-    case "listItemForSale":
-      listItemForSale(
+    case "requestTrade":
+      requestTrade(
         room,
         actor,
+        action.ownerId,
         action.itemInstanceId,
-        action.askingPrice,
-        action.targetPlayerId,
+        action.offerPrice,
       );
       break;
     case "chooseDealCard":

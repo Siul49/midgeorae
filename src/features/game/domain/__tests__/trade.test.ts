@@ -40,15 +40,15 @@ function makePlayer(
 function makeDeal(overrides: Partial<PendingDeal> = {}): PendingDeal {
   return {
     id: "deal-1",
-    actionType: "sell",
-    sellerId: "seller",
-    buyerId: "buyer",
-    itemInstanceId: "seller-item-0",
+    actionType: "tradeRequest",
+    requesterId: "requester",
+    ownerId: "owner",
+    itemInstanceId: "owner-item-0",
     askingPrice: 120_000,
     revealedBeforeDeal: false,
     choices: {
-      seller: "cool",
-      buyer: "cool",
+      owner: "cool",
+      requester: "cool",
     },
     resolved: false,
     ...overrides,
@@ -57,56 +57,57 @@ function makeDeal(overrides: Partial<PendingDeal> = {}): PendingDeal {
 
 describe("game trade domain", () => {
   it("settles an accepted deal without mutating input players", () => {
-    const seller = makePlayer("seller", 300_000, [80_000]);
-    const buyer = makePlayer("buyer", 500_000, []);
+    const owner = makePlayer("owner", 300_000, [80_000]);
+    const requester = makePlayer("requester", 500_000, []);
     const deal = makeDeal();
 
-    const settlement = settleAcceptedDeal({ deal, seller, buyer });
+    const settlement = settleAcceptedDeal({ deal, owner, requester });
 
-    expect(settlement.sellerMoney).toBe(420_000);
-    expect(settlement.buyerMoney).toBe(380_000);
-    expect(settlement.sellerHand).toHaveLength(0);
-    expect(settlement.buyerHand).toHaveLength(1);
-    expect(settlement.buyerHand[0]).toMatchObject({
-      instanceId: "seller-item-0",
+    expect(settlement.ownerMoney).toBe(420_000);
+    expect(settlement.requesterMoney).toBe(380_000);
+    expect(settlement.ownerHand).toHaveLength(0);
+    expect(settlement.requesterHand).toHaveLength(1);
+    expect(settlement.requesterHand[0]).toMatchObject({
+      instanceId: "owner-item-0",
+      acquiredPrice: 120_000,
       revealed: true,
-      revealedToPlayerIds: ["seller", "buyer"],
+      revealedToPlayerIds: ["owner", "requester"],
     });
     expect(settlement.pendingReviews).toEqual([
       {
         tradeId: "deal-1",
-        reviewerId: "seller",
-        targetPlayerId: "buyer",
+        reviewerId: "owner",
+        targetPlayerId: "requester",
       },
       {
         tradeId: "deal-1",
-        reviewerId: "buyer",
-        targetPlayerId: "seller",
+        reviewerId: "requester",
+        targetPlayerId: "owner",
       },
     ]);
-    expect(seller.money).toBe(300_000);
-    expect(seller.hand).toHaveLength(1);
-    expect(buyer.money).toBe(500_000);
-    expect(buyer.hand).toHaveLength(0);
+    expect(owner.money).toBe(300_000);
+    expect(owner.hand).toHaveLength(1);
+    expect(requester.money).toBe(500_000);
+    expect(requester.hand).toHaveLength(0);
   });
 
-  it("rejects settlement when the seller no longer has the item", () => {
+  it("rejects settlement when the owner no longer has the item", () => {
     expect(() =>
       settleAcceptedDeal({
         deal: makeDeal({ itemInstanceId: "missing-item" }),
-        seller: makePlayer("seller", 300_000, [80_000]),
-        buyer: makePlayer("buyer", 500_000, []),
+        owner: makePlayer("owner", 300_000, [80_000]),
+        requester: makePlayer("requester", 500_000, []),
       }),
     ).toThrow("거래 물건을 찾을 수 없습니다.");
   });
 
-  it("rejects settlement when the buyer cannot pay the asking price", () => {
+  it("rejects settlement when the requester cannot pay the asking price", () => {
     expect(() =>
       settleAcceptedDeal({
         deal: makeDeal({ askingPrice: 600_000 }),
-        seller: makePlayer("seller", 300_000, [80_000]),
-        buyer: makePlayer("buyer", 500_000, []),
+        owner: makePlayer("owner", 300_000, [80_000]),
+        requester: makePlayer("requester", 500_000, []),
       }),
-    ).toThrow("구매자의 금액이 부족합니다.");
+    ).toThrow("신청자의 금액이 부족합니다.");
   });
 });

@@ -76,7 +76,7 @@ const SESSION_KEY = "midgeorae-online-session";
 const CARD_BACK = "/game-cards/backs/item-back.svg";
 
 const ACTION_PREVIEW_CARDS = [
-  { title: "거래 제안", body: "상대에게 가격을 제안합니다.", accent: "orange" },
+  { title: "거래 신청", body: "상대 물건에 가격을 제시합니다.", accent: "orange" },
   { title: "가격 협상", body: "가격을 조정합니다.", accent: "orange" },
   { title: "아이템 보호", body: "내 아이템을 1회 보호.", accent: "green" },
   { title: "즉시 구매", body: "시장 아이템을 즉시 구매.", accent: "orange" },
@@ -144,7 +144,7 @@ function actionIcon(type: ActionCardType) {
       return <Recycle size={18} />;
     case "swap":
       return <Repeat2 size={18} />;
-    case "sell":
+    case "tradeRequest":
     default:
       return <ShoppingBag size={18} />;
   }
@@ -192,8 +192,12 @@ function productIcon(item: ItemCardSnapshot) {
   }
 }
 
-function isSaleAction(card: ActionCardSnapshot | null) {
-  return card?.type === "sell" || card?.type === "freeGive" || card?.type === "directTrade";
+function isTradeRequestAction(card: ActionCardSnapshot | null) {
+  return (
+    card?.type === "tradeRequest" ||
+    card?.type === "freeGive" ||
+    card?.type === "directTrade"
+  );
 }
 
 export function MidgeoraeOnlineGame() {
@@ -228,6 +232,14 @@ export function MidgeoraeOnlineGame() {
     () => snapshot?.players.filter((player) => player.id !== me?.id) ?? [],
     [me?.id, snapshot?.players],
   );
+  const selectedOwner = useMemo(
+    () => otherPlayers.find((player) => player.id === dealTargetId),
+    [dealTargetId, otherPlayers],
+  );
+  const requestableItems = useMemo(
+    () => selectedOwner?.publicItems ?? [],
+    [selectedOwner?.publicItems],
+  );
   const currentAction = snapshot?.currentActionCard ?? null;
   const pendingDeal = snapshot?.pendingDeal ?? null;
   const pendingDealItem = snapshot?.pendingDealItem ?? null;
@@ -235,7 +247,7 @@ export function MidgeoraeOnlineGame() {
   const isDealParty = Boolean(
     pendingDeal &&
       me &&
-      (pendingDeal.sellerId === me.id || pendingDeal.buyerId === me.id),
+      (pendingDeal.ownerId === me.id || pendingDeal.requesterId === me.id),
   );
   const myDealChoice =
     pendingDeal && me ? pendingDeal.choices[me.id] : undefined;
@@ -331,10 +343,16 @@ export function MidgeoraeOnlineGame() {
   }, [session]);
 
   useEffect(() => {
-    if (myHand.length > 0 && !myHand.some((item) => item.instanceId === selectedItemId)) {
-      setSelectedItemId(myHand[0]?.instanceId ?? "");
+    const selectableItems = isTradeRequestAction(currentAction)
+      ? requestableItems
+      : myHand;
+    if (
+      selectableItems.length > 0 &&
+      !selectableItems.some((item) => item.instanceId === selectedItemId)
+    ) {
+      setSelectedItemId(selectableItems[0]?.instanceId ?? "");
     }
-  }, [myHand, selectedItemId]);
+  }, [currentAction, myHand, requestableItems, selectedItemId]);
 
   useEffect(() => {
     if (otherPlayers.length > 0 && !otherPlayers.some((player) => player.id === dealTargetId)) {
@@ -459,13 +477,13 @@ export function MidgeoraeOnlineGame() {
     }
   }
 
-  function listSelectedItem() {
+  function requestSelectedItem() {
     const price = currentAction?.type === "freeGive" ? 0 : askingPrice;
     void submitAction({
-      type: "listItemForSale",
+      type: "requestTrade",
+      ownerId: dealTargetId,
       itemInstanceId: selectedItemId,
-      askingPrice: price,
-      targetPlayerId: dealTargetId,
+      offerPrice: price,
     });
   }
 
@@ -691,6 +709,7 @@ export function MidgeoraeOnlineGame() {
                   selectedItemId={selectedItemId}
                   setSelectedItemId={setSelectedItemId}
                   otherPlayers={otherPlayers}
+                  requestableItems={requestableItems}
                   dealTargetId={dealTargetId}
                   setDealTargetId={setDealTargetId}
                   askingPrice={askingPrice}
@@ -700,7 +719,7 @@ export function MidgeoraeOnlineGame() {
                   pendingDealActive={Boolean(pendingDeal)}
                   currentPlayerName={currentPlayer?.name ?? ""}
                   onDraw={() => submitAction({ type: "drawActionCard" })}
-                  onListItem={listSelectedItem}
+                  onRequestTrade={requestSelectedItem}
                   onTerror={() =>
                     submitAction({
                       type: "terrorReview",
@@ -985,10 +1004,10 @@ function turnStateCopy({
       body: "아래 액션 패널에서 행동카드를 먼저 뽑으세요.",
     };
   }
-  if (isSaleAction(action)) {
+  if (isTradeRequestAction(action)) {
     return {
       title: `내 턴: ${action.title}`,
-      body: "내 손패에서 물건을 고르고 상대와 가격을 정해 거래를 제안하세요.",
+      body: "상대의 물건을 고르고 가격을 정해 거래를 신청하세요.",
     };
   }
   return {
@@ -1300,7 +1319,8 @@ function PendingDealPanel({
         <div>
           <h2 className="text-xl font-black text-orange-950">거래 진행 중</h2>
           <p className="mt-1 text-sm font-bold text-orange-800">
-            {playerName(snapshot, deal.sellerId)} → {playerName(snapshot, deal.buyerId)} ·{" "}
+            {playerName(snapshot, deal.requesterId)} →{" "}
+            {playerName(snapshot, deal.ownerId)} ·{" "}
             {moneyLabel(deal.askingPrice)}
           </p>
         </div>
@@ -1413,6 +1433,7 @@ function ActionPanel({
   selectedItemId,
   setSelectedItemId,
   otherPlayers,
+  requestableItems,
   dealTargetId,
   setDealTargetId,
   askingPrice,
@@ -1422,7 +1443,7 @@ function ActionPanel({
   pendingDealActive,
   currentPlayerName,
   onDraw,
-  onListItem,
+  onRequestTrade,
   onTerror,
   onRecycle,
   onSwap,
@@ -1436,6 +1457,7 @@ function ActionPanel({
   selectedItemId: string;
   setSelectedItemId: (value: string) => void;
   otherPlayers: PublicPlayer[];
+  requestableItems: ItemCardSnapshot[];
   dealTargetId: string;
   setDealTargetId: (value: string) => void;
   askingPrice: number;
@@ -1445,14 +1467,17 @@ function ActionPanel({
   pendingDealActive: boolean;
   currentPlayerName: string;
   onDraw: () => void;
-  onListItem: () => void;
+  onRequestTrade: () => void;
   onTerror: () => void;
   onRecycle: (itemInstanceId: string) => void;
   onSwap: () => void;
   onSkip: () => void;
   compact?: boolean;
 }) {
-  const selectedItem = myHand.find((item) => item.instanceId === selectedItemId);
+  const tradeActionActive = isTradeRequestAction(action);
+  const selectedItem = (
+    tradeActionActive ? requestableItems : myHand
+  ).find((item) => item.instanceId === selectedItemId);
   const bricks = myHand.filter((item) => item.isBrick);
   const recycleItemId = bricks.some((item) => item.instanceId === selectedItemId)
     ? selectedItemId
@@ -1511,7 +1536,7 @@ function ActionPanel({
             행동카드 뽑기
           </button>
         </div>
-      ) : isSaleAction(action) ? (
+      ) : tradeActionActive ? (
         <div
           className={
             compact
@@ -1526,21 +1551,26 @@ function ActionPanel({
             />
           </div>
           <div className="market-card-lane space-y-3 p-4">
-            <SelectLabel label="판매 물건">
+            <SelectLabel label="요청할 물건">
               <select
                 value={selectedItemId}
                 onChange={(event) => setSelectedItemId(event.target.value)}
                 className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
               >
-                {myHand.map((item) => (
+                {requestableItems.length === 0 ? (
+                  <option value="">요청할 물건 없음</option>
+                ) : (
+                  requestableItems.map((item) => (
                   <option key={item.instanceId} value={item.instanceId}>
                     {item.name} · {categoryLabel(item.category)} ·{" "}
-                    {conditionLabel(item.condition)} · 시장가 {moneyLabel(item.marketPrice)}
+                    {conditionLabel(item.condition)} · 시장가{" "}
+                    {item.revealed ? moneyLabel(item.marketPrice) : "비공개"}
                   </option>
-                ))}
+                  ))
+                )}
               </select>
             </SelectLabel>
-            <SelectLabel label="구매자">
+            <SelectLabel label="보유자">
               <select
                 value={dealTargetId}
                 onChange={(event) => setDealTargetId(event.target.value)}
@@ -1566,12 +1596,12 @@ function ActionPanel({
             </SelectLabel>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={onListItem}
-                disabled={!selectedItemId || !dealTargetId}
+                onClick={onRequestTrade}
+                disabled={!selectedItemId || !dealTargetId || requestableItems.length === 0}
                 className="motion-button inline-flex items-center justify-center gap-2 bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-orange-700 disabled:bg-stone-300"
               >
                 <Handshake size={17} />
-                거래 제안
+                거래 신청
               </button>
               <button
                 onClick={onSkip}
