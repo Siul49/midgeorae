@@ -5,7 +5,11 @@ export const MAX_PLAYERS = 5;
 export const LOBBY_MONEY = 0;
 export const STARTING_REPUTATION = 5;
 export const STARTING_MANNER = 36.5;
-export const DEFAULT_MAX_ROUNDS = 8;
+export const MARKET_ACTIONS_PER_PLAYER = 5;
+
+export function getMarketActionLimit(playerCount: number) {
+  return playerCount * MARKET_ACTIONS_PER_PLAYER;
+}
 
 export const JOB_CARDS: JobCardSnapshot[] = [
   {

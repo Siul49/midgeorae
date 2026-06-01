@@ -2,7 +2,7 @@
 
 이 문서는 `Siul49/midgeorae`의 열린 이슈를 다른 세션에서도 바로 이어서 작업할 수 있도록 정리한 참고 문서다. 각 이슈는 작은 브랜치에서 독립적으로 끝내고 병합하는 것을 원칙으로 한다.
 
-현재 `master`에 병합된 GAME-0A, GAME-0B, GAME-0C, GAME-6 작업 기록은 `docs/game/work-log-2026-06-01-game-0a-0b-0c-game-6.md`를 기준으로 본다.
+현재 `master`에 병합된 GAME-0A, GAME-0B, GAME-0C, GAME-6 작업 기록은 `docs/game/work-log-2026-06-01-game-0a-0b-0c-game-6.md`를 기준으로 본다. GAME-9, GAME-1, GAME-2까지의 이어진 작업 기록은 `docs/game/work-log-2026-06-01-game-through-game-2.md`를 기준으로 본다.
 
 ## 공통 작업 규칙
 
@@ -22,7 +22,7 @@
 4. [#4 GAME-6](https://github.com/Siul49/midgeorae/issues/4): 물품, 카테고리, 상태 데이터 확장
 5. [#5 GAME-9](https://github.com/Siul49/midgeorae/issues/5): 판매자 중심 거래 신청을 구매 주도 행동 카드로 재설계
 6. [#6 GAME-1](https://github.com/Siul49/midgeorae/issues/6): 거래 품목 공개와 숨은 위험 정보 보완
-7. [#7 GAME-2](https://github.com/Siul49/midgeorae/issues/7): 8턴 고정 규칙을 시장 진행도 기반 종료 조건으로 재설계
+7. [#7 GAME-2](https://github.com/Siul49/midgeorae/issues/7): 8턴 고정 규칙을 시장 진행도와 최종 신고로 재설계
 8. [#8 GAME-5](https://github.com/Siul49/midgeorae/issues/8): 평판 토큰을 신뢰도 시스템으로 재설계
 9. [#9 GAME-3](https://github.com/Siul49/midgeorae/issues/9): 시민 직업 규칙 문서화와 구현
 10. [#10 GAME-7](https://github.com/Siul49/midgeorae/issues/10): 빌런 행동 미션과 증거 시스템 추가
@@ -143,7 +143,7 @@
 - 검수자 직업은 이 검증 찬스를 더 강하게 쓰거나 보너스를 받는다.
 - 직거래 카드는 숨은 위험 정보를 확인하는 특수 거래 카드로 둔다.
 
-### GAME-2: 시장 진행도와 종료 조건
+### GAME-2: 시장 진행도와 최종 신고 전환
 
 8턴 고정 대신 시장 진행도로 바꾼다.
 
@@ -151,14 +151,14 @@
 
 - `marketActionLimit = playerCount * 5`
 - `usedActionCount / marketActionLimit`을 시장 진행도로 표시
-- 시장 마감 후 최종 투표
+- 시장 마감 후 최종 신고/분쟁 심사
 - 시장 마감 전 빌런 평판 0이면 시민 조기 승리
 - 시장 마감 시 빌런이 미션을 완료하고 정체를 피했으면 빌런 승리
 - 빌런이 정체를 피했지만 미션 미완료면 시민 방어 승리
 
 주의:
 
-- 턴을 너무 짧게 잡으면 평판 투표와 미션 수행이 의미 없어지므로 4인 기준 20행동을 1차 기준으로 본다.
+- 턴을 너무 짧게 잡으면 신고 판단과 미션 수행이 의미 없어지므로 4인 기준 20행동을 1차 기준으로 본다.
 
 ### GAME-5: 평판 시스템 개선
 
@@ -171,7 +171,7 @@
 - 불만 후기: 대상 평판 -1
 - 작성자 평판은 소모하지 않음
 - 빌런 평판 0: 시민 조기 승리
-- 시민 평판 0: 강제 투표 또는 시장 조기 마감 후보
+- 시민 평판 0: 강제 신고 또는 시장 조기 마감 후보
 
 주의:
 
@@ -190,7 +190,7 @@
 - 검수자: 숨은 위험 정보 확인
 - 흥정가: 가격 조정 거래 참여
 - 수집가: 같은 카테고리 3개 보유
-- 신고자: 증거 2개 이상 보유 후 빌런 투표
+- 신고자: 증거 2개 이상 보유 후 빌런 신고
 - 리셀러: 구매가보다 비싸게 2회 재판매
 
 ### GAME-7: 빌런 행동과 증거

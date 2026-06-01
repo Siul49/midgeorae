@@ -58,6 +58,21 @@ describe("room-store", () => {
 
     throw new Error(`Could not draw ${actionType}`);
   }
+
+  function currentTurnSession(
+    code: string,
+    sessions: ReturnType<typeof createRoom>[],
+  ) {
+    const currentTurnPlayerId = getRoomSnapshot(
+      code,
+      sessions[0]!.playerToken,
+    ).currentTurnPlayerId;
+    const session = sessions.find(
+      (candidate) => candidate.playerId === currentTurnPlayerId,
+    );
+    expect(session).toBeDefined();
+    return session!;
+  }
   it("creates a room and lets up to five players join", () => {
     const host = createRoom("경수");
 
@@ -174,6 +189,20 @@ describe("room-store", () => {
     expect(p3View.me?.hand).toHaveLength(5);
   });
 
+  it("sets the market action budget from the player count", () => {
+    const host = createRoom("경수");
+    joinRoom(host.room.code, "유현");
+    joinRoom(host.room.code, "윤식");
+    joinRoom(host.room.code, "환희");
+
+    const started = submitRoomAction(host.room.code, host.playerToken, {
+      type: "startGame",
+    });
+
+    expect(started.usedActionCount).toBe(0);
+    expect(started.marketActionLimit).toBe(20);
+  });
+
   it("includes item category, condition, and empty acquired price in private hands", () => {
     const host = createRoom("경수");
     joinRoom(host.room.code, "유현");
@@ -232,6 +261,54 @@ describe("room-store", () => {
     expect(() =>
       submitRoomAction(host.room.code, host.playerToken, { type: "addBot" }),
     ).toThrow("봇 테스트 방에서만 봇을 추가할 수 있습니다.");
+  });
+
+  it("counts market progress when a turn action is consumed, not when an action card is drawn", () => {
+    const host = createRoom("경수");
+    const p2 = joinRoom(host.room.code, "유현");
+    const p3 = joinRoom(host.room.code, "윤식");
+    const sessions = [host, p2, p3];
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const drawn = submitRoomAction(host.room.code, host.playerToken, {
+      type: "drawActionCard",
+    });
+    expect(drawn.usedActionCount).toBe(0);
+
+    const skipped = submitRoomAction(host.room.code, host.playerToken, {
+      type: "endTurn",
+    });
+    expect(skipped.usedActionCount).toBe(1);
+    expect(skipped.marketActionLimit).toBe(15);
+    expect(skipped.currentTurnPlayerId).toBe(p2.playerId);
+
+    const nextSession = currentTurnSession(host.room.code, sessions);
+    const nextSkipped = submitRoomAction(host.room.code, nextSession.playerToken, {
+      type: "endTurn",
+    });
+    expect(nextSkipped.usedActionCount).toBe(2);
+  });
+
+  it("moves to final reporting when the market action budget is exhausted", () => {
+    const host = createRoom("경수");
+    const p2 = joinRoom(host.room.code, "유현");
+    const p3 = joinRoom(host.room.code, "윤식");
+    const sessions = [host, p2, p3];
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    let snapshot = getRoomSnapshot(host.room.code, host.playerToken);
+    while (snapshot.usedActionCount < snapshot.marketActionLimit) {
+      const session = currentTurnSession(host.room.code, sessions);
+      snapshot = submitRoomAction(host.room.code, session.playerToken, {
+        type: "endTurn",
+      });
+    }
+
+    expect(snapshot.status).toBe("reporting");
+    expect(snapshot.usedActionCount).toBe(15);
+    expect(snapshot.marketActionLimit).toBe(15);
+    expect(snapshot.currentTurnPlayerId).toBeNull();
+    expect(snapshot.logs.some((log) => log.includes("시장 마감"))).toBe(true);
   });
 
   it("rejects starting with fewer than three players", () => {
@@ -666,7 +743,7 @@ describe("room-store", () => {
     ).toThrow("현재 턴 플레이어만 할 수 있습니다.");
   });
 
-  it("finishes the game after every player votes for the villain", () => {
+  it("finishes the game after every player reports a suspicious trader", () => {
     const host = createRoom("경수");
     const p2 = joinRoom(host.room.code, "유현");
     const p3 = joinRoom(host.room.code, "윤식");
@@ -677,6 +754,9 @@ describe("room-store", () => {
     const started = getRoomSnapshot(host.room.code, host.playerToken);
     const target = started.players.find((player) => player.id !== host.playerId);
     expect(target).toBeDefined();
+    submitRoomAction(host.room.code, host.playerToken, {
+      type: "startReporting",
+    });
 
     for (const token of [
       host.playerToken,
@@ -686,7 +766,7 @@ describe("room-store", () => {
       p5.playerToken,
     ]) {
       submitRoomAction(host.room.code, token, {
-        type: "voteVillain",
+        type: "reportSuspiciousPlayer",
         targetPlayerId: target!.id,
       });
     }
@@ -694,5 +774,6 @@ describe("room-store", () => {
     const finished = getRoomSnapshot(host.room.code, host.playerToken);
     expect(finished.status).toBe("finished");
     expect(finished.result).toBeDefined();
+    expect(finished.result?.reports[target!.id]).toBe(5);
   });
 });

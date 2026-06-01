@@ -31,14 +31,14 @@
 | 플레이어 인증과 토큰 확인 | `room-store.ts` | `server` |
 | 호스트 권한, 인원 제한 검증 | `room-store.ts` | `server` |
 | 역할, 직업, 빌런 미션 배정 | `room-store.ts` | `rules` 또는 `domain` |
-| 시작 자금, 평판, 라운드 같은 밸런스 상수 | `room-store.ts` | `rules` |
+| 시작 자금, 평판, 시장 진행도 같은 밸런스 상수 | `room-store.ts` | `rules` |
 | 행동 카드 뽑기와 덱 보충 | `room-store.ts`, `cards.ts` | `rules`와 `server` |
 | 거래 제안, 거래 선택, 거래 성사 처리 | `room-store.ts` | `domain` 판정 + `server` 적용 |
 | 거래 물건 공개 범위 필터링 | `room-store.ts` | `domain` 또는 `server` snapshot 정책 |
 | 후기와 평판 변화 | `room-store.ts` | `domain` |
 | 악플테러, 분리수거, 물물교환 액션 처리 | `room-store.ts` | `domain` 판정 + `server` 적용 |
-| 라운드 진행과 투표 전환 | `room-store.ts` | `domain` 또는 `rules` |
-| 투표 집계, 결과 계산 | `room-store.ts` | `domain` |
+| 시장 진행도와 최종 신고 전환 | `room-store.ts` | `domain` 또는 `rules` |
+| 신고 집계, 결과 계산 | `room-store.ts` | `domain` |
 | 봇 대상 선택과 자동 플레이 | `room-store.ts` | `server/bot` 또는 `server` 하위 모듈 |
 | 플레이어별 공개 스냅샷 생성 | `room-store.ts` | `server` |
 | 테스트용 방 초기화 | `room-store.ts` | `server` |
@@ -71,7 +71,7 @@
 - 거래 성사 시 자산과 보유 카드 변경 결과 계산
 - 후기와 평판 변화 계산
 - 시장 종료 조건 판정
-- 투표 결과와 승리 조건 계산
+- 신고 결과와 승리 조건 계산
 - 직업 미션 진행도 판정
 - 빌런 미션 진행도와 증거 판정
 
@@ -103,7 +103,7 @@
 - 카드 테이블
 - 거래 패널
 - 후기와 평판 패널
-- 투표와 결과 패널
+- 최종 신고와 결과 패널
 - 개인 손패, 직업, 미션 표시
 
 UI는 서버 스냅샷을 기준으로 렌더링하고, 규칙 계산을 직접 재구현하지 않는다.
@@ -135,7 +135,7 @@ UI는 서버 스냅샷을 기준으로 렌더링하고, 규칙 계산을 직접 
 | GAME-6 물품 데이터 확장 | `rules` 또는 `data`, `server/cards.ts`, UI 표시 영역 | 카테고리, 시세, 상태, 위험 태그의 기반이다. |
 | GAME-9 구매 주도 거래 신청 | `domain`, `server`, `online` | 거래 상태 모델과 UI 문구가 함께 바뀐다. |
 | GAME-1 거래 품목 공개와 숨은 위험 | `domain`, `server` snapshot, `online` | 공개 정보와 숨은 위험 정보의 경계가 핵심이다. |
-| GAME-2 시장 진행도와 종료 조건 | `rules`, `domain`, `server`, `online` | `maxRounds`를 대체할 시장 진행도 판정이 필요하다. |
+| GAME-2 시장 진행도와 종료 조건 | `rules`, `domain`, `server`, `online` | `maxRounds`를 대체할 시장 진행도와 최종 신고 전환 판정이 필요하다. |
 | GAME-5 평판 시스템 개선 | `rules`, `domain`, `server`, `online` | 평판을 화폐가 아니라 공개 신뢰도로 재정의한다. |
 | GAME-3 시민 직업 규칙 | `docs/game/rules`, `rules`, `domain`, `online` | 문서 확정 후 판정 함수와 UI를 붙인다. |
 | GAME-7 빌런 행동과 증거 | `rules`, `domain`, `server`, `online` | 로그와 증거 판정을 함께 설계해야 한다. |
