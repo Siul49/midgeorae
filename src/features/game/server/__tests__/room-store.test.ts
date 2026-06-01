@@ -407,6 +407,87 @@ describe("room-store", () => {
     });
   });
 
+  it("shows public item info during a normal trade and reveals hidden risk one turn later", () => {
+    const host = createRoom("A");
+    const p2 = joinRoom(host.room.code, "B");
+    const p3 = joinRoom(host.room.code, "C");
+    joinRoom(host.room.code, "D");
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+
+    const ownerItem = getRoomSnapshot(host.room.code, p2.playerToken).me!.hand!.find(
+      (item) => !item.isBrick,
+    );
+    expect(ownerItem).toBeDefined();
+
+    submitRoomAction(host.room.code, host.playerToken, {
+      type: "requestTrade",
+      ownerId: p2.playerId,
+      itemInstanceId: ownerItem!.instanceId,
+      offerPrice: 120000,
+    });
+
+    const requesterDealView = getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerDealView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const nonPartyDealView = getRoomSnapshot(host.room.code, p3.playerToken);
+
+    expect(requesterDealView.pendingDealItem).toMatchObject({
+      instanceId: ownerItem!.instanceId,
+      id: ownerItem!.id,
+      name: ownerItem!.name,
+      category: ownerItem!.category,
+      marketPrice: ownerItem!.marketPrice,
+      condition: null,
+      isBrick: false,
+      revealed: false,
+    });
+    expect(ownerDealView.pendingDealItem).toMatchObject({
+      instanceId: ownerItem!.instanceId,
+      category: ownerItem!.category,
+      condition: null,
+      revealed: false,
+    });
+    expect(nonPartyDealView.pendingDealItem).toMatchObject({
+      category: null,
+      marketPrice: 0,
+      condition: null,
+      revealed: false,
+    });
+
+    submitRoomAction(host.room.code, host.playerToken, {
+      type: "chooseDealCard",
+      choice: "cool",
+    });
+    submitRoomAction(host.room.code, p2.playerToken, {
+      type: "chooseDealCard",
+      choice: "cool",
+    });
+
+    const requesterAfterDeal = getRoomSnapshot(host.room.code, host.playerToken);
+    const boughtItem = requesterAfterDeal.me!.hand!.find(
+      (item) => item.instanceId === ownerItem!.instanceId,
+    );
+    expect(boughtItem).toMatchObject({
+      category: ownerItem!.category,
+      marketPrice: ownerItem!.marketPrice,
+      condition: null,
+      isBrick: false,
+      revealed: false,
+    });
+
+    submitRoomAction(host.room.code, p2.playerToken, { type: "endTurn" });
+
+    const requesterAfterDelivery = getRoomSnapshot(host.room.code, host.playerToken);
+    const deliveredItem = requesterAfterDelivery.me!.hand!.find(
+      (item) => item.instanceId === ownerItem!.instanceId,
+    );
+    expect(deliveredItem).toMatchObject({
+      condition: ownerItem!.condition,
+      isBrick: ownerItem!.isBrick,
+      revealed: true,
+    });
+  });
+
   it("completes a trade request only when requester and owner both choose cool deal", () => {
     const host = createRoom("A");
     const p2 = joinRoom(host.room.code, "B");

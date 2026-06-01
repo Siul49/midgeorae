@@ -34,6 +34,7 @@ export interface ItemCardSnapshot {
 
 export interface ServerItemCard extends ItemCardSnapshot {
   revealedToPlayerIds: string[];
+  hiddenInfoRevealTurn?: number;
 }
 
 export interface ActionCardSnapshot {
@@ -56,6 +57,7 @@ export interface PendingDeal {
   itemInstanceId: string;
   askingPrice: number;
   revealedBeforeDeal: boolean;
+  hiddenInfoRevealTurn?: number;
   choices: Partial<Record<string, DealCardChoice>>;
   resolved: boolean;
 }
@@ -121,6 +123,7 @@ export interface Room {
   hostPlayerId: string;
   players: ServerPlayer[];
   currentTurnPlayerId: string | null;
+  turnCount: number;
   round: number;
   maxRounds: number;
   logs: string[];

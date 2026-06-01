@@ -28,9 +28,14 @@ export function settleAcceptedDeal({
   const transferredItem: ServerItemCard = {
     ...item,
     acquiredPrice: deal.askingPrice,
-    revealed: true,
+    hiddenInfoRevealTurn: deal.hiddenInfoRevealTurn,
+    revealed: false,
     revealedToPlayerIds: Array.from(
-      new Set([...item.revealedToPlayerIds, owner.id, requester.id]),
+      new Set([
+        ...item.revealedToPlayerIds,
+        owner.id,
+        ...(deal.revealedBeforeDeal ? [requester.id] : []),
+      ]),
     ),
   };
 

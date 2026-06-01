@@ -70,8 +70,8 @@ describe("game trade domain", () => {
     expect(settlement.requesterHand[0]).toMatchObject({
       instanceId: "owner-item-0",
       acquiredPrice: 120_000,
-      revealed: true,
-      revealedToPlayerIds: ["owner", "requester"],
+      revealed: false,
+      revealedToPlayerIds: ["owner"],
     });
     expect(settlement.pendingReviews).toEqual([
       {
@@ -89,6 +89,21 @@ describe("game trade domain", () => {
     expect(owner.hand).toHaveLength(1);
     expect(requester.money).toBe(500_000);
     expect(requester.hand).toHaveLength(0);
+  });
+
+  it("keeps direct trade items revealed for both trading players", () => {
+    const owner = makePlayer("owner", 300_000, [80_000]);
+    const requester = makePlayer("requester", 500_000, []);
+    const deal = makeDeal({ actionType: "directTrade", revealedBeforeDeal: true });
+
+    const settlement = settleAcceptedDeal({ deal, owner, requester });
+
+    expect(settlement.requesterHand[0]).toMatchObject({
+      instanceId: "owner-item-0",
+      acquiredPrice: 120_000,
+      revealed: false,
+      revealedToPlayerIds: ["owner", "requester"],
+    });
   });
 
   it("rejects settlement when the owner no longer has the item", () => {

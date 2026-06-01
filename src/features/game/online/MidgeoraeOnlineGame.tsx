@@ -129,7 +129,7 @@ function categoryLabel(category: ItemCardSnapshot["category"]) {
 }
 
 function conditionLabel(condition: ItemCardSnapshot["condition"]) {
-  return condition ? CONDITION_LABELS[condition] : "미공개";
+  return condition ? CONDITION_LABELS[condition] : "상태 미확인";
 }
 
 function actionIcon(type: ActionCardType) {
@@ -926,9 +926,9 @@ function TableHandCard({
           {item.name}
         </div>
         <div className="mt-1 text-xs font-black text-orange-700">
-          {item.revealed ? moneyLabel(item.marketPrice) : "비공개"}
+          {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
         </div>
-        {item.revealed && item.category && item.condition && (
+        {item.category && (
           <div className="mt-2 text-[10px] font-black text-stone-500">
             {categoryLabel(item.category)} · {conditionLabel(item.condition)}
           </div>
@@ -1341,9 +1341,9 @@ function PendingDealPanel({
             {item?.name ?? "뒤집힌 물건"}
           </div>
           <div className="mt-2 text-sm font-bold text-stone-500">
-            시장가 {item?.revealed ? moneyLabel(item.marketPrice) : "비공개"}
+            시장가 {item && item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
           </div>
-          {item?.revealed && item.category && item.condition && (
+          {item?.category && (
             <div className="mt-2 text-xs font-black text-stone-500">
               {categoryLabel(item.category)} · {conditionLabel(item.condition)}
             </div>
@@ -1564,7 +1564,7 @@ function ActionPanel({
                   <option key={item.instanceId} value={item.instanceId}>
                     {item.name} · {categoryLabel(item.category)} ·{" "}
                     {conditionLabel(item.condition)} · 시장가{" "}
-                    {item.revealed ? moneyLabel(item.marketPrice) : "비공개"}
+                    {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
                   </option>
                   ))
                 )}

@@ -108,6 +108,7 @@ function touch(room: Room) {
 function toPublicPlayer(
   player: ServerPlayer,
   viewer: ServerPlayer | null,
+  room: Room,
 ): PublicPlayer {
   return {
     id: player.id,
@@ -121,7 +122,7 @@ function toPublicPlayer(
     position: player.position,
     itemCount: player.hand.length,
     publicItems: viewer
-      ? player.hand.map((item) => toItemSnapshot(item, viewer))
+      ? player.hand.map((item) => toItemSnapshot(item, viewer, room))
       : [],
   };
 }
@@ -141,12 +142,43 @@ function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
   };
 }
 
+function publicItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
+  if (item.isBrick) return hiddenItemSnapshot(item);
+
+  return {
+    instanceId: item.instanceId,
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    condition: null,
+    marketPrice: item.marketPrice,
+    acquiredPrice: item.acquiredPrice,
+    isBrick: false,
+    imagePath: item.imagePath,
+    revealed: false,
+  };
+}
+
 function toItemSnapshot(
   item: ServerItemCard,
   viewer: ServerPlayer,
+  room: Room,
+  {
+    allowPublicInfo = false,
+    allowTimedReveal = false,
+  }: { allowPublicInfo?: boolean; allowTimedReveal?: boolean } = {},
 ): ItemCardSnapshot {
   const revealed =
-    item.revealed || item.revealedToPlayerIds.includes(viewer.id);
+    item.revealed ||
+    item.revealedToPlayerIds.includes(viewer.id) ||
+    (allowTimedReveal &&
+      item.hiddenInfoRevealTurn !== undefined &&
+      room.turnCount >= item.hiddenInfoRevealTurn);
+
+  if (!revealed) {
+    return allowPublicInfo ? publicItemSnapshot(item) : hiddenItemSnapshot(item);
+  }
+
   return {
     instanceId: item.instanceId,
     id: item.id,
@@ -175,8 +207,7 @@ function visiblePendingDeal(
   if (
     !viewer ||
     deal.ownerId === viewer.id ||
-    deal.requesterId === viewer.id ||
-    deal.revealedBeforeDeal
+    deal.requesterId === viewer.id
   ) {
     return {
       ...deal,
@@ -203,9 +234,12 @@ function visiblePendingDealItem(
   );
   if (!item) return null;
 
-  if (!deal.revealedBeforeDeal) return hiddenItemSnapshot(item);
+  const isDealParty =
+    deal.ownerId === viewer.id || deal.requesterId === viewer.id;
+  if (!isDealParty) return hiddenItemSnapshot(item);
+  if (!deal.revealedBeforeDeal) return publicItemSnapshot(item);
 
-  return toItemSnapshot(item, viewer);
+  return toItemSnapshot(item, viewer, room);
 }
 
 function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
@@ -213,7 +247,7 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
     code: room.code,
     mode: room.mode,
     status: room.status,
-    players: room.players.map((player) => toPublicPlayer(player, viewer)),
+    players: room.players.map((player) => toPublicPlayer(player, viewer, room)),
     me: viewer
       ? {
           id: viewer.id,
@@ -225,7 +259,12 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
           job: viewer.job,
           money: viewer.money,
           reputationTokens: viewer.reputationTokens,
-          hand: viewer.hand.map((item) => toItemSnapshot(item, viewer)),
+          hand: viewer.hand.map((item) =>
+            toItemSnapshot(item, viewer, room, {
+              allowPublicInfo: true,
+              allowTimedReveal: true,
+            }),
+          ),
           dealCards: viewer.dealCards,
         }
       : null,
@@ -265,6 +304,8 @@ function assertPlaying(room: Room) {
 }
 
 function nextTurn(room: Room) {
+  room.turnCount += 1;
+
   if (!room.currentTurnPlayerId) {
     room.currentTurnPlayerId = room.players[0]?.id ?? null;
     return;
@@ -393,9 +434,8 @@ function requestTrade(
 
   const revealedBeforeDeal = actionCard.type === "directTrade";
   if (revealedBeforeDeal) {
-    item.revealed = true;
     item.revealedToPlayerIds = Array.from(
-      new Set([...item.revealedToPlayerIds, actor.id]),
+      new Set([...item.revealedToPlayerIds, owner.id, actor.id]),
     );
   }
 
@@ -423,7 +463,16 @@ function resolveDeal(room: Room, deal: PendingDeal) {
   if (!ownerChoice || !requesterChoice) return;
 
   if (ownerChoice === "cool" && requesterChoice === "cool") {
-    const settlement = settleAcceptedDeal({ deal, owner, requester });
+    const settlement = settleAcceptedDeal({
+      deal: {
+        ...deal,
+        hiddenInfoRevealTurn: deal.revealedBeforeDeal
+          ? undefined
+          : room.turnCount + 2,
+      },
+      owner,
+      requester,
+    });
     owner.money = settlement.ownerMoney;
     requester.money = settlement.requesterMoney;
     owner.hand = settlement.ownerHand;
@@ -769,6 +818,7 @@ export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionRe
     hostPlayerId: player.id,
     players: [player],
     currentTurnPlayerId: null,
+    turnCount: 0,
     round: 1,
     maxRounds: DEFAULT_MAX_ROUNDS,
     logs: [
