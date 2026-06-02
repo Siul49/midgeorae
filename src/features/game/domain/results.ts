@@ -20,13 +20,17 @@ export function calculateReportResult(
   players: ServerPlayer[],
   reports: Record<string, string>,
   villainId: string,
+  villainMissionComplete: boolean = false,
 ): RoomResult {
   const countedReports = countReports(reports);
   const mostReportedId =
     Object.entries(countedReports).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
   const villainCaught = mostReportedId === villainId;
 
-  const eligiblePlayers = villainCaught
+  const villainWon = !villainCaught && villainMissionComplete;
+  const winningSide = villainWon ? "villain" : "citizens";
+
+  const eligiblePlayers = winningSide === "citizens"
     ? players.filter((player) => player.id !== villainId)
     : players;
   const winnerId =
@@ -37,7 +41,7 @@ export function calculateReportResult(
     villainId,
     villainCaught,
     winnerId,
-    winningSide: villainCaught ? "citizens" : "villain",
+    winningSide,
     reports: countedReports,
   };
 }

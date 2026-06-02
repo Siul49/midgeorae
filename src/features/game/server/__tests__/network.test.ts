@@ -79,6 +79,11 @@ describe("network helpers", () => {
   });
 
   it("builds allowed Next.js dev origins for LAN addresses", () => {
-    expect(buildAllowedDevOrigins(sampleInterfaces)).toEqual(["192.168.0.12"]);
+    expect(buildAllowedDevOrigins(sampleInterfaces)).toEqual([
+      "localhost",
+      "127.0.0.1",
+      "::1",
+      "192.168.0.12",
+    ]);
   });
 });

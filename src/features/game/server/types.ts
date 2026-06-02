@@ -25,7 +25,8 @@ export interface ItemCardSnapshot {
   name: string;
   category: ItemCategory | null;
   condition: ItemCondition | null;
-  marketPrice: number;
+  originalPrice: number; // in 원 (정가)
+  marketPrice: number; // in 원 (중고 시세)
   acquiredPrice: number | null;
   isBrick: boolean;
   imagePath: string;
@@ -60,6 +61,9 @@ export interface PendingDeal {
   hiddenInfoRevealTurn?: number;
   choices: Partial<Record<string, DealCardChoice>>;
   resolved: boolean;
+  currentOffer?: number;
+  lastOfferPlayerId?: string;
+  negoCount?: number;
 }
 
 export interface PendingReview {
@@ -86,6 +90,16 @@ export interface ServerPlayer {
   hand: ServerItemCard[];
   dealCards: DealCards;
   connectedAt: number;
+  tradeParticipations: number;
+  negoOffersSent: number;
+  reviewsSubmitted: number;
+  inspectTokens: number;
+  negoTokens: number;
+  evidenceTokens: number;
+  // 빌런 사기 미션 카운터 추가
+  brickSalesCount: number;
+  defectSalesCount: number;
+  overpriceSalesCount: number;
 }
 
 export interface PublicPlayer {
@@ -110,10 +124,12 @@ export interface PublicPlayer {
 export interface RoomResult {
   villainId?: string;
   villainCaught?: boolean;
+  villainMissionComplete?: boolean;
   winnerId: string;
   winningSide?: "citizens" | "villain";
   eliminatedPlayerId?: string;
   reports: Record<string, number>;
+  finalScores?: Record<string, { totalMoney: number }>;
 }
 
 export interface Room {
@@ -151,6 +167,9 @@ export interface PlayerSnapshot {
   reputationTokens?: number;
   hand?: ItemCardSnapshot[];
   dealCards?: DealCards;
+  inspectTokens?: number;
+  negoTokens?: number;
+  evidenceTokens?: number;
 }
 
 export interface RoomSnapshot {
@@ -183,6 +202,7 @@ export type RoomAction =
       offerPrice: number;
     }
   | { type: "chooseDealCard"; choice: DealCardChoice }
+  | { type: "negoDeal"; price: number }
   | {
       type: "reviewTrade";
       targetPlayerId: string;

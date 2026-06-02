@@ -13,39 +13,33 @@ export function getMarketActionLimit(playerCount: number) {
 
 export const JOB_CARDS: JobCardSnapshot[] = [
   {
-    id: "student",
-    title: "알뜰 학생",
-    description: "현금은 적지만 거래 감각이 빠릅니다.",
-    startingMoney: 700000,
-  },
-  {
-    id: "collector",
-    title: "수집가",
-    description: "물건의 가치를 오래 보는 타입입니다.",
+    id: "inspector",
+    title: "검수자",
+    description: "물건 상태를 정밀 진단합니다. 미션: 다른 플레이어와 2회 거래 시도.",
     startingMoney: 900000,
   },
   {
-    id: "office-worker",
-    title: "직장인",
-    description: "평균보다 여유 있는 예산으로 시작합니다.",
-    startingMoney: 1100000,
-  },
-  {
-    id: "reseller",
-    title: "되팔이 고수",
-    description: "큰돈을 들고 시작하지만 견제도 받기 쉽습니다.",
-    startingMoney: 1300000,
-  },
-  {
-    id: "part-timer",
-    title: "알바왕",
-    description: "무난한 예산과 빠른 판단으로 판을 읽습니다.",
+    id: "negotiator",
+    title: "흥정가",
+    description: "가격 조정을 주도합니다. 미션: 시세와 다른 가격의 거래 신청 2회 전송.",
     startingMoney: 1000000,
+  },
+  {
+    id: "reporter",
+    title: "신고자",
+    description: "상대방의 행동을 분석합니다. 미션: 거래 후기(좋아요/싫어요) 2회 이상 작성.",
+    startingMoney: 1100000,
   },
 ];
 
 export const VILLAIN_MISSIONS = [
-  "좋아요 토큰을 선물하며 다른 시민을 빌런처럼 보이게 만드세요.",
-  "시민 한 명의 좋아요 토큰을 0개로 만들도록 여론을 유도하세요.",
-  "거래 취소와 악평을 이용해 본인의 정체를 숨기세요.",
+  "VILLAIN_MISSION_BRICK",
+  "VILLAIN_MISSION_DEFECT",
+  "VILLAIN_MISSION_OVERPRICE",
 ];
+
+export const VILLAIN_MISSION_DESCRIPTIONS: Record<string, string> = {
+  VILLAIN_MISSION_BRICK: "벽돌 카드가 포함된 거래를 판매자로서 1회 이상 성공시키세요.",
+  VILLAIN_MISSION_DEFECT: "하자 있는 물품(결함/파손)을 시세 이상의 가격으로 판매 완료하세요.",
+  VILLAIN_MISSION_OVERPRICE: "물품 시세 대비 110% 이상의 가격으로 판매 완료 2회 이상 달성하세요.",
+};

@@ -1,9 +1,0 @@
-<svg width="420" height="600" viewBox="0 0 420 600" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="420" height="600" rx="28" fill="#f0fdfa"/>
-  <rect x="18" y="18" width="384" height="564" rx="22" stroke="#0f766e" stroke-width="8"/>
-  <text x="210" y="94" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" font-weight="700" fill="#115e59">분리수거</text>
-  <path d="M216 155l54 94h-37l-22 39-37-65 42-68Z" fill="#99f6e4" stroke="#0f766e" stroke-width="10" stroke-linejoin="round"/>
-  <path d="M286 270l54 94-42 24h-76l18-32h45l-33-58 34-28Z" fill="#ccfbf1" stroke="#0f766e" stroke-width="10" stroke-linejoin="round"/>
-  <path d="M164 314l-54 94 42 24h76l-18-32h-45l33-58-34-28Z" fill="#5eead4" stroke="#0f766e" stroke-width="10" stroke-linejoin="round"/>
-  <text x="210" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#115e59">벽돌 1장을 제거합니다</text>
-</svg>

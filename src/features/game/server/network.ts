@@ -77,5 +77,6 @@ export function buildLanInviteUrls({
 }
 
 export function buildAllowedDevOrigins(interfaces?: MinimalNetworkInterfaces) {
-  return getUsableLanIpv4Addresses(interfaces);
+  const lanAddresses = getUsableLanIpv4Addresses(interfaces);
+  return ["localhost", "127.0.0.1", "::1", ...lanAddresses];
 }

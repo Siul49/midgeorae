@@ -28,7 +28,8 @@ export interface Item {
   id: string;
   name: string;
   emoji: string;
-  marketPrice: number; // in 원
+  originalPrice: number; // in 원 (정가)
+  marketPrice: number; // in 원 (중고 시세)
   category: ItemCategory;
   condition: ItemCondition;
 }

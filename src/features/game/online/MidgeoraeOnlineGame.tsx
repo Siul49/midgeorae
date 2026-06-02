@@ -26,6 +26,7 @@ import {
   Guitar,
   Handshake,
   Headphones,
+  HelpCircle,
   Keyboard,
   Laptop,
   LogOut,
@@ -35,6 +36,7 @@ import {
   Recycle,
   RefreshCw,
   Repeat2,
+  Search,
   Shirt,
   ShoppingBag,
   Smartphone,
@@ -45,8 +47,11 @@ import {
   ThumbsUp,
   Users,
   Watch,
+  FileText,
+  Store,
 } from "lucide-react";
 import Image from "next/image";
+import { GameTutorialModal } from "../components/GameTutorialModal";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../rules/game-rules";
 import type {
   ActionCardSnapshot,
@@ -59,6 +64,7 @@ import type {
   RoomMode,
   RoomSessionResult,
   RoomSnapshot,
+  PlayerSnapshot,
 } from "@/features/game/server/types";
 
 interface Session {
@@ -72,7 +78,7 @@ interface NetworkInviteResponse {
 }
 
 const SESSION_KEY = "midgeorae-online-session";
-const CARD_BACK = "/game-cards/backs/item-back.svg";
+const CARD_BACK = "/game-cards/backs/item-back.png";
 
 const ACTION_PREVIEW_CARDS = [
   { title: "거래 신청", body: "상대 물건에 가격을 제시합니다.", accent: "orange" },
@@ -208,6 +214,10 @@ export function MidgeoraeOnlineGame() {
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [session, setSession] = useState<Session | null>(null);
+  const [pendingDealItem, setPendingDealItem] =
+    useState<ItemCardSnapshot | null>(null);
+
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -219,12 +229,14 @@ export function MidgeoraeOnlineGame() {
   const [actionTargetId, setActionTargetId] = useState("");
   const sessionRef = useRef<Session | null>(null);
   const sessionChangeRef = useRef(0);
+  const tutorialShownRef = useRef(false);
 
   const shareUrl = useMemo(() => {
     if (!session || typeof window === "undefined") return "";
     return `${window.location.origin}/game?room=${session.code}`;
   }, [session]);
   const primaryInviteUrl = lanInviteUrls[0] ?? shareUrl;
+  const networkUrls = lanInviteUrls.length > 0 ? lanInviteUrls : [shareUrl];
 
   const me = snapshot?.me ?? null;
   const myHand = useMemo(() => me?.hand ?? [], [me?.hand]);
@@ -246,7 +258,7 @@ export function MidgeoraeOnlineGame() {
   );
   const currentAction = snapshot?.currentActionCard ?? null;
   const pendingDeal = snapshot?.pendingDeal ?? null;
-  const pendingDealItem = snapshot?.pendingDealItem ?? null;
+  const tradeActionActive = isTradeRequestAction(currentAction);
   const pendingReviews = snapshot?.pendingReviews ?? [];
   const isDealParty = Boolean(
     pendingDeal &&
@@ -357,6 +369,30 @@ export function MidgeoraeOnlineGame() {
       setSelectedItemId(selectableItems[0]?.instanceId ?? "");
     }
   }, [currentAction, myHand, requestableItems, selectedItemId]);
+
+  useEffect(() => {
+    if (currentAction?.type === "freeGive") {
+      setAskingPrice(0);
+      return;
+    }
+    const selectableItems = isTradeRequestAction(currentAction)
+      ? requestableItems
+      : myHand;
+    const selected = selectableItems.find((item) => item.instanceId === selectedItemId);
+    if (selected && selected.originalPrice) {
+      setAskingPrice(selected.originalPrice);
+    }
+  }, [selectedItemId, currentAction, requestableItems, myHand]);
+
+  useEffect(() => {
+    if (snapshot?.status === "playing" && !tutorialShownRef.current) {
+      tutorialShownRef.current = true;
+      const doNotShow = localStorage.getItem("midgeorae-tutorial-hide");
+      if (!doNotShow) {
+        setIsTutorialOpen(true);
+      }
+    }
+  }, [snapshot?.status]);
 
   useEffect(() => {
     if (otherPlayers.length > 0 && !otherPlayers.some((player) => player.id === dealTargetId)) {
@@ -585,6 +621,17 @@ export function MidgeoraeOnlineGame() {
 
   return (
     <main className="game-shell game-play-shell min-h-screen text-stone-950">
+      <GameTutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+        onDoNotShowAgain={(checked) => {
+          if (checked) {
+            localStorage.setItem("midgeorae-tutorial-hide", "true");
+          } else {
+            localStorage.removeItem("midgeorae-tutorial-hide");
+          }
+        }}
+      />
       <div className="game-screen-viewport mx-auto">
         <section className="game-frame-shell motion-panel">
           <header className="game-top-strip p-3">
@@ -614,6 +661,9 @@ export function MidgeoraeOnlineGame() {
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <FrameIconButton label="게임 안내" onClick={() => setIsTutorialOpen(true)}>
+                  <HelpCircle size={18} />
+                </FrameIconButton>
                 <FrameIconButton label="새로고침" onClick={() => fetchSnapshot()}>
                   <RefreshCw size={18} />
                 </FrameIconButton>
@@ -661,16 +711,32 @@ export function MidgeoraeOnlineGame() {
                   onChoose={(choice) =>
                     submitAction({ type: "chooseDealCard", choice })
                   }
+                  onNego={(price) =>
+                    submitAction({ type: "negoDeal", price })
+                  }
+                  me={me}
                 />
               )}
 
-              <MyDashboard
-                me={me}
-                myHand={myHand}
-                isMyTurn={isMyTurn}
-                selectedItemId={selectedItemId}
-                setSelectedItemId={setSelectedItemId}
-              />
+              {tradeActionActive ? (
+                <MarketView
+                  otherPlayers={otherPlayers}
+                  dealTargetId={dealTargetId}
+                  selectedItemId={selectedItemId}
+                  onSelectTarget={(ownerId, itemId) => {
+                    setDealTargetId(ownerId);
+                    setSelectedItemId(itemId);
+                  }}
+                />
+              ) : (
+                <MyDashboard
+                  me={me}
+                  myHand={myHand}
+                  isMyTurn={isMyTurn}
+                  selectedItemId={selectedItemId}
+                  setSelectedItemId={setSelectedItemId}
+                />
+              )}
 
               {pendingReviews.length > 0 && (
                 <ReviewPanel
@@ -928,6 +994,11 @@ function TableHandCard({
         <div className="mt-2 min-h-10 text-sm font-black leading-5 text-stone-950">
           {item.name}
         </div>
+        {item.originalPrice > 0 && (
+          <div className="mt-2 text-xs font-bold text-stone-500 line-through decoration-stone-400">
+            정가 {moneyLabel(item.originalPrice)}
+          </div>
+        )}
         <div className="mt-1 text-xs font-black text-orange-700">
           {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
         </div>
@@ -1035,6 +1106,79 @@ function roleDescription(role: PlayerRole | undefined) {
   return "게임이 시작되면 내 역할이 여기에 공개됩니다.";
 }
 
+function MarketView({
+  otherPlayers,
+  dealTargetId,
+  selectedItemId,
+  onSelectTarget,
+}: {
+  otherPlayers: PublicPlayer[];
+  dealTargetId: string;
+  selectedItemId: string;
+  onSelectTarget: (ownerId: string, itemId: string) => void;
+}) {
+  const allItems = useMemo(() => {
+    return otherPlayers.flatMap((p) =>
+      p.publicItems.map((item) => ({ owner: p, item }))
+    );
+  }, [otherPlayers]);
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-orange-50/50 p-4 lg:p-6 rounded-xl border border-orange-200 shadow-inner">
+      <h2 className="mb-4 text-xl font-black text-orange-950 flex items-center gap-2">
+        <Store size={24} className="text-orange-600" />
+        시장 매물 (원하는 물건을 클릭하세요)
+      </h2>
+      {allItems.length === 0 ? (
+        <div className="p-8 text-center text-stone-500 font-bold">시장에 등록된 매물이 없습니다.</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {allItems.map(({ owner, item }) => {
+            const isSelected = dealTargetId === owner.id && selectedItemId === item.instanceId;
+            return (
+              <div
+                key={item.instanceId}
+                onClick={() => onSelectTarget(owner.id, item.instanceId)}
+                className={`motion-card relative cursor-pointer overflow-hidden border-2 bg-white transition-all ${
+                  isSelected ? "border-orange-600 ring-2 ring-orange-200 shadow-md transform scale-105" : "border-stone-200 hover:border-orange-400"
+                }`}
+              >
+                <div className="aspect-square bg-stone-100 p-2 relative">
+                   <CardImage src={item.imagePath} alt={item.name} />
+                   <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full font-bold">
+                     {owner.name}
+                   </div>
+                </div>
+                <div className="p-3 text-center">
+                  <div className="text-sm font-black text-stone-900 truncate">{item.name || "미공개"}</div>
+                  <div className="mt-1 text-xs font-bold text-stone-500 truncate">
+                    {categoryLabel(item.category)} · {conditionLabel(item.condition)}
+                  </div>
+                  {item.originalPrice > 0 && (
+                    <div className="mt-2 text-xs font-bold text-stone-500 line-through decoration-stone-400">
+                      정가 {moneyLabel(item.originalPrice)}
+                    </div>
+                  )}
+                  <div className="mt-1 text-sm font-black text-orange-600">
+                    {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
+                  </div>
+                </div>
+                {isSelected && (
+                   <div className="absolute inset-0 bg-orange-600/10 pointer-events-none flex items-center justify-center">
+                     <div className="bg-orange-600 text-white rounded-full p-2 shadow-lg scale-110 motion-safe:animate-bounce">
+                       <Check size={24} />
+                     </div>
+                   </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MyDashboard({
   me,
   myHand,
@@ -1078,9 +1222,31 @@ function MyDashboard({
             <strong>{roleLabel(me.role)}</strong>
           </div>
           {me.job && (
-            <div className="my-role-chip my-role-chip-job">
-              <span>직업</span>
-              <strong>{me.job.title}</strong>
+            <div className="my-role-chip my-role-chip-job flex-row items-center gap-3">
+              <div>
+                <span>직업</span>
+                <strong>{me.job.title}</strong>
+              </div>
+              <div className="flex gap-2 border-l border-orange-200 pl-3">
+                {me.job.id === "inspector" && (
+                  <div className="flex items-center gap-1 text-orange-800" title="감정 토큰 (검수 완료)">
+                    <Search size={16} />
+                    <span className="text-sm font-black">{me.inspectTokens ?? 0}</span>
+                  </div>
+                )}
+                {me.job.id === "negotiator" && (
+                  <div className="flex items-center gap-1 text-orange-800" title="네고 토큰 (흥정 완료)">
+                    <Handshake size={16} />
+                    <span className="text-sm font-black">{me.negoTokens ?? 0}</span>
+                  </div>
+                )}
+                {me.job.id === "reporter" && (
+                  <div className="flex items-center gap-1 text-orange-800" title="증거 토큰 (신고/리뷰 완료)">
+                    <FileText size={16} />
+                    <span className="text-sm font-black">{me.evidenceTokens ?? 0}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -1305,31 +1471,41 @@ function PendingDealPanel({
   isDealParty,
   myChoice,
   onChoose,
+  onNego,
+  me,
 }: {
   snapshot: RoomSnapshot;
   item: ItemCardSnapshot | null;
   isDealParty: boolean;
   myChoice: DealCardChoice | undefined;
   onChoose: (choice: DealCardChoice) => void;
+  onNego: (price: number) => void;
+  me: PlayerSnapshot | null;
 }) {
   const deal = snapshot.pendingDeal;
+  const currentPrice = deal ? (deal.currentOffer !== undefined ? deal.currentOffer : deal.askingPrice) : 0;
+  const [negoPrice, setNegoPrice] = useState(currentPrice);
+
+  useEffect(() => {
+    setNegoPrice(currentPrice);
+  }, [currentPrice]);
+
   if (!deal) return null;
 
   return (
-    <section className="motion-panel-strong market-card-table p-5">
+    <section className="motion-panel-strong deal-note">
       <div className="relative">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-orange-900/10 pb-3">
         <div>
-          <h2 className="text-xl font-black text-orange-950">거래 진행 중</h2>
+          <h2 className="text-xl font-black text-orange-950">거래 장부 (진행 중)</h2>
           <p className="mt-1 text-sm font-bold text-orange-800">
             {playerName(snapshot, deal.requesterId)} →{" "}
-            {playerName(snapshot, deal.ownerId)} ·{" "}
-            {moneyLabel(deal.askingPrice)}
+            {playerName(snapshot, deal.ownerId)} · 최초가: {moneyLabel(deal.askingPrice)}
           </p>
         </div>
-        <Handshake className="text-orange-700" size={28} />
+        <FileText className="text-orange-700 opacity-60" size={32} />
       </div>
-
+ 
       <div className="mt-4 grid gap-4 md:grid-cols-[128px_1fr]">
         <div className="deal-card-lift mx-auto w-full max-w-32">
           {item ? (
@@ -1343,7 +1519,12 @@ function PendingDealPanel({
           <div className="mt-1 text-2xl font-black text-stone-950">
             {item?.name ?? "뒤집힌 물건"}
           </div>
-          <div className="mt-2 text-sm font-bold text-stone-500">
+          {item?.originalPrice ? (
+            <div className="mt-2 text-xs font-bold text-stone-500 line-through decoration-stone-400">
+              정가 {moneyLabel(item.originalPrice)}
+            </div>
+          ) : null}
+          <div className="mt-1 text-sm font-bold text-stone-500">
             시장가 {item && item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
           </div>
           {item?.category && (
@@ -1352,6 +1533,17 @@ function PendingDealPanel({
             </div>
           )}
 
+          <div className="mt-3 border-t border-stone-200/60 pt-3">
+            <div className="text-lg font-black text-orange-700 flex items-center gap-2">
+              제안 가격: {moneyLabel(currentPrice)}
+              {deal.negoCount !== undefined && deal.negoCount > 0 && (
+                <span className="text-xs border border-orange-200 bg-orange-50 px-2 py-0.5 rounded text-orange-600 font-bold">
+                  흥정 {deal.negoCount}회째
+                </span>
+              )}
+            </div>
+          </div>
+
           {isDealParty ? (
             myChoice ? (
               <div className="mt-5 inline-flex items-center gap-2 border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-black text-stone-700">
@@ -1359,21 +1551,67 @@ function PendingDealPanel({
                 내 거래 카드 선택 완료
               </div>
             ) : (
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                <button
-                  onClick={() => onChoose("cool")}
-                  className="motion-button inline-flex items-center justify-center gap-2 bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700"
-                >
-                  <ThumbsUp size={17} />
-                  쿨거래
-                </button>
-                <button
-                  onClick={() => onChoose("cancel")}
-                  className="motion-button inline-flex items-center justify-center gap-2 border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700 hover:bg-red-100"
-                >
-                  <Ban size={17} />
-                  거래취소
-                </button>
+              <div className="mt-5 space-y-4">
+                {deal.lastOfferPlayerId !== me?.id ? (
+                  <div className="bg-orange-50/50 border border-orange-100 p-3 rounded-lg">
+                    <div className="text-xs font-black text-orange-800 uppercase mb-2">원하는 가격으로 흥정(역제안)</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={negoPrice <= 0}
+                          onClick={() => setNegoPrice(Math.max(0, negoPrice - 10000))}
+                          className="flex h-9 w-9 items-center justify-center border border-stone-300 bg-white hover:bg-stone-100 disabled:opacity-50 text-stone-700 font-black text-lg transition-colors"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          value={negoPrice}
+                          onChange={(event) => setNegoPrice(Math.max(0, Number(event.target.value)))}
+                          min={0}
+                          step={10000}
+                          className="w-32 text-center border border-stone-300 bg-white px-2 py-1.5 text-sm font-bold focus:outline-none focus:border-orange-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setNegoPrice(negoPrice + 10000)}
+                          className="flex h-9 w-9 items-center justify-center border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 font-black text-lg transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => onNego(negoPrice)}
+                        className="motion-button inline-flex items-center justify-center gap-1.5 bg-orange-600 px-4 py-2 text-sm font-black text-white hover:bg-orange-700 transition-colors"
+                      >
+                        <Handshake size={15} />
+                        역제안 보내기
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs font-bold text-stone-500 bg-stone-50 border border-stone-150 p-2.5 rounded">
+                    ⏱️ 내가 가격을 제안했습니다. 상대방의 결정을 기다리는 중입니다.
+                  </div>
+                )}
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    onClick={() => onChoose("cool")}
+                    className="motion-button inline-flex items-center justify-center gap-2 bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700"
+                  >
+                    <ThumbsUp size={17} />
+                    쿨거래
+                  </button>
+                  <button
+                    onClick={() => onChoose("cancel")}
+                    className="motion-button inline-flex items-center justify-center gap-2 border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700 hover:bg-red-100"
+                  >
+                    <Ban size={17} />
+                    거래취소
+                  </button>
+                </div>
               </div>
             )
           ) : (
@@ -1554,48 +1792,48 @@ function ActionPanel({
             />
           </div>
           <div className="market-card-lane space-y-3 p-4">
-            <SelectLabel label="요청할 물건">
-              <select
-                value={selectedItemId}
-                onChange={(event) => setSelectedItemId(event.target.value)}
-                className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
-              >
-                {requestableItems.length === 0 ? (
-                  <option value="">요청할 물건 없음</option>
-                ) : (
-                  requestableItems.map((item) => (
-                  <option key={item.instanceId} value={item.instanceId}>
-                    {item.name} · {categoryLabel(item.category)} ·{" "}
-                    {conditionLabel(item.condition)} · 시장가{" "}
-                    {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
-                  </option>
-                  ))
-                )}
-              </select>
-            </SelectLabel>
-            <SelectLabel label="보유자">
-              <select
-                value={dealTargetId}
-                onChange={(event) => setDealTargetId(event.target.value)}
-                className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
-              >
-                {otherPlayers.map((player) => (
-                  <option key={player.id} value={player.id}>
-                    {player.name}
-                  </option>
-                ))}
-              </select>
-            </SelectLabel>
+            <div className="mb-2 p-3 bg-stone-100 rounded text-sm font-bold text-stone-700">
+              {selectedItem ? (
+                <>
+                  <div className="text-orange-700 mb-1">
+                    [선택됨] {otherPlayers.find(p => p.id === dealTargetId)?.name}님의 물건
+                  </div>
+                  <div>
+                    {selectedItem.name || "미공개"} · {categoryLabel(selectedItem.category)}
+                  </div>
+                </>
+              ) : (
+                <div className="text-stone-400">좌측 시장 매물판에서 거래할 물건을 선택해주세요.</div>
+              )}
+            </div>
             <SelectLabel label="제시 가격">
-              <input
-                type="number"
-                value={action.type === "freeGive" ? 0 : askingPrice}
-                onChange={(event) => setAskingPrice(Number(event.target.value))}
-                disabled={action.type === "freeGive"}
-                min={0}
-                step={10000}
-                className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold disabled:bg-stone-100"
-              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={action.type === "freeGive" || askingPrice <= 0}
+                  onClick={() => setAskingPrice(Math.max(0, askingPrice - 10000))}
+                  className="flex h-9 w-9 items-center justify-center border border-stone-300 bg-stone-100 hover:bg-stone-200 disabled:opacity-50 text-stone-700 font-black text-lg transition-colors"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={action.type === "freeGive" ? 0 : askingPrice}
+                  onChange={(event) => setAskingPrice(Math.max(0, Number(event.target.value)))}
+                  disabled={action.type === "freeGive"}
+                  min={0}
+                  step={10000}
+                  className="w-full text-center border border-stone-300 bg-white px-3 py-2 text-sm font-bold disabled:bg-stone-100 focus:outline-none focus:border-orange-500"
+                />
+                <button
+                  type="button"
+                  disabled={action.type === "freeGive"}
+                  onClick={() => setAskingPrice(askingPrice + 10000)}
+                  className="flex h-9 w-9 items-center justify-center border border-stone-300 bg-stone-100 hover:bg-stone-200 disabled:opacity-50 text-stone-700 font-black text-lg transition-colors"
+                >
+                  +
+                </button>
+              </div>
             </SelectLabel>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -1738,16 +1976,18 @@ function ReportPanel({
   onReport: (targetPlayerId: string) => void;
 }) {
   return (
-    <section className="motion-panel market-card-table p-5">
+    <section className="motion-panel border-2 border-red-500 bg-red-50 p-5 shadow-[0_8px_0_rgba(153,27,27,0.2)] rounded-xl">
       <div className="relative">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 border-b border-red-200 pb-3">
         <div>
-          <h2 className="text-xl font-black">최종 신고</h2>
-          <p className="mt-1 text-sm font-bold text-stone-500">
-            {snapshot.reportsCast}/{snapshot.players.length}명 신고 접수
+          <h2 className="text-xl font-black text-red-900">최종 신고 (상소문)</h2>
+          <p className="mt-1 text-sm font-bold text-red-700">
+            빌런으로 의심되는 플레이어를 신고하세요. ({snapshot.reportsCast}/{snapshot.players.length}명 신고 접수)
           </p>
         </div>
-        <AlertTriangle className="text-orange-600" size={26} />
+        <div className="animate-pulse rounded-full bg-red-200 p-2 text-red-600">
+          <MessageCircleWarning size={28} />
+        </div>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         {otherPlayers.map((player) => (
@@ -1795,6 +2035,45 @@ function ResultPanel({ snapshot }: { snapshot: RoomSnapshot }) {
           label="색출"
           value={result.villainCaught ? "성공" : "실패"}
         />
+      </div>
+
+      <div className="mt-8 border-t border-stone-200 pt-6">
+        <h3 className="text-lg font-black text-stone-800 mb-4">최종 순위 및 평판</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-stone-100 text-stone-600 font-bold uppercase text-xs">
+              <tr>
+                <th className="px-4 py-2">순위</th>
+                <th className="px-4 py-2">플레이어</th>
+                <th className="px-4 py-2 text-right">최종 자산</th>
+                <th className="px-4 py-2 text-center">평판</th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshot.players
+                .slice()
+                .sort((a, b) => {
+                  const moneyA = snapshot.result?.finalScores?.[a.id]?.totalMoney ?? 0;
+                  const moneyB = snapshot.result?.finalScores?.[b.id]?.totalMoney ?? 0;
+                  return moneyB - moneyA;
+                })
+                .map((player, index) => {
+                  const money = snapshot.result?.finalScores?.[player.id]?.totalMoney;
+                  return (
+                    <tr key={player.id} className={`border-b border-stone-100 ${player.id === result.winnerId ? "bg-orange-50 font-black text-orange-900" : ""}`}>
+                      <td className="px-4 py-3">{index + 1}위</td>
+                      <td className="px-4 py-3">
+                        {player.name}
+                        {player.id === result.villainId && <span className="ml-2 rounded bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-600">빌런</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right">{money !== undefined ? moneyLabel(money) : "-"}</td>
+                      <td className="px-4 py-3 text-center">{player.reputationTokens}/5</td>
+                    </tr>
+                  );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
       </div>
     </section>
@@ -1869,7 +2148,8 @@ function CardImage({
       width={420}
       height={600}
       unoptimized
-      className={`aspect-[7/10] w-full border border-stone-200 bg-white object-contain shadow-[0_6px_0_rgba(28,25,23,0.08)] ${className}`}
     />
   );
 }
+
+

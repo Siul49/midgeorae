@@ -5,6 +5,7 @@ import {
   joinRoom,
   resetRoomsForTests,
   submitRoomAction,
+  rooms,
 } from "../room-store";
 
 describe("room-store", () => {
@@ -575,7 +576,7 @@ describe("room-store", () => {
 
     const beforeRequester = getRoomSnapshot(host.room.code, host.playerToken);
     const beforeOwner = getRoomSnapshot(host.room.code, p2.playerToken);
-    const item = beforeOwner.me!.hand![0];
+    const item = beforeOwner.me!.hand!.find((i) => !i.isBrick) ?? beforeOwner.me!.hand![0];
     submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
@@ -713,7 +714,7 @@ describe("room-store", () => {
     const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
     const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
 
-    expect(requesterView.me?.reputationTokens).toBe(3);
+    expect(requesterView.me?.reputationTokens).toBe(4);
     expect(ownerView.me?.reputationTokens).toBe(6);
     expect(requesterView.pendingReviews).toHaveLength(0);
     expect(ownerView.pendingReviews).toHaveLength(0);
@@ -775,5 +776,61 @@ describe("room-store", () => {
     expect(finished.status).toBe("finished");
     expect(finished.result).toBeDefined();
     expect(finished.result?.reports[target!.id]).toBe(5);
+  });
+
+  it("forces reporting phase when a citizen's reputation drops to 0, and finishes game when villain's reputation drops to 0", () => {
+    const host = createRoom("A");
+    joinRoom(host.room.code, "B");
+    joinRoom(host.room.code, "C");
+    joinRoom(host.room.code, "D");
+    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const roomInstance = rooms.get(host.room.code);
+    expect(roomInstance).toBeDefined();
+
+    const citizen = roomInstance!.players.find((p) => p.role === "citizen");
+    const villain = roomInstance!.players.find((p) => p.role === "villain");
+    expect(citizen).toBeDefined();
+    expect(villain).toBeDefined();
+
+    // 1. 시민 평판 0 도달 시: 강제 투표(reporting) 진입 검증
+    citizen!.reputationTokens = 1;
+    roomInstance!.status = "playing";
+    roomInstance!.currentTurnPlayerId = villain!.id;
+    roomInstance!.currentActionCard = {
+      type: "badReview",
+      title: "악플테러",
+      description: "평판 깎기",
+      imagePath: "",
+    };
+
+    const snapAfterTerror = submitRoomAction(host.room.code, villain!.token, {
+      type: "terrorReview",
+      targetPlayerId: citizen!.id,
+    });
+
+    expect(citizen!.reputationTokens).toBe(0);
+    expect(snapAfterTerror.status).toBe("reporting");
+    expect(snapAfterTerror.logs.some((l) => l.includes("평판이 0이 되어"))).toBe(true);
+
+    // 2. 빌런 평판 0 도달 시: 즉시 게임 종료(finished) 및 시민 승리 검증
+    roomInstance!.status = "playing";
+    villain!.reputationTokens = 1;
+    roomInstance!.currentTurnPlayerId = citizen!.id;
+    roomInstance!.currentActionCard = {
+      type: "badReview",
+      title: "악플테러",
+      description: "평판 깎기",
+      imagePath: "",
+    };
+
+    const snapAfterVillainTerror = submitRoomAction(host.room.code, citizen!.token, {
+      type: "terrorReview",
+      targetPlayerId: villain!.id,
+    });
+
+    expect(villain!.reputationTokens).toBe(0);
+    expect(snapAfterVillainTerror.status).toBe("finished");
+    expect(snapAfterVillainTerror.result?.winningSide).toBe("citizens");
   });
 });

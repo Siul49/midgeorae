@@ -8,6 +8,7 @@ import {
   STARTING_MANNER,
   STARTING_REPUTATION,
   VILLAIN_MISSIONS,
+  VILLAIN_MISSION_DESCRIPTIONS,
 } from "../rules/game-rules";
 import {
   calculateReportResult,
@@ -15,6 +16,7 @@ import {
 } from "../domain/results";
 import { calculateTradeReviewOutcome } from "../domain/reputation";
 import { settleAcceptedDeal } from "../domain/trade";
+import { evaluateCitizenMission, evaluateVillainMission } from "../domain/jobs";
 import { dealItemHands, makeActionDeck } from "./cards";
 import { makeRoomCode } from "./room-code";
 import type {
@@ -37,7 +39,7 @@ import type {
 const roomStoreKey = "__midgeoraeRooms" as const;
 const globalRoomStore = globalThis as typeof globalThis &
   Record<typeof roomStoreKey, Map<string, Room> | undefined>;
-const rooms =
+export const rooms =
   globalRoomStore[roomStoreKey] ??
   (globalRoomStore[roomStoreKey] = new Map<string, Room>());
 
@@ -79,6 +81,15 @@ function createPlayer(
     hand: [],
     dealCards: { cool: true, cancel: true },
     connectedAt: now(),
+    tradeParticipations: 0,
+    negoOffersSent: 0,
+    reviewsSubmitted: 0,
+    inspectTokens: 0,
+    negoTokens: 0,
+    evidenceTokens: 0,
+    brickSalesCount: 0,
+    defectSalesCount: 0,
+    overpriceSalesCount: 0,
   };
 }
 
@@ -131,13 +142,14 @@ function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
   return {
     instanceId: item.instanceId,
     id: item.id,
-    name: "뒤집힌 물건",
+    name: item.name,
     category: null,
     condition: null,
+    originalPrice: item.originalPrice,
     marketPrice: 0,
     acquiredPrice: null,
     isBrick: false,
-    imagePath: "/game-cards/backs/item-back.svg",
+    imagePath: item.imagePath,
     revealed: false,
   };
 }
@@ -151,6 +163,7 @@ function publicItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
     name: item.name,
     category: item.category,
     condition: null,
+    originalPrice: item.originalPrice,
     marketPrice: item.marketPrice,
     acquiredPrice: item.acquiredPrice,
     isBrick: false,
@@ -182,13 +195,14 @@ function toItemSnapshot(
   return {
     instanceId: item.instanceId,
     id: item.id,
-    name: revealed ? item.name : "뒤집힌 물건",
-    category: revealed ? item.category : null,
+    name: item.name,
+    category: item.category,
     condition: revealed ? item.condition : null,
+    originalPrice: item.originalPrice,
     marketPrice: revealed ? item.marketPrice : 0,
     acquiredPrice: revealed ? item.acquiredPrice : null,
     isBrick: revealed ? item.isBrick : false,
-    imagePath: revealed ? item.imagePath : "/game-cards/backs/item-back.svg",
+    imagePath: item.imagePath,
     revealed,
   };
 }
@@ -266,6 +280,9 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
             }),
           ),
           dealCards: viewer.dealCards,
+          inspectTokens: viewer.inspectTokens,
+          negoTokens: viewer.negoTokens,
+          evidenceTokens: viewer.evidenceTokens,
         }
       : null,
     currentTurnPlayerId: room.currentTurnPlayerId,
@@ -343,10 +360,14 @@ function nextTurn(room: Room) {
 function finishByReputation(room: Room, eliminatedPlayer: ServerPlayer) {
   room.status = "finished";
   room.currentTurnPlayerId = null;
-  room.result = calculateReputationEliminationResult(
+  const result = calculateReputationEliminationResult(
     room.players,
     eliminatedPlayer,
   );
+  room.result = {
+    ...result,
+    villainMissionComplete: false,
+  };
   room.logs.push(
     `${eliminatedPlayer.name}님의 좋아요 토큰이 0개가 되어 게임이 종료되었습니다.`,
   );
@@ -354,7 +375,16 @@ function finishByReputation(room: Room, eliminatedPlayer: ServerPlayer) {
 
 function adjustReputation(room: Room, target: ServerPlayer, amount: number) {
   target.reputationTokens = Math.max(0, target.reputationTokens + amount);
-  if (target.reputationTokens === 0) finishByReputation(room, target);
+  if (target.reputationTokens === 0) {
+    if (target.role === "villain") {
+      finishByReputation(room, target);
+    } else {
+      enterReporting(
+        room,
+        `${target.name}님의 평판이 0이 되어 즉시 시장이 폐쇄되고 최종 투표에 돌입합니다.`,
+      );
+    }
+  }
 }
 
 function startGame(room: Room, actor: ServerPlayer) {
@@ -368,14 +398,15 @@ function startGame(room: Room, actor: ServerPlayer) {
   }
 
   const villainIndex = Math.floor(Math.random() * room.players.length);
-  const mission =
-    VILLAIN_MISSIONS[Math.floor(Math.random() * VILLAIN_MISSIONS.length)];
+  const missionId =
+    VILLAIN_MISSIONS[Math.floor(Math.random() * VILLAIN_MISSIONS.length)]!;
+  const missionText = VILLAIN_MISSION_DESCRIPTIONS[missionId];
   const hands = dealItemHands(room.players.map((player) => player.id));
   const jobs = dealJobs(room.players.map((player) => player.id));
 
   room.players.forEach((player, index) => {
     player.role = index === villainIndex ? "villain" : "citizen";
-    player.mission = index === villainIndex ? mission : undefined;
+    player.mission = index === villainIndex ? missionText : undefined;
     player.job = jobs[player.id];
     player.money = player.job?.startingMoney ?? 1000000;
     player.reputationTokens = STARTING_REPUTATION;
@@ -448,6 +479,12 @@ function requestTrade(
   if (price < 0) throw new Error("가격이 올바르지 않습니다.");
   if (actor.money < price) throw new Error("신청자의 금액이 부족합니다.");
 
+  if (price !== item.marketPrice) {
+    actor.negoOffersSent += 1;
+    const msg = evaluateCitizenMission(actor);
+    if (msg) room.logs.push(msg);
+  }
+
   const revealedBeforeDeal = actionCard.type === "directTrade";
   if (revealedBeforeDeal) {
     item.revealedToPlayerIds = Array.from(
@@ -465,6 +502,9 @@ function requestTrade(
     revealedBeforeDeal,
     choices: {},
     resolved: false,
+    currentOffer: price,
+    lastOfferPlayerId: actor.id,
+    negoCount: 0,
   };
   room.logs.push(
     `${actor.name}님이 ${owner.name}님의 물건에 ${formatWon(price)} 거래를 신청했습니다.`,
@@ -479,9 +519,13 @@ function resolveDeal(room: Room, deal: PendingDeal) {
   if (!ownerChoice || !requesterChoice) return;
 
   if (ownerChoice === "cool" && requesterChoice === "cool") {
+    const tradedItem = owner.hand.find((item) => item.instanceId === deal.itemInstanceId);
+    const finalPrice = deal.currentOffer !== undefined ? deal.currentOffer : deal.askingPrice;
+
     const settlement = settleAcceptedDeal({
       deal: {
         ...deal,
+        askingPrice: finalPrice,
         hiddenInfoRevealTurn: deal.revealedBeforeDeal
           ? undefined
           : room.turnCount + 2,
@@ -494,9 +538,33 @@ function resolveDeal(room: Room, deal: PendingDeal) {
     owner.hand = settlement.ownerHand;
     requester.hand = settlement.requesterHand;
     room.pendingReviews.push(...settlement.pendingReviews);
+
+    owner.tradeParticipations += 1;
+    requester.tradeParticipations += 1;
+
+    if (owner.role === "villain" && tradedItem) {
+      if (tradedItem.isBrick) {
+        owner.brickSalesCount += 1;
+      }
+      if (
+        (tradedItem.condition === "defective" || tradedItem.condition === "broken") &&
+        finalPrice >= tradedItem.marketPrice
+      ) {
+        owner.defectSalesCount += 1;
+      }
+      if (finalPrice >= tradedItem.marketPrice * 1.1) {
+        owner.overpriceSalesCount += 1;
+      }
+    }
+
     room.logs.push(
-      `${requester.name}님과 ${owner.name}님의 쿨거래가 성사되었습니다.`,
+      `${requester.name}님과 ${owner.name}님의 쿨거래가 성사되었습니다. (${formatWon(finalPrice)})`,
     );
+
+    const ownerMsg = evaluateCitizenMission(owner);
+    if (ownerMsg) room.logs.push(ownerMsg);
+    const requesterMsg = evaluateCitizenMission(requester);
+    if (requesterMsg) room.logs.push(requesterMsg);
   } else {
     room.logs.push(`${requester.name}님과 ${owner.name}님의 거래가 취소되었습니다.`);
   }
@@ -520,6 +588,40 @@ function chooseDealCard(
   }
   deal.choices[actor.id] = choice;
   resolveDeal(room, deal);
+}
+
+function negoDeal(
+  room: Room,
+  actor: ServerPlayer,
+  price: number,
+) {
+  assertPlaying(room);
+  const deal = room.pendingDeal;
+  if (!deal) throw new Error("진행 중인 거래가 없습니다.");
+  if (actor.id !== deal.ownerId && actor.id !== deal.requesterId) {
+    throw new Error("거래 당사자만 흥정할 수 있습니다.");
+  }
+  if (deal.lastOfferPlayerId === actor.id) {
+    throw new Error("상대방의 제안에 대해서만 흥정할 수 있습니다.");
+  }
+  if (price < 0) {
+    throw new Error("가격은 0원 이상이어야 합니다.");
+  }
+  if (actor.id === deal.requesterId && actor.money < price) {
+    throw new Error("소지금보다 높은 가격으로 제안할 수 없습니다.");
+  }
+
+  deal.currentOffer = price;
+  deal.lastOfferPlayerId = actor.id;
+  deal.negoCount = (deal.negoCount ?? 0) + 1;
+  // 역제안을 보낸 사람은 자동으로 cool 상태가 되며, 제안을 받은 상대방의 선택지는 비웁니다.
+  deal.choices = {
+    [actor.id]: "cool",
+  };
+
+  room.logs.push(
+    `${actor.name}님이 가격을 ${formatWon(price)}으로 흥정(역제안)했습니다.`,
+  );
 }
 
 function reviewTrade(
@@ -559,6 +661,10 @@ function reviewTrade(
     if (outcome.eliminatedPlayer === "target") finishByReputation(room, target);
     room.logs.push(`${actor.name}님이 ${target.name}님의 좋아요 토큰을 소멸시켰습니다.`);
   }
+
+  actor.reviewsSubmitted += 1;
+  const msg = evaluateCitizenMission(actor);
+  if (msg) room.logs.push(msg);
 
   room.pendingReviews = room.pendingReviews.filter(
     (candidate) => candidate !== review,
@@ -616,6 +722,10 @@ function swapRandomItem(room: Room, actor: ServerPlayer, targetPlayerId: string)
   nextTurn(room);
 }
 
+function checkVillainMissionComplete(room: Room, villain: ServerPlayer): boolean {
+  return evaluateVillainMission(villain);
+}
+
 function reportSuspiciousPlayer(
   room: Room,
   actor: ServerPlayer,
@@ -637,7 +747,14 @@ function reportSuspiciousPlayer(
   if (Object.keys(room.reports).length === room.players.length) {
     const villain = room.players.find((player) => player.role === "villain");
     if (!villain) throw new Error("빌런 정보가 없습니다.");
-    room.result = calculateReportResult(room.players, room.reports, villain.id);
+    const missionComplete = checkVillainMissionComplete(room, villain);
+    room.result = calculateReportResult(
+      room.players,
+      room.reports,
+      villain.id,
+      missionComplete,
+    );
+    room.result.villainMissionComplete = missionComplete;
     room.status = "finished";
     room.logs.push("최종 신고가 접수되었습니다. 분쟁 심사 결과를 공개합니다.");
   }
@@ -920,6 +1037,9 @@ export function submitRoomAction(
       break;
     case "chooseDealCard":
       chooseDealCard(room, actor, action.choice);
+      break;
+    case "negoDeal":
+      negoDeal(room, actor, action.price);
       break;
     case "reviewTrade":
       reviewTrade(room, actor, action.targetPlayerId, action.satisfied);

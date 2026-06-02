@@ -49,72 +49,72 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.98 0.01 75); /* 한지 미색 (Off-white with slight warmth) */
+  --foreground: oklch(0.15 0.02 45); /* 다크 브라운/차콜 */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.15 0.02 45);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.15 0.02 45);
+  --primary: oklch(0.65 0.2 45); /* 귤색 (Tangerine Orange) */
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.92 0.04 75); /* 따뜻한 베이지 */
+  --secondary-foreground: oklch(0.25 0.04 45);
+  --muted: oklch(0.94 0.02 75);
+  --muted-foreground: oklch(0.5 0.02 45);
+  --accent: oklch(0.85 0.15 45); /* 연한 귤색 */
+  --accent-foreground: oklch(0.2 0.05 45);
+  --destructive: oklch(0.6 0.2 25);
+  --border: oklch(0.88 0.03 75);
+  --input: oklch(0.9 0.03 75);
+  --ring: oklch(0.65 0.2 45);
+  --chart-1: oklch(0.65 0.2 45);
+  --chart-2: oklch(0.55 0.15 140);
+  --chart-3: oklch(0.45 0.1 200);
+  --chart-4: oklch(0.7 0.15 90);
+  --chart-5: oklch(0.8 0.1 75);
+  --radius: 0.75rem; /* 약간 더 둥글게 */
+  --sidebar: oklch(0.98 0.01 75);
+  --sidebar-foreground: oklch(0.15 0.02 45);
+  --sidebar-primary: oklch(0.65 0.2 45);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.92 0.04 75);
+  --sidebar-accent-foreground: oklch(0.25 0.04 45);
+  --sidebar-border: oklch(0.88 0.03 75);
+  --sidebar-ring: oklch(0.65 0.2 45);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.15 0.01 45); /* 다크 브라운 계열 배경 */
+  --foreground: oklch(0.95 0.02 75);
+  --card: oklch(0.2 0.01 45);
+  --card-foreground: oklch(0.95 0.02 75);
+  --popover: oklch(0.2 0.01 45);
+  --popover-foreground: oklch(0.95 0.02 75);
+  --primary: oklch(0.65 0.2 45); /* 귤색 유지 */
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.25 0.02 45);
+  --secondary-foreground: oklch(0.95 0.02 75);
+  --muted: oklch(0.25 0.02 45);
+  --muted-foreground: oklch(0.7 0.02 75);
+  --accent: oklch(0.3 0.05 45);
+  --accent-foreground: oklch(0.95 0.02 75);
+  --destructive: oklch(0.6 0.2 25);
+  --border: oklch(0.3 0.02 45);
+  --input: oklch(0.3 0.02 45);
+  --ring: oklch(0.65 0.2 45);
+  --chart-1: oklch(0.65 0.2 45);
+  --chart-2: oklch(0.55 0.15 140);
+  --chart-3: oklch(0.45 0.1 200);
+  --chart-4: oklch(0.7 0.15 90);
+  --chart-5: oklch(0.8 0.1 75);
+  --sidebar: oklch(0.2 0.01 45);
+  --sidebar-foreground: oklch(0.95 0.02 75);
+  --sidebar-primary: oklch(0.65 0.2 45);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.25 0.02 45);
+  --sidebar-accent-foreground: oklch(0.95 0.02 75);
+  --sidebar-border: oklch(0.3 0.02 45);
+  --sidebar-ring: oklch(0.65 0.2 45);
 }
 
 @layer base {
@@ -136,18 +136,11 @@
     overflow-x: hidden;
     overflow-y: auto;
     word-break: keep-all;
-    background:
-      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      repeating-linear-gradient(
-        7deg,
-        rgba(255, 255, 255, 0.018) 0,
-        rgba(255, 255, 255, 0.018) 2px,
-        transparent 2px,
-        transparent 9px
-      ),
-      linear-gradient(135deg, #20221f 0%, #171a18 52%, #25352f 100%);
-    background-size: 34px 34px, 34px 34px, auto, auto;
+    background: var(--background);
+    /* 한지 텍스처 느낌의 미세 노이즈와 은은한 그라데이션 */
+    background-image: 
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   }
 
   .game-play-shell {
@@ -252,14 +245,25 @@
   }
 
   .game-table-layout {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
-    grid-template-areas: "social board actions";
-    grid-template-columns: clamp(156px, 13vw, 190px) minmax(0, 1fr) clamp(250px, 21vw, 310px);
     gap: 14px;
-    overflow: hidden;
+    overflow: auto;
     padding-top: 14px;
+    padding-bottom: 80px; /* 모바일 하단 공간 확보 */
+  }
+
+  @media (min-width: 1024px) {
+    .game-table-layout {
+      display: grid;
+      flex-direction: row;
+      grid-template-areas: "social board actions";
+      grid-template-columns: clamp(156px, 13vw, 190px) minmax(0, 1fr) clamp(250px, 21vw, 310px);
+      overflow: hidden;
+      padding-bottom: 0;
+    }
   }
 
   .game-left-rail,
@@ -270,27 +274,47 @@
 
   .game-left-rail {
     display: flex;
-    grid-area: social;
-    min-height: 0;
     flex-direction: column;
     gap: 12px;
-    overflow: auto;
+  }
+  @media (min-width: 1024px) {
+    .game-left-rail {
+      grid-area: social;
+      min-height: 0;
+      overflow: auto;
+    }
   }
 
   .game-board-stage {
-    grid-area: board;
     min-width: 0;
     min-height: 0;
-    overflow: auto;
+  }
+  @media (min-width: 1024px) {
+    .game-board-stage {
+      grid-area: board;
+      overflow: auto;
+    }
   }
 
   .game-right-rail {
     display: flex;
-    grid-area: actions;
-    min-height: 0;
     flex-direction: column;
     gap: 10px;
-    overflow: auto;
+    /* 모바일에서는 하단 액션 패널 고정 */
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    background: inherit;
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
+  @media (min-width: 1024px) {
+    .game-right-rail {
+      grid-area: actions;
+      min-height: 0;
+      overflow: auto;
+      position: static;
+      padding-bottom: 0;
+    }
   }
 
   .play-cockpit-grid {

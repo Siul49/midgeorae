@@ -25,6 +25,7 @@ function makePlayer(
       name: `${id} 물건`,
       category: "electronics",
       condition: "used",
+      originalPrice: marketPrice * 2,
       marketPrice,
       acquiredPrice: null,
       isBrick: false,
@@ -34,6 +35,15 @@ function makePlayer(
     })),
     dealCards: { cool: true, cancel: true },
     connectedAt: 0,
+    tradeParticipations: 0,
+    negoOffersSent: 0,
+    reviewsSubmitted: 0,
+    inspectTokens: 0,
+    negoTokens: 0,
+    evidenceTokens: 0,
+    brickSalesCount: 0,
+    defectSalesCount: 0,
+    overpriceSalesCount: 0,
   };
 }
 

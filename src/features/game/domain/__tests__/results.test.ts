@@ -32,6 +32,7 @@ function makePlayer(
       name: `${id} 물건`,
       category: "electronics",
       condition: "used",
+      originalPrice: marketPrice * 2,
       marketPrice,
       acquiredPrice: null,
       isBrick: false,
@@ -41,6 +42,15 @@ function makePlayer(
     })),
     dealCards: { cool: true, cancel: true },
     connectedAt: 0,
+    tradeParticipations: 0,
+    negoOffersSent: 0,
+    reviewsSubmitted: 0,
+    inspectTokens: 0,
+    negoTokens: 0,
+    evidenceTokens: 0,
+    brickSalesCount: 0,
+    defectSalesCount: 0,
+    overpriceSalesCount: 0,
   };
 }
 
@@ -109,5 +119,49 @@ describe("game result domain", () => {
       eliminatedPlayerId: "citizen-a",
       reports: {},
     });
+  });
+
+  it("returns villain victory when the villain is not caught and completes their mission", () => {
+    const players = [
+      makePlayer("citizen-a", 100_000, [50_000]),
+      makePlayer("citizen-b", 300_000, [10_000]),
+      makePlayer("villain", 500_000, [100_000], "villain"),
+    ];
+
+    const result = calculateReportResult(
+      players,
+      {
+        "citizen-a": "citizen-b",
+        "citizen-b": "citizen-a",
+        villain: "citizen-a",
+      },
+      "villain",
+      true,
+    );
+
+    expect(result.winningSide).toBe("villain");
+    expect(result.winnerId).toBe("villain");
+  });
+
+  it("returns citizen victory when the villain is not caught but fails their mission", () => {
+    const players = [
+      makePlayer("citizen-a", 100_000, [50_000]),
+      makePlayer("citizen-b", 300_000, [10_000]),
+      makePlayer("villain", 500_000, [100_000], "villain"),
+    ];
+
+    const result = calculateReportResult(
+      players,
+      {
+        "citizen-a": "citizen-b",
+        "citizen-b": "citizen-a",
+        villain: "citizen-a",
+      },
+      "villain",
+      false,
+    );
+
+    expect(result.winningSide).toBe("citizens");
+    expect(result.winnerId).toBe("citizen-b");
   });
 });
