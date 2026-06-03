@@ -105,7 +105,32 @@ export function EventCardView() {
         )}
 
         <button
-          onClick={() => dispatch({ type: "RESOLVE_EVENT" })}
+          onClick={() => {
+            const player = state.players[state.currentPlayerIndex];
+            let loseItemIndex;
+            let stolenPlayerId;
+            let stolenItemIndex;
+
+            if (event.effect.type === "loseItem") {
+              if (player.items.length > 0) {
+                loseItemIndex = Math.floor(Math.random() * player.items.length);
+              }
+            } else if (event.effect.type === "stealItem") {
+              const otherPlayers = state.players.filter((p) => p.id !== player.id && p.items.length > 0);
+              if (otherPlayers.length > 0) {
+                const victim = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
+                stolenPlayerId = victim.id;
+                stolenItemIndex = Math.floor(Math.random() * victim.items.length);
+              }
+            }
+
+            dispatch({
+              type: "RESOLVE_EVENT",
+              loseItemIndex,
+              stolenPlayerId,
+              stolenItemIndex,
+            });
+          }}
           className="mt-6 w-full py-4 bg-white hover:bg-gray-50 text-gray-800 font-bold text-lg rounded-2xl shadow-lg transition-all"
         >
           확인

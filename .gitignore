@@ -58,3 +58,12 @@ test-results/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bot data
+/bot-data/
+
+# doc binaries
+docs/**/*.pdf
+docs/**/*.docx
+docs/**/*.zip
+

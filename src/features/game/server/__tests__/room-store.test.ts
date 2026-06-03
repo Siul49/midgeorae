@@ -4,9 +4,46 @@ import {
   getRoomSnapshot,
   joinRoom,
   resetRoomsForTests,
-  submitRoomAction,
+  submitRoomAction as originalSubmitRoomAction,
   rooms,
 } from "../room-store";
+
+function submitRoomAction(
+  code: string,
+  token: string,
+  action: Parameters<typeof originalSubmitRoomAction>[2],
+) {
+  const result = originalSubmitRoomAction(code, token, action);
+
+  if (action.type === "startGame") {
+    const room = rooms.get(code);
+    if (room && room.status === "preparing") {
+      room.players.forEach((player) => {
+        if (!player.isPrepared) {
+          const itemsConfig = player.hand.map((item) => {
+            let fakeItemId: string | undefined = undefined;
+            if (item.isBrick) {
+              fakeItemId = "iphone";
+            }
+            return {
+              instanceId: item.instanceId,
+              customCondition: item.condition ?? "used",
+              askingPrice: item.originalPrice > 0 ? item.originalPrice : 500000,
+              fakeItemId,
+            };
+          });
+          originalSubmitRoomAction(code, player.token, {
+            type: "fixPreparation",
+            itemsConfig,
+          });
+        }
+      });
+    }
+    return getRoomSnapshot(code, token);
+  }
+
+  return result;
+}
 
 describe("room-store", () => {
   beforeEach(() => resetRoomsForTests());
@@ -248,9 +285,17 @@ describe("room-store", () => {
     submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const afterBots = submitRoomAction(host.room.code, host.playerToken, {
+    let afterBots = submitRoomAction(host.room.code, host.playerToken, {
       type: "endTurn",
     });
+
+    // 봇들이 사람(호스트)에게 거래를 제안하여 턴이 멈춘 동안, 호스트가 지속적으로 거래를 취소(cancel)하여 턴이 호스트에게 되돌아오게 함
+    while (afterBots.pendingDeal && afterBots.currentTurnPlayerId !== host.playerId) {
+      afterBots = submitRoomAction(host.room.code, host.playerToken, {
+        type: "chooseDealCard",
+        choice: "cancel",
+      });
+    }
 
     expect(afterBots.currentTurnPlayerId).toBe(host.playerId);
     expect(afterBots.logs.some((log) => log.includes("자동"))).toBe(true);
@@ -475,12 +520,12 @@ describe("room-store", () => {
 
     expect(requesterView.pendingDealItem).toMatchObject({
       isBrick: false,
-      marketPrice: 0,
+      marketPrice: 500000,
       revealed: false,
     });
     expect(ownerView.pendingDealItem).toMatchObject({
       isBrick: false,
-      marketPrice: 0,
+      marketPrice: 500000,
       revealed: false,
     });
   });
@@ -515,20 +560,20 @@ describe("room-store", () => {
       name: ownerItem!.name,
       category: ownerItem!.category,
       marketPrice: ownerItem!.marketPrice,
-      condition: null,
+      condition: ownerItem!.condition,
       isBrick: false,
       revealed: false,
     });
     expect(ownerDealView.pendingDealItem).toMatchObject({
       instanceId: ownerItem!.instanceId,
       category: ownerItem!.category,
-      condition: null,
+      condition: ownerItem!.condition,
       revealed: false,
     });
     expect(nonPartyDealView.pendingDealItem).toMatchObject({
-      category: null,
-      marketPrice: 0,
-      condition: null,
+      category: ownerItem!.category,
+      marketPrice: ownerItem!.marketPrice,
+      condition: ownerItem!.condition,
       revealed: false,
     });
 
@@ -548,7 +593,7 @@ describe("room-store", () => {
     expect(boughtItem).toMatchObject({
       category: ownerItem!.category,
       marketPrice: ownerItem!.marketPrice,
-      condition: null,
+      condition: ownerItem!.condition,
       isBrick: false,
       revealed: false,
     });
@@ -606,7 +651,16 @@ describe("room-store", () => {
     const boughtItem = requesterView.me?.hand?.find(
       (owned) => owned.instanceId === item.instanceId,
     );
-    expect(boughtItem?.acquiredPrice).toBe(120000);
+    expect(boughtItem?.acquiredPrice).toBeNull(); // 배송 중에는 감춰짐
+
+    // 턴을 넘겨서 배송을 완료시킴 (p2 턴 종료 -> 다음 턴 진행)
+    submitRoomAction(host.room.code, p2.playerToken, { type: "endTurn" });
+
+    const requesterViewAfterDelivery = getRoomSnapshot(host.room.code, host.playerToken);
+    const deliveredItem = requesterViewAfterDelivery.me?.hand?.find(
+      (owned) => owned.instanceId === item.instanceId,
+    );
+    expect(deliveredItem?.acquiredPrice).toBe(120000);
     expect(requesterView.pendingReviews).toHaveLength(1);
     expect(ownerView.pendingReviews).toHaveLength(1);
   });

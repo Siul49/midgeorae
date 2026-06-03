@@ -13,7 +13,7 @@ describe("server item cards", () => {
   });
 
   it("deals five players without repeating normal item ids in the first deal", () => {
-    const hands = dealItemHands(["p1", "p2", "p3", "p4", "p5"]);
+    const hands = dealItemHands(["p1", "p2", "p3", "p4", "p5"], null);
     const cards = Object.values(hands).flat();
     const normalCards = cards.filter((card) => !card.isBrick);
 

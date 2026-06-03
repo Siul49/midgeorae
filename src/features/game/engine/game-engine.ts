@@ -1,4 +1,4 @@
-﻿import type { GameState, GameAction, Player, TradeState, GameLog } from "../types";
+import type { GameState, GameAction, Player, TradeState, GameLog } from "../types";
 import {
   PLAYER_COLORS,
   STARTING_MONEY,
@@ -13,9 +13,7 @@ import {
   DISLIKE_SCORE_PENALTY,
 } from "../types";
 import { BOARD_SPACES, BOARD_SIZE } from "../data/board";
-import { getRandomItems, getRandomItem, GOLDEN_ITEMS } from "../data/items";
-import { drawEventCard } from "../data/events";
-import { getRandomMission } from "../data/missions";
+import { getRandomItems, GOLDEN_ITEMS } from "../data/items";
 
 // ===== Initial State =====
 
@@ -30,7 +28,7 @@ export const initialGameState: GameState = {
   currentEvent: null,
   freeGrabItem: null,
   freeGrabWinnerId: null,
-  marketItems: getRandomItems(6),
+  marketItems: [],
   logs: [],
   votingResults: {},
   revealedVillain: null,
@@ -40,10 +38,6 @@ export const initialGameState: GameState = {
 };
 
 // ===== Helpers =====
-
-function rollDice(): number {
-  return Math.floor(Math.random() * 6) + 1;
-}
 
 function addLog(state: GameState, playerId: number, action: string, details: string): GameLog {
   return {
@@ -100,12 +94,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "START_GAME": {
       const playerCount = action.players.length;
-      const villainIndex = Math.floor(Math.random() * playerCount);
+      const villainIndex = action.villainIndex;
       const players: Player[] = action.players.map((p, i) => ({
         id: i,
         name: p.name,
         role: i === villainIndex ? "villain" : "citizen",
-        mission: i === villainIndex ? getRandomMission() : null,
+        mission: i === villainIndex ? action.mission : null,
         money: STARTING_MONEY,
         items: [],
         mannerTemp: STARTING_MANNER_TEMP,
@@ -122,7 +116,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...initialGameState,
         phase: "turnStart",
         players,
-        marketItems: getRandomItems(6),
+        marketItems: action.marketItems,
         logs: [addLog(state, -1, "gameStart", `${playerCount}명으로 게임 시작!`)],
       };
     }
@@ -141,7 +135,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "ROLL_DICE": {
-      const dice = rollDice();
+      const dice = action.diceValue;
       const player = currentPlayer(state);
       const newPosition = (player.position + dice) % BOARD_SIZE;
       const passedStart = player.position + dice >= BOARD_SIZE;
@@ -199,14 +193,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           return {
             ...state,
             phase: "freeGrab",
-            freeGrabItem: getRandomItem(),
+            freeGrabItem: action.freeGrabItem ?? null,
             freeGrabWinnerId: null,
           };
         case "event":
           return {
             ...state,
             phase: "eventDraw",
-            currentEvent: drawEventCard(),
+            currentEvent: action.eventCard ?? null,
           };
         case "manner":
           return {
@@ -246,7 +240,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let price = item.marketPrice;
       const space = BOARD_SPACES[player.position];
       if (space.type === "nego") {
-        price = Math.round(price * (0.7 + Math.random() * 0.6)); // ±30%
+        const multiplier = action.negoMultiplier !== undefined ? action.negoMultiplier : 1.0;
+        price = Math.round(price * multiplier);
       }
       if (player.hasDiscount) {
         price = Math.round(price * 0.5);
@@ -463,12 +458,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         }
         case "loseItem": {
           if (player.items.length > 0) {
-            const randomIdx = Math.floor(Math.random() * player.items.length);
+            const idx = action.loseItemIndex !== undefined ? action.loseItemIndex : 0;
+            const randomIdx = Math.min(player.items.length - 1, Math.max(0, idx));
             const lostItem = player.items[randomIdx];
-            updatedPlayers = updatePlayer(state, player.id, {
-              items: player.items.filter((_, i) => i !== randomIdx),
-            });
-            newLogs.push(addLog(state, player.id, "loseItem", `${lostItem.item.name}을(를) 잃었습니다`));
+            if (lostItem) {
+              updatedPlayers = updatePlayer(state, player.id, {
+                items: player.items.filter((_, i) => i !== randomIdx),
+              });
+              newLogs.push(addLog(state, player.id, "loseItem", `${lostItem.item.name}을(를) 잃었습니다`));
+            }
           }
           break;
         }
@@ -501,19 +499,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         case "stealItem": {
           const otherPlayers = state.players.filter((p) => p.id !== player.id && p.items.length > 0);
           if (otherPlayers.length > 0) {
-            const victim = otherPlayers[Math.floor(Math.random() * otherPlayers.length)];
-            const stolenIdx = Math.floor(Math.random() * victim.items.length);
-            const stolenItem = victim.items[stolenIdx];
-            updatedPlayers = state.players.map((p) => {
-              if (p.id === victim.id) {
-                return { ...p, items: p.items.filter((_, i) => i !== stolenIdx) };
+            let victimIdx = 0;
+            if (action.stolenPlayerId !== undefined) {
+              const idx = otherPlayers.findIndex((p) => p.id === action.stolenPlayerId);
+              if (idx !== -1) victimIdx = idx;
+            }
+            const victim = otherPlayers[victimIdx];
+            if (victim) {
+              const itemIdx = action.stolenItemIndex !== undefined ? action.stolenItemIndex : 0;
+              const stolenIdx = Math.min(victim.items.length - 1, Math.max(0, itemIdx));
+              const stolenItem = victim.items[stolenIdx];
+              if (stolenItem) {
+                updatedPlayers = state.players.map((p) => {
+                  if (p.id === victim.id) {
+                    return { ...p, items: p.items.filter((_, i) => i !== stolenIdx) };
+                  }
+                  if (p.id === player.id) {
+                    return { ...p, items: [...p.items, stolenItem] };
+                  }
+                  return p;
+                });
+                newLogs.push(addLog(state, player.id, "steal", `${victim.name}에게서 ${stolenItem.item.name}을(를) 훔쳤습니다!`));
               }
-              if (p.id === player.id) {
-                return { ...p, items: [...p.items, stolenItem] };
-              }
-              return p;
-            });
-            newLogs.push(addLog(state, player.id, "steal", `${victim.name}에게서 ${stolenItem.item.name}을(를) 훔쳤습니다!`));
+            }
           }
           break;
         }

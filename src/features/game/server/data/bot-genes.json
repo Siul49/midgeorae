@@ -1,0 +1,222 @@
+[
+  {
+    "id": "8e529192-3918-48b3-a1ac-49d5c117f855",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.1978858628952653,
+    "priceMarkupRatio": 0.9225952332497491,
+    "negoPropensity": 0.6057578388663878,
+    "deceitRatio": 0.7403505373130788,
+    "suspicionRatio": 0.7953459733051027,
+    "jobPriority": 0.31781063422391026
+  },
+  {
+    "id": "da4e249e-bb2c-421f-bacb-cf34ed7dd730",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.0601103940660235,
+    "priceMarkupRatio": 1.2943072529907638,
+    "negoPropensity": 0.714317476272108,
+    "deceitRatio": 0.9283001666536843,
+    "suspicionRatio": 0.8950340880270997,
+    "jobPriority": 0.8215695476655693
+  },
+  {
+    "id": "76951a7d-24c9-43d2-97c9-dbeae13b4172",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.9596844425982972,
+    "priceMarkupRatio": 1.1243019124364244,
+    "negoPropensity": 0.7238118343547072,
+    "deceitRatio": 0.3557064953300123,
+    "suspicionRatio": 0.45734689091424957,
+    "jobPriority": 0.20252853682125932
+  },
+  {
+    "id": "4db72361-d3c8-4a50-bd4b-f38f7cedb88f",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.9186381856188486,
+    "priceMarkupRatio": 1.27747682232074,
+    "negoPropensity": 0.8434125272970331,
+    "deceitRatio": 0.4612425214459613,
+    "suspicionRatio": 0.7219282853259912,
+    "jobPriority": 0.3377143261976334
+  },
+  {
+    "id": "e7cadf1d-8858-44aa-8d78-2e6a4d219466",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.0776611918649779,
+    "priceMarkupRatio": 0.965585311141358,
+    "negoPropensity": 0.6515539319057855,
+    "deceitRatio": 0.7424063389240623,
+    "suspicionRatio": 0.7553622481772704,
+    "jobPriority": 0.37257148440064286
+  },
+  {
+    "id": "cc58829c-8ae8-4297-a0d2-5d8362ffd119",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.0913086560483962,
+    "priceMarkupRatio": 1.2333426624960284,
+    "negoPropensity": 0.8995686117476039,
+    "deceitRatio": 0.97695765549685,
+    "suspicionRatio": 0.7574571650919928,
+    "jobPriority": 0.5899713503078936
+  },
+  {
+    "id": "c22051cd-cdf4-417d-a02d-e418bd267efa",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.1139966275001583,
+    "priceMarkupRatio": 1.1450632502761573,
+    "negoPropensity": 0.3995776221146147,
+    "deceitRatio": 0.7141334213063943,
+    "suspicionRatio": 0.7272699145340156,
+    "jobPriority": 0.5953933769168144
+  },
+  {
+    "id": "33f3a06f-a063-431c-9c94-e19ef3e94de4",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.0507009953723765,
+    "priceMarkupRatio": 1.1275363269179008,
+    "negoPropensity": 0.35491145867720597,
+    "deceitRatio": 0.6105635745139768,
+    "suspicionRatio": 0.6532252032447509,
+    "jobPriority": 0.24995122452415988
+  },
+  {
+    "id": "96809d2b-7999-4387-816c-7d8254f992fd",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.9850612834658151,
+    "priceMarkupRatio": 1.1251138064096755,
+    "negoPropensity": 0.8404349366476292,
+    "deceitRatio": 0.48483260554955815,
+    "suspicionRatio": 0.7088757227239946,
+    "jobPriority": 0.8534847574535405
+  },
+  {
+    "id": "1e37a55f-f844-4c17-b476-bcc1f53f0935",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.0154417449656932,
+    "priceMarkupRatio": 1.0210542280964103,
+    "negoPropensity": 0.5215328464224809,
+    "deceitRatio": 0.9130727075878253,
+    "suspicionRatio": 0.542685005099004,
+    "jobPriority": 0.5316534428494202
+  },
+  {
+    "id": "375d7e74-c1dc-44c4-876b-d4fac1e3084e",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.9508487888745638,
+    "priceMarkupRatio": 1.2103902279218297,
+    "negoPropensity": 0.49210766379894666,
+    "deceitRatio": 0.9031813958191353,
+    "suspicionRatio": 0.248830530860053,
+    "jobPriority": 0.4589949613380164
+  },
+  {
+    "id": "21c78b70-7b89-4cc9-bea1-c22bafea75c2",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.031471293285791,
+    "priceMarkupRatio": 1.151196928758802,
+    "negoPropensity": 0.8926843439359041,
+    "deceitRatio": 0.7428215492674677,
+    "suspicionRatio": 0.5811751828828834,
+    "jobPriority": 0.8511110946436466
+  },
+  {
+    "id": "85b8cf47-a4a1-40b3-9796-b35d79e06976",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.0212721781611362,
+    "priceMarkupRatio": 1.1652895350554053,
+    "negoPropensity": 0.5742912007754918,
+    "deceitRatio": 0.7415360255261493,
+    "suspicionRatio": 0.4750017314808252,
+    "jobPriority": 0.3108317195310013
+  },
+  {
+    "id": "77e12520-7e25-436c-8fb3-5b338ac3b38d",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.916751481338467,
+    "priceMarkupRatio": 1.0154505811309165,
+    "negoPropensity": 0.4220993415592441,
+    "deceitRatio": 0.8288462943017398,
+    "suspicionRatio": 0.8491223580127965,
+    "jobPriority": 0.398428305998239
+  },
+  {
+    "id": "ac6e6b9b-728b-4f64-b170-061a5d6ec3ee",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.9356813406830307,
+    "priceMarkupRatio": 0.9838987432351937,
+    "negoPropensity": 0.5319538032147298,
+    "deceitRatio": 0.4784137125602138,
+    "suspicionRatio": 0.36720242178884505,
+    "jobPriority": 0.5649789788586411
+  },
+  {
+    "id": "6a6cff35-0eb1-4f2c-b587-0f8464b0e7a9",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.03070584162573,
+    "priceMarkupRatio": 1.2077258978368357,
+    "negoPropensity": 0.2962852871402715,
+    "deceitRatio": 0.844737537730021,
+    "suspicionRatio": 0.2898915641050769,
+    "jobPriority": 0.8379257369081934
+  },
+  {
+    "id": "f49a9e11-d33c-4540-b0b9-2830bafca73a",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.1711129732552168,
+    "priceMarkupRatio": 1.2247787377018244,
+    "negoPropensity": 0.7288353843188422,
+    "deceitRatio": 0.7000735409955774,
+    "suspicionRatio": 0.744545975615502,
+    "jobPriority": 0.4135818332386142
+  },
+  {
+    "id": "9051b72f-db57-434b-bc70-23db54e3061c",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.9372857508987813,
+    "priceMarkupRatio": 1.0565140481889543,
+    "negoPropensity": 0.1372439593494666,
+    "deceitRatio": 0.4343421410840852,
+    "suspicionRatio": 0.25303552317389777,
+    "jobPriority": 0.7085603387121076
+  },
+  {
+    "id": "4d4eb62e-cd90-4b67-a33c-7024e43d6ee4",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 0.8142185992563533,
+    "priceMarkupRatio": 1.0189838403394673,
+    "negoPropensity": 0.6555839497458796,
+    "deceitRatio": 0.30321018590381377,
+    "suspicionRatio": 0.6984623935965609,
+    "jobPriority": 0.833521525032632
+  },
+  {
+    "id": "c65dda2a-468c-4187-943e-7d6f3cd3cc39",
+    "generation": 1,
+    "fitness": 0,
+    "negoAcceptThreshold": 1.1715719096749095,
+    "priceMarkupRatio": 1.054970236367151,
+    "negoPropensity": 0.5658843144621469,
+    "deceitRatio": 0.5352458403169637,
+    "suspicionRatio": 0.30741783670855083,
+    "jobPriority": 0.6700749990824086
+  }
+]

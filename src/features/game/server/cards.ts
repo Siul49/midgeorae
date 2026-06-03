@@ -3,7 +3,7 @@ import type { ActionCardSnapshot, ServerItemCard } from "./types";
 
 const CARDS_PER_PLAYER = 5;
 
-const ITEM_IMAGE_BY_ID: Record<string, string> = {
+export const ITEM_IMAGE_BY_ID: Record<string, string> = {
   iphone: "/game-cards/cards/item-01-iphone.png",
   airpods: "/game-cards/cards/item-02-airpods.png",
   switch: "/game-cards/cards/item-03-switch.png",
@@ -99,17 +99,24 @@ export function makeItemDeck() {
     marketPrice: item.marketPrice,
     category: item.category,
     condition: item.condition,
+    customCondition: item.condition,
+    askingPrice: item.originalPrice,
+    isBrickDisguised: false,
     acquiredPrice: null,
     isBrick: false,
     imagePath: ITEM_IMAGE_BY_ID[item.id] ?? "/game-cards/backs/item-back.png",
   }));
+
   const bricks = Array.from({ length: 4 }, (_, index) => ({
     id: `brick-${index + 1}`,
     name: "벽돌",
     originalPrice: 0,
     marketPrice: 0,
     category: null,
-    condition: null,
+    condition: "broken" as const,
+    customCondition: "mint" as const,
+    askingPrice: 500000,
+    isBrickDisguised: false,
     acquiredPrice: null,
     isBrick: true,
     imagePath: "/game-cards/actions/brick.png",
@@ -120,6 +127,7 @@ export function makeItemDeck() {
 
 export function dealItemHands(
   playerIds: string[],
+  villainId: string | null,
   cardsPerPlayer = CARDS_PER_PLAYER,
 ): Record<string, ServerItemCard[]> {
   let deck = [...makeItemDeck()].sort(() => Math.random() - 0.5);
@@ -133,7 +141,17 @@ export function dealItemHands(
       if (deck.length === 0) {
         deck = [...makeItemDeck()].sort(() => Math.random() - 0.5);
       }
-      const card = deck.shift();
+      
+      const isVillain = ownerId === villainId;
+      let card = deck.shift();
+      if (!isVillain) {
+        // 시민은 벽돌을 가질 수 없으므로 벽돌 카드가 뽑히면 덱 맨 뒤로 돌림
+        while (card && card.isBrick) {
+          deck.push(card);
+          card = deck.shift();
+        }
+      }
+      
       if (!card) continue;
       hands[ownerId].push({
         ...card,
@@ -142,6 +160,31 @@ export function dealItemHands(
         revealedToPlayerIds: [ownerId],
       });
       drawIndex += 1;
+    }
+  }
+
+  // 빌런이 존재하는데 시작 손패에 벽돌이 한 장도 없는 경우 강제로 첫 번째 카드를 벽돌로 둔갑
+  if (villainId && hands[villainId] && hands[villainId].length > 0) {
+    const hasBrick = hands[villainId].some((c) => c.isBrick);
+    if (!hasBrick) {
+      hands[villainId][0] = {
+        instanceId: `brick-0-${drawIndex}`,
+        id: "brick",
+        name: "벽돌 (위장 미설정)",
+        category: null,
+        condition: "broken",
+        customCondition: "mint",
+        askingPrice: 500000,
+        isBrickDisguised: false,
+        fakeItemId: undefined,
+        originalPrice: 0,
+        marketPrice: 0,
+        acquiredPrice: null,
+        isBrick: true,
+        imagePath: "/game-cards/actions/brick.png",
+        revealed: false,
+        revealedToPlayerIds: [villainId],
+      };
     }
   }
 

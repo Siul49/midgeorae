@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useGame } from "../GameProvider";
 
+import { getRandomMission } from "../data/missions";
+import { getRandomItems } from "../data/items";
+
 export function GameSetup() {
   const { dispatch } = useGame();
   const [playerCount, setPlayerCount] = useState(4);
@@ -12,7 +15,16 @@ export function GameSetup() {
     const players = names
       .slice(0, playerCount)
       .map((name, i) => ({ name: name.trim() || `플레이어 ${i + 1}` }));
-    dispatch({ type: "START_GAME", players });
+    const villainIndex = Math.floor(Math.random() * playerCount);
+    const mission = getRandomMission();
+    const marketItems = getRandomItems(6);
+    dispatch({
+      type: "START_GAME",
+      players,
+      villainIndex,
+      mission,
+      marketItems,
+    });
   };
 
   return (

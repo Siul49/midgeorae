@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo } from "react";
 import { useGame } from "../GameProvider";
@@ -65,7 +65,17 @@ export function BuyAction() {
             return (
               <button
                 key={item.id}
-                onClick={() => dispatch({ type: "BUY_ITEM", itemId: item.id })}
+                onClick={() => {
+                  let negoMultiplier;
+                  if (isNego) {
+                    const seed = Array.from(item.id).reduce(
+                      (sum, char) => sum + char.charCodeAt(0),
+                      0,
+                    );
+                    negoMultiplier = 0.7 + (seed % 61) / 100;
+                  }
+                  dispatch({ type: "BUY_ITEM", itemId: item.id, negoMultiplier });
+                }}
                 disabled={!canAfford}
                 className={`w-full p-4 rounded-2xl flex items-center gap-4 transition-all ${
                   canAfford

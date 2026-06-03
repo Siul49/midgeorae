@@ -1,0 +1,341 @@
+--- Page 1 ---
+GAME
+D E V E L O P M E N T
+26
+-
+1 Global Media
+3. Toys, Rules, Mechanics
+
+--- Page 2 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+in the beginning,
+there were toys…
+
+--- Page 3 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+What is a toy?
+• Toy는 오락을 위한 도구이다
+• Toy는 놀이 활동을 촉진하는 매개체(facilitator)이다
+• Toy는 행동을 집중시키고, 놀이로 전환시킨다
+- 즉, Toy의 디자인을 통해 놀이 행위를 가능하게 
+한다
+- Ex) 곰인형은 사랑을 받기 위해 존재하고, 
+인형은 특정 활동을 모방하도록 설계됨
+
+
+--- Page 4 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Spil
+(
+게임
+, Game)
+ vs. Leg
+(
+놀이
+, Play)
+Why the Scandinavians got it right
+
+--- Page 5 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How do toys facilitate 
+play?
+
+--- Page 6 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How do toys facilitate play?
+Signifiers
+행동을 유도하는 신호
+• 사용자가 무엇을 해야 하는 지 알려주는 설계 요소
+• 동시에 감정까지 유도
+• 행동은 ‘명령’이 아니라, ‘유도’로 만들어짐
+- 디자인은 행동을 ‘지시’하지 않고, “유혹한다”
+
+--- Page 7 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How do toys facilitate play?
+Affordances
+행동 가능성
+• 사용자가 즉각적으로 인지하는 행동 가능성
+• “이걸로 무엇을 할 수 있는가”가 보이는 상태
+• 실제 가능성보다 → 인지된 가능성(perceived)이 중요
+- 공 → 던질 수 있음
+- 계단 → 올라갈 수 있음
+
+
+--- Page 8 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How do toys facilitate play?
+Constraints
+제약
+• 행동을 제한하는 설계
+• Physical 물리적 제한
+- 벽, 무게, 거리
+• Logical 논리적 제한
+- 퍼즐 규칙
+• Cultural 문화적 제한
+- 문화마다 가진 암묵적 규칙
+
+
+--- Page 9 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How do toys facilitate play?
+놀이 단계
+• Affordance 중심
+• 자유
+게임 단계
+• Constraint 강화
+• Rule 추가
+
+--- Page 10 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How do toys facilitate play?
+Why is this important?
+• Toy 에는 게임의 잡음(Noise)이 없다
+- Noise는 play의 본질을 흐리는 요소 : 규칙, 도전 등
+• 디자인 관점에서 Toy 는 규정적(prescriptive)이기 보다 
+생성적(generative)이다
+구분 장난감 (Toy) 게임 (Game)
+구조 없음 있음
+규칙 없음 있음
+도전 없음 있음
+성격 생성적 규정적
+
+--- Page 11 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Growing up:
+From toys to games?
+
+--- Page 12 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Avedon
+▪ purpose 목적 → 방향설정
+▪ procedures (≈ mechanics) 행동 방식 → 플레이
+▪ Rules 규칙 → 구조
+▪ number of players 참여자 수
+▪ Roles 역할
+▪ participant interaction patterns (≈ challenges?) 
+상호작용 → 경험
+▪ results (≈ goals) 결과 → 의미
+ Elliot Avedon
+캐나다 출신 게임 디자이너이자 학자 
+보드게임 및 전통 게임 연구 분야에서 활동
+
+--- Page 13 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Rules
+▪ 플레이 방법에 대한 지시, Rollings&Adams
+▪ 플레이어가 받아들여야 하는 정의(Definitions)와 
+지침(Instructions), Rollings&Adams
+▪ 게임은 상태 머신(State Machine)과 가능성 
+트리(Game Tree)를 만든다, Jesper Juul
+▪ Play를 위한 구조(Structures)와 틀(Frames)
+
+
+--- Page 14 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Rules
+▪ 게임 규칙을 정의하는 요소들, Rollings & Adams
+- Semiotics of the game : 빨강 = 위험 / 코인 = 보상
+- Gameplay : 행동 패턴
+- Sequence of play : 턴제 / 실시간
+- Goals & victory/loss conditions : 플레이 방향과 동기 부여
+- Termination condition : 종료 조건
+- Metarules : 규칙 위의 규칙, 규칙을 해석/변경하는 규칙
+Ernest Adams
+Andrew Rollings
+
+
+--- Page 15 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Is 
+Gravity  
+a 
+Rule
+ ?
+현실세계 IRL : 규칙은 “발견되는 것”
+비디오 게임 : 경우에 따라 다름
+World / Simulation Rules
+게임 세계에 일관성을 부여하는 매개변수,
+반드시 게임 규칙과 연관될 필요는 없다
+
+
+--- Page 16 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Toys, 
+Rules,  
+and  
+the  
+next step
+▪ Toy에 규칙이 적용되면 게임이 된다
+▪ 규칙도 Affordance(행동가능성)와 Constraints(제약)를 가진다
+▪ 규칙만으로는 흥미롭지 않다.
+▪ 그러나 규칙은
+- 게임의 구성요소이며,
+- 플레이어 행동과 게임 설계를 위한 구조이다
+
+--- Page 17 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Game Mechanics
+
+--- Page 18 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Defining
+ !
+MDA Framework
+Mechanics are the various actions, behaviors, and 
+control mechanisms afforded to the player within a 
+game context
+→ 플레이어에게 제공되는 행동, 상호작용, 조작 방식
+Lost Garden
+Game mechanics are rule-based systems/simulations 
+that facilitate and encourage a user to explore and 
+learn the properties of their possibility space 
+through feedback
+→ 규칙 기반 시스템으로서, 피드백을 통해 가능성 공간을 탐색하게 
+만드는 구조Mechanics = Player Action System
+
+
+--- Page 19 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Game Mechanics:
+비범한 방식으로 도전 과제를 극복하도록 설계된,
+게임 세계에서 플레이어의 능동적 행동을 위한 규칙 기반 방법론
+
+--- Page 20 ---
+• 도전은 플레이어에게 노력(effort)을 요구한다
+• 도전은 규칙 기반일 수도 있고, 아닐 수도 있다
+• 도전은
+- 시스템에 의해 생성될 수도 있고
+- 다른 플레이어에 의해 생성될 수도 있다
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Challenges!
+https://www.youtube.com/watch?v=2IfcdPuGE14 
+
+--- Page 21 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+The Function of Mechanics
+게임 메카닉은 플레이어의 상호작용을 정의하고, 
+플레이어를 게임 세계, 도전, 그리고 전체 규칙과 연결하는 
+개별적인(독립적인) 단위이다
+→ 메카닉은 플레이어와 게임의 모든 요소를 연결하는
+‘행동 인터페이스’다
+디자이너에게 게임 메카닉은 자신의 작업의 본질적인 문법이며, 
+문제 해결을 위해 정식화되고, 전달되며, 수정될 수 있는
+ 전통적 형식 요소들이다
+→ 게임 디자이너는 메카닉으로 ‘문장(플레이)’을 만든다
+Game Idea
+(verbs, nouns, adjectives)
+Rules
+Challenges
+Game Mechanics
+
+--- Page 22 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+For game design,
+rules, mechanics and challenges
+are the essential grammar
+
+--- Page 23 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Workshop
+역기획서 내용(목차, 항목) 구성하기
+플레이 경험을 토대로 역기획서 작성하기
+
+--- Page 24 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Homework
+역제안서 1차 작성하기
+교재 Chapter 4장 읽기
+

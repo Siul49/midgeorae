@@ -24,6 +24,24 @@ export interface BoardSpace {
 export type ItemCategory = "electronics" | "fashion" | "hobby" | "living";
 export type ItemCondition = "mint" | "used" | "defective" | "broken";
 
+export interface ItemCardSnapshot {
+  instanceId: string;
+  id: string;
+  name: string;
+  category: ItemCategory | null;
+  condition: ItemCondition | null;
+  customCondition?: ItemCondition | null;
+  askingPrice?: number;
+  isBrickDisguised?: boolean;
+  fakeItemId?: string;
+  originalPrice: number; // in 원 (정가)
+  marketPrice: number; // in 원 (중고 시세)
+  acquiredPrice: number | null;
+  isBrick: boolean;
+  imagePath: string;
+  revealed: boolean;
+}
+
 export interface Item {
   id: string;
   name: string;
@@ -142,11 +160,21 @@ export interface GameState {
 }
 
 export type GameAction =
-  | { type: "START_GAME"; players: { name: string }[] }
+  | {
+      type: "START_GAME";
+      players: { name: string }[];
+      villainIndex: number;
+      mission: Mission;
+      marketItems: Item[];
+    }
   | { type: "CONFIRM_TURN" } // player confirmed they're ready
-  | { type: "ROLL_DICE" }
-  | { type: "MOVE_COMPLETE" }
-  | { type: "BUY_ITEM"; itemId: string }
+  | { type: "ROLL_DICE"; diceValue: number }
+  | {
+      type: "MOVE_COMPLETE";
+      freeGrabItem?: Item;
+      eventCard?: EventCard;
+    }
+  | { type: "BUY_ITEM"; itemId: string; negoMultiplier?: number }
   | { type: "SKIP_BUY" }
   | { type: "START_SELL"; itemIndex: number }
   | { type: "JOIN_TRADE"; buyerId: number }
@@ -155,7 +183,12 @@ export type GameAction =
   | { type: "REJECT_OFFER" }
   | { type: "CANCEL_TRADE" }
   | { type: "FREE_GRAB"; playerId: number }
-  | { type: "RESOLVE_EVENT" }
+  | {
+      type: "RESOLVE_EVENT";
+      loseItemIndex?: number;
+      stolenPlayerId?: number;
+      stolenItemIndex?: number;
+    }
   | { type: "VOTE_MANNER"; targetId: number; isLike: boolean }
   | { type: "SKIP_MANNER_VOTE" }
   | { type: "END_TURN" }

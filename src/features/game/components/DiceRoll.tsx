@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useGame } from "../GameProvider";
 import { BOARD_SPACES } from "../data/board";
+import { getRandomItem } from "../data/items";
+import { drawEventCard } from "../data/events";
 
 function formatWon(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
@@ -24,7 +26,9 @@ export function DiceRoll() {
 
     const timeout = setTimeout(() => {
       clearInterval(interval);
-      dispatch({ type: "ROLL_DICE" });
+      const finalDice = Math.floor(Math.random() * 6) + 1;
+      setDisplayFace(DICE_FACES[finalDice - 1]);
+      dispatch({ type: "ROLL_DICE", diceValue: finalDice });
       setRolling(false);
     }, 1000);
 
@@ -49,7 +53,20 @@ export function DiceRoll() {
             <div className="text-sm text-gray-500 mt-1">{targetSpace.description}</div>
           </div>
           <button
-            onClick={() => dispatch({ type: "MOVE_COMPLETE" })}
+            onClick={() => {
+              let freeGrabItem;
+              let eventCard;
+              if (targetSpace.type === "freebie") {
+                freeGrabItem = getRandomItem();
+              } else if (targetSpace.type === "event") {
+                eventCard = drawEventCard();
+              }
+              dispatch({
+                type: "MOVE_COMPLETE",
+                freeGrabItem,
+                eventCard,
+              });
+            }}
             className="mt-6 block mx-auto px-8 py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-lg rounded-2xl transition-all"
           >
             확인 →

@@ -1,0 +1,378 @@
+--- Page 1 ---
+GAME
+D E V E L O P M E N T
+26
+-
+1 Global Media
+1. Game Design
+
+
+--- Page 2 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+What is Game Design?
+게임 디자인이란 무엇을 의미하는가?
+디자인은 무엇인가?
+게임 디자이너의 역할은 무엇인가?
+디자인 프로세스는 무엇인가?
+
+--- Page 3 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+An idea?
+아이디어가 있으면, 게임을 만들 수 있다?
+좋은 아이디어=재미있는 게임?
+
+--- Page 4 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+상황에 
+맞게 
+규칙을 
+바꾸거나
+,
+다양한 
+플레이어를 
+만족시키기 
+위해 
+규칙을 
+조정하고
+,
+지루한 
+게임에 
+재미를 
+더하기 
+위해 
+새로운 
+목표를 
+만들며
+,
+때로는 
+스스로 
+불리한 
+조건을 
+설정하기도 
+한다
+.
+Design 
+Rules
+
+--- Page 5 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+So what is game design?
+
+--- Page 6 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Game design is a craft
+
+--- Page 7 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+What is design?
+
+
+--- Page 8 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Abstracting uses
+디자인은 사용자의 행동을 추상화 한다
+
+
+--- Page 9 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Predicting the future
+디자인은 사용자의 미래 행동을 예측하는 작업이다
+
+
+--- Page 10 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Creating pleasurable experiences
+좋은 디자인은 즐거운 경험을 만든다
+
+
+--- Page 11 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+More on what is design
+
+
+--- Page 12 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+What do designers do?
+Buy black turtlenecks
+Wear rimless glasses
+Work with MacBook at a café
+Know a lot about the artificial world 
+(techniques of the artificial)
+
+
+--- Page 13 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Learning design
+Reflective Practice 
+Process
+Artifacts 
+Instruction 
+
+--- Page 14 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Game design and player experience
+Designing a thing that has to be experienced somewhere by someone
+Meke systems that originate behaviors
+
+
+--- Page 15 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+so game design is about players and systems
+wrong!
+
+--- Page 16 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+How to make rules 
+attractive?
+
+
+--- Page 17 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Why are the rules of 
+attractive?
+무궁화 꽃이 피었습니다
+
+--- Page 18 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+interesting choices
+No choices are clearly better than others
+Choices not necessarily equally good
+Player has to take informed choices
+A game is a series of interesting decisions.
+- Sid Meier
+
+
+--- Page 19 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Task of the game designer
+
+--- Page 20 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Language issues
+
+--- Page 21 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+nouns
+
+
+--- Page 22 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+adjectives
+
+
+--- Page 23 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+verbs
+
+
+--- Page 24 ---
+A Walt Disney World Lovers Take on Disneyland — Wishes Family Travel
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Designing game is all about verbs!
+
+--- Page 25 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+The verb issue
+Players do stuff in the virtual worlds of games!
+Players do that stuff the rules allow them to do!
+
+
+--- Page 26 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+The Linguistic approach
+
+--- Page 27 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+shoot
+
+
+--- Page 28 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+jump
+
+
+--- Page 29 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+survive
+
+
+--- Page 30 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+explore
+
+
+--- Page 31 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+cooperate
+
+
+--- Page 32 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+construct
+
+
+--- Page 33 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Summery
+게임 디자인은 디자인의 한 분야이다
+디자인은 사물이 자신의 기능을 수행할 수 있도록 만들면서,
+동시에 사용자에게 즐거운 경험(pleasurable experience)을 제공하도록 설계하는 작업이다
+게임은 상호작용을 위한 시스템이다
+게임은 여러 요소로 구성된 시스템이며, 그 중 핵심은 메카닉(mechanics, 또는 Rules)이다
+게임은 하나의 언어로 이해할 수 있다
+게임은 명사, 형용사, 동사의 구조로 이루어지며, 그 중 핵심은 동사이다
+이러한 관점은 새로운 게임 아이디어를 생성하는 데 유용한 방법이 된다
+
+--- Page 34 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Workshop
+(팀별)좋아하는 게임을 팀원들에게 상호 소개(1주차 과제 활용)
+게임들 중 하나를 선택하여 질문
+플레이어는 무엇을 하는가? (Verbs)
+플레이어는 어떤 선택을 해야 하는가?
+게임의 규칙이 만들어 내는 핵심 경험은 무엇인가?
+팀별로 정리
+
+--- Page 35 ---
+26
+-
+1 Global Media
+GAME 
+D E V E L O P M E N T
+Homework
+그룹별로 게임을 하나 선택해서 오기
+다음 주부터 역제안서 작성을 진행할 예정
+교재 Chapter 2장 읽기
+

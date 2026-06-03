@@ -1,40 +1,44 @@
 import { randomUUID } from "node:crypto";
 import {
-  JOB_CARDS,
   LOBBY_MONEY,
   MAX_PLAYERS,
-  getMarketActionLimit,
-  MIN_PLAYERS,
   STARTING_MANNER,
   STARTING_REPUTATION,
-  VILLAIN_MISSIONS,
-  VILLAIN_MISSION_DESCRIPTIONS,
 } from "../rules/game-rules";
-import {
-  calculateReportResult,
-  calculateReputationEliminationResult,
-} from "../domain/results";
-import { calculateTradeReviewOutcome } from "../domain/reputation";
-import { settleAcceptedDeal } from "../domain/trade";
-import { evaluateCitizenMission, evaluateVillainMission } from "../domain/jobs";
-import { dealItemHands, makeActionDeck } from "./cards";
 import { makeRoomCode } from "./room-code";
+import { loadGenePool } from "./bot-evolution";
 import type {
-  ActionCardSnapshot,
-  DealCardChoice,
-  ItemCardSnapshot,
-  JobCardSnapshot,
-  PendingDeal,
-  PublicPlayer,
   Room,
   RoomAction,
   RoomMode,
   RoomSessionResult,
   RoomSnapshot,
-  RoomStatus,
-  ServerItemCard,
   ServerPlayer,
 } from "./types";
+import {
+  touch,
+  toSnapshot,
+  startGame,
+  drawActionCard,
+  requestTrade,
+  chooseDealCard,
+  negoDeal,
+  reviewTrade,
+  terrorReview,
+  recycleBrick,
+  swapRandomItem,
+  reportSuspiciousPlayer,
+  fixPreparation,
+  updateCustomCondition,
+  assertPlaying,
+  assertCurrentTurn,
+  enterReporting,
+  nextTurn,
+} from "./room-action-handlers";
+import {
+  autoPrepareBot,
+  autoPlayBots,
+} from "./bot-handler";
 
 const roomStoreKey = "__midgeoraeRooms" as const;
 const globalRoomStore = globalThis as typeof globalThis &
@@ -54,10 +58,6 @@ function normalizeCode(code: string) {
 function normalizeName(name: string, fallbackName: string) {
   const trimmed = name.trim();
   return (trimmed || fallbackName).slice(0, 16);
-}
-
-function formatWon(value: number) {
-  return `${value.toLocaleString("ko-KR")}원`;
 }
 
 function createPlayer(
@@ -105,661 +105,6 @@ function findPlayer(room: Room, token: string): ServerPlayer {
   return player;
 }
 
-function findPlayerById(room: Room, playerId: string): ServerPlayer {
-  const player = room.players.find((candidate) => candidate.id === playerId);
-  if (!player) throw new Error("플레이어를 찾을 수 없습니다.");
-  return player;
-}
-
-function touch(room: Room) {
-  room.version += 1;
-  room.updatedAt = now();
-}
-
-function toPublicPlayer(
-  player: ServerPlayer,
-  viewer: ServerPlayer | null,
-  room: Room,
-): PublicPlayer {
-  return {
-    id: player.id,
-    name: player.name,
-    isHost: player.isHost,
-    isBot: player.isBot,
-    reputationTokens: player.reputationTokens,
-    manner: player.manner,
-    likes: player.likes,
-    dislikes: player.dislikes,
-    position: player.position,
-    itemCount: player.hand.length,
-    publicItems: viewer
-      ? player.hand.map((item) => toItemSnapshot(item, viewer, room))
-      : [],
-  };
-}
-
-function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
-  return {
-    instanceId: item.instanceId,
-    id: item.id,
-    name: item.name,
-    category: null,
-    condition: null,
-    originalPrice: item.originalPrice,
-    marketPrice: 0,
-    acquiredPrice: null,
-    isBrick: false,
-    imagePath: item.imagePath,
-    revealed: false,
-  };
-}
-
-function publicItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
-  if (item.isBrick) return hiddenItemSnapshot(item);
-
-  return {
-    instanceId: item.instanceId,
-    id: item.id,
-    name: item.name,
-    category: item.category,
-    condition: null,
-    originalPrice: item.originalPrice,
-    marketPrice: item.marketPrice,
-    acquiredPrice: item.acquiredPrice,
-    isBrick: false,
-    imagePath: item.imagePath,
-    revealed: false,
-  };
-}
-
-function toItemSnapshot(
-  item: ServerItemCard,
-  viewer: ServerPlayer,
-  room: Room,
-  {
-    allowPublicInfo = false,
-    allowTimedReveal = false,
-  }: { allowPublicInfo?: boolean; allowTimedReveal?: boolean } = {},
-): ItemCardSnapshot {
-  const revealed =
-    item.revealed ||
-    item.revealedToPlayerIds.includes(viewer.id) ||
-    (allowTimedReveal &&
-      item.hiddenInfoRevealTurn !== undefined &&
-      room.turnCount >= item.hiddenInfoRevealTurn);
-
-  if (!revealed) {
-    return allowPublicInfo ? publicItemSnapshot(item) : hiddenItemSnapshot(item);
-  }
-
-  return {
-    instanceId: item.instanceId,
-    id: item.id,
-    name: item.name,
-    category: item.category,
-    condition: revealed ? item.condition : null,
-    originalPrice: item.originalPrice,
-    marketPrice: revealed ? item.marketPrice : 0,
-    acquiredPrice: revealed ? item.acquiredPrice : null,
-    isBrick: revealed ? item.isBrick : false,
-    imagePath: item.imagePath,
-    revealed,
-  };
-}
-
-function visiblePendingDeal(
-  room: Room,
-  viewer: ServerPlayer | null,
-): PendingDeal | null {
-  if (!room.pendingDeal) return null;
-  const deal = room.pendingDeal;
-  const visibleChoices: PendingDeal["choices"] = {};
-  if (viewer && deal.choices[viewer.id]) {
-    visibleChoices[viewer.id] = deal.choices[viewer.id];
-  }
-
-  if (
-    !viewer ||
-    deal.ownerId === viewer.id ||
-    deal.requesterId === viewer.id
-  ) {
-    return {
-      ...deal,
-      choices: visibleChoices,
-    };
-  }
-
-  return {
-    ...deal,
-    choices: {},
-    itemInstanceId: "",
-  };
-}
-
-function visiblePendingDealItem(
-  room: Room,
-  viewer: ServerPlayer | null,
-): ItemCardSnapshot | null {
-  if (!room.pendingDeal || !viewer) return null;
-  const deal = room.pendingDeal;
-  const owner = room.players.find((player) => player.id === deal.ownerId);
-  const item = owner?.hand.find(
-    (candidate) => candidate.instanceId === deal.itemInstanceId,
-  );
-  if (!item) return null;
-
-  const isDealParty =
-    deal.ownerId === viewer.id || deal.requesterId === viewer.id;
-  if (!isDealParty) return hiddenItemSnapshot(item);
-  if (!deal.revealedBeforeDeal) return publicItemSnapshot(item);
-
-  return toItemSnapshot(item, viewer, room);
-}
-
-function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
-  return {
-    code: room.code,
-    mode: room.mode,
-    status: room.status,
-    players: room.players.map((player) => toPublicPlayer(player, viewer, room)),
-    me: viewer
-      ? {
-          id: viewer.id,
-          name: viewer.name,
-          isHost: viewer.isHost,
-          isBot: viewer.isBot,
-          role: viewer.role,
-          mission: viewer.mission,
-          job: viewer.job,
-          money: viewer.money,
-          reputationTokens: viewer.reputationTokens,
-          hand: viewer.hand.map((item) =>
-            toItemSnapshot(item, viewer, room, {
-              allowPublicInfo: true,
-              allowTimedReveal: true,
-            }),
-          ),
-          dealCards: viewer.dealCards,
-          inspectTokens: viewer.inspectTokens,
-          negoTokens: viewer.negoTokens,
-          evidenceTokens: viewer.evidenceTokens,
-        }
-      : null,
-    currentTurnPlayerId: room.currentTurnPlayerId,
-    currentActionCard: room.currentActionCard,
-    pendingDeal: visiblePendingDeal(room, viewer),
-    pendingDealItem: visiblePendingDealItem(room, viewer),
-    pendingReviews: viewer
-      ? room.pendingReviews.filter((review) => review.reviewerId === viewer.id)
-      : [],
-    usedActionCount: room.usedActionCount,
-    marketActionLimit: room.marketActionLimit,
-    logs: room.logs.slice(-20),
-    reportsCast: Object.keys(room.reports).length,
-    result: room.result,
-    version: room.version,
-  };
-}
-
-function dealJobs(playerIds: string[]): Record<string, JobCardSnapshot> {
-  const shuffled = [...JOB_CARDS].sort(() => Math.random() - 0.5);
-  return Object.fromEntries(
-    playerIds.map((playerId, index) => [playerId, shuffled[index % shuffled.length]]),
-  );
-}
-
-function assertCurrentTurn(room: Room, player: ServerPlayer) {
-  if (room.currentTurnPlayerId !== player.id) {
-    throw new Error("현재 턴 플레이어만 할 수 있습니다.");
-  }
-}
-
-function assertPlaying(room: Room) {
-  if (room.status !== "playing") {
-    throw new Error("진행 중인 게임에서만 할 수 있습니다.");
-  }
-}
-
-function enterReporting(room: Room, message = "시장 마감입니다. 최종 신고를 시작합니다.") {
-  room.status = "reporting";
-  room.currentTurnPlayerId = null;
-  room.currentActionCard = null;
-  room.pendingDeal = null;
-  room.logs.push(message);
-}
-
-function nextTurn(room: Room) {
-  room.turnCount += 1;
-  room.usedActionCount = Math.min(
-    room.marketActionLimit,
-    room.usedActionCount + 1,
-  );
-
-  if (
-    room.marketActionLimit > 0 &&
-    room.usedActionCount >= room.marketActionLimit
-  ) {
-    enterReporting(room);
-    return;
-  }
-
-  if (!room.currentTurnPlayerId) {
-    room.currentTurnPlayerId = room.players[0]?.id ?? null;
-    return;
-  }
-
-  const currentIndex = room.players.findIndex(
-    (player) => player.id === room.currentTurnPlayerId,
-  );
-  const nextIndex = (currentIndex + 1) % room.players.length;
-
-  room.currentTurnPlayerId = room.players[nextIndex]?.id ?? null;
-  room.currentActionCard = null;
-}
-
-function finishByReputation(room: Room, eliminatedPlayer: ServerPlayer) {
-  room.status = "finished";
-  room.currentTurnPlayerId = null;
-  const result = calculateReputationEliminationResult(
-    room.players,
-    eliminatedPlayer,
-  );
-  room.result = {
-    ...result,
-    villainMissionComplete: false,
-  };
-  room.logs.push(
-    `${eliminatedPlayer.name}님의 좋아요 토큰이 0개가 되어 게임이 종료되었습니다.`,
-  );
-}
-
-function adjustReputation(room: Room, target: ServerPlayer, amount: number) {
-  target.reputationTokens = Math.max(0, target.reputationTokens + amount);
-  if (target.reputationTokens === 0) {
-    if (target.role === "villain") {
-      finishByReputation(room, target);
-    } else {
-      enterReporting(
-        room,
-        `${target.name}님의 평판이 0이 되어 즉시 시장이 폐쇄되고 최종 투표에 돌입합니다.`,
-      );
-    }
-  }
-}
-
-function startGame(room: Room, actor: ServerPlayer) {
-  if (!actor.isHost) throw new Error("호스트만 게임을 시작할 수 있습니다.");
-  if (room.status !== "waiting") throw new Error("이미 시작된 방입니다.");
-  if (room.players.length < MIN_PLAYERS) {
-    throw new Error("3명 이상 모여야 시작할 수 있습니다.");
-  }
-  if (room.players.length > MAX_PLAYERS) {
-    throw new Error("5명 이하로만 시작할 수 있습니다.");
-  }
-
-  const villainIndex = Math.floor(Math.random() * room.players.length);
-  const missionId =
-    VILLAIN_MISSIONS[Math.floor(Math.random() * VILLAIN_MISSIONS.length)]!;
-  const missionText = VILLAIN_MISSION_DESCRIPTIONS[missionId];
-  const hands = dealItemHands(room.players.map((player) => player.id));
-  const jobs = dealJobs(room.players.map((player) => player.id));
-
-  room.players.forEach((player, index) => {
-    player.role = index === villainIndex ? "villain" : "citizen";
-    player.mission = index === villainIndex ? missionText : undefined;
-    player.job = jobs[player.id];
-    player.money = player.job?.startingMoney ?? 1000000;
-    player.reputationTokens = STARTING_REPUTATION;
-    player.hand = hands[player.id] ?? [];
-    player.dealCards = { cool: true, cancel: true };
-  });
-  room.status = "playing";
-  room.currentTurnPlayerId = room.players[0]?.id ?? null;
-  room.usedActionCount = 0;
-  room.marketActionLimit = getMarketActionLimit(room.players.length);
-  room.actionDeck = makeActionDeck();
-  room.discardPile = [];
-  room.currentActionCard = null;
-  room.logs.push(
-    `게임이 시작되었습니다. 역할 카드와 물건 카드 5장을 확인하세요. 시장 행동 예산은 ${room.marketActionLimit}회입니다.`,
-  );
-}
-
-function drawActionCard(room: Room, actor: ServerPlayer) {
-  assertPlaying(room);
-  assertCurrentTurn(room, actor);
-  if (room.currentActionCard) throw new Error("이미 행동카드를 뽑았습니다.");
-  if (room.actionDeck.length === 0) {
-    room.actionDeck = makeActionDeck();
-    room.discardPile = [];
-  }
-
-  const card = room.actionDeck.shift();
-  if (!card) throw new Error("행동카드가 없습니다.");
-  room.currentActionCard = card;
-  room.logs.push(`${actor.name}님이 행동카드 '${card.title}'을(를) 뽑았습니다.`);
-}
-
-function assertTradeAction(
-  card: ActionCardSnapshot | null,
-): asserts card is ActionCardSnapshot & { type: PendingDeal["actionType"] } {
-  if (!isTradeAction(card)) {
-    throw new Error("거래 행동카드에서만 거래를 신청할 수 있습니다.");
-  }
-}
-
-function isTradeAction(
-  card: ActionCardSnapshot | null,
-): card is ActionCardSnapshot & { type: PendingDeal["actionType"] } {
-  return Boolean(
-    card && ["tradeRequest", "freeGive", "directTrade"].includes(card.type),
-  );
-}
-
-function requestTrade(
-  room: Room,
-  actor: ServerPlayer,
-  ownerId: string,
-  itemInstanceId: string,
-  offerPrice: number,
-) {
-  assertPlaying(room);
-  assertCurrentTurn(room, actor);
-  const actionCard = room.currentActionCard;
-  assertTradeAction(actionCard);
-  if (room.pendingDeal) throw new Error("이미 진행 중인 거래가 있습니다.");
-
-  const owner = findPlayerById(room, ownerId);
-  if (owner.id === actor.id) {
-    throw new Error("자기 자신에게 거래를 신청할 수 없습니다.");
-  }
-  const item = owner.hand.find((owned) => owned.instanceId === itemInstanceId);
-  if (!item) throw new Error("거래 신청할 물건을 찾을 수 없습니다.");
-  const price = actionCard.type === "freeGive" ? 0 : offerPrice;
-  if (price < 0) throw new Error("가격이 올바르지 않습니다.");
-  if (actor.money < price) throw new Error("신청자의 금액이 부족합니다.");
-
-  if (price !== item.marketPrice) {
-    actor.negoOffersSent += 1;
-    const msg = evaluateCitizenMission(actor);
-    if (msg) room.logs.push(msg);
-  }
-
-  const revealedBeforeDeal = actionCard.type === "directTrade";
-  if (revealedBeforeDeal) {
-    item.revealedToPlayerIds = Array.from(
-      new Set([...item.revealedToPlayerIds, owner.id, actor.id]),
-    );
-  }
-
-  room.pendingDeal = {
-    id: randomUUID(),
-    actionType: actionCard.type,
-    requesterId: actor.id,
-    ownerId: owner.id,
-    itemInstanceId,
-    askingPrice: price,
-    revealedBeforeDeal,
-    choices: {},
-    resolved: false,
-    currentOffer: price,
-    lastOfferPlayerId: actor.id,
-    negoCount: 0,
-  };
-  room.logs.push(
-    `${actor.name}님이 ${owner.name}님의 물건에 ${formatWon(price)} 거래를 신청했습니다.`,
-  );
-}
-
-function resolveDeal(room: Room, deal: PendingDeal) {
-  const owner = findPlayerById(room, deal.ownerId);
-  const requester = findPlayerById(room, deal.requesterId);
-  const ownerChoice = deal.choices[owner.id];
-  const requesterChoice = deal.choices[requester.id];
-  if (!ownerChoice || !requesterChoice) return;
-
-  if (ownerChoice === "cool" && requesterChoice === "cool") {
-    const tradedItem = owner.hand.find((item) => item.instanceId === deal.itemInstanceId);
-    const finalPrice = deal.currentOffer !== undefined ? deal.currentOffer : deal.askingPrice;
-
-    const settlement = settleAcceptedDeal({
-      deal: {
-        ...deal,
-        askingPrice: finalPrice,
-        hiddenInfoRevealTurn: deal.revealedBeforeDeal
-          ? undefined
-          : room.turnCount + 2,
-      },
-      owner,
-      requester,
-    });
-    owner.money = settlement.ownerMoney;
-    requester.money = settlement.requesterMoney;
-    owner.hand = settlement.ownerHand;
-    requester.hand = settlement.requesterHand;
-    room.pendingReviews.push(...settlement.pendingReviews);
-
-    owner.tradeParticipations += 1;
-    requester.tradeParticipations += 1;
-
-    if (owner.role === "villain" && tradedItem) {
-      if (tradedItem.isBrick) {
-        owner.brickSalesCount += 1;
-      }
-      if (
-        (tradedItem.condition === "defective" || tradedItem.condition === "broken") &&
-        finalPrice >= tradedItem.marketPrice
-      ) {
-        owner.defectSalesCount += 1;
-      }
-      if (finalPrice >= tradedItem.marketPrice * 1.1) {
-        owner.overpriceSalesCount += 1;
-      }
-    }
-
-    room.logs.push(
-      `${requester.name}님과 ${owner.name}님의 쿨거래가 성사되었습니다. (${formatWon(finalPrice)})`,
-    );
-
-    const ownerMsg = evaluateCitizenMission(owner);
-    if (ownerMsg) room.logs.push(ownerMsg);
-    const requesterMsg = evaluateCitizenMission(requester);
-    if (requesterMsg) room.logs.push(requesterMsg);
-  } else {
-    room.logs.push(`${requester.name}님과 ${owner.name}님의 거래가 취소되었습니다.`);
-  }
-
-  if (room.currentActionCard) room.discardPile.push(room.currentActionCard);
-  room.pendingDeal = null;
-  room.currentActionCard = null;
-  nextTurn(room);
-}
-
-function chooseDealCard(
-  room: Room,
-  actor: ServerPlayer,
-  choice: DealCardChoice,
-) {
-  assertPlaying(room);
-  const deal = room.pendingDeal;
-  if (!deal) throw new Error("진행 중인 거래가 없습니다.");
-  if (actor.id !== deal.ownerId && actor.id !== deal.requesterId) {
-    throw new Error("거래 당사자만 선택할 수 있습니다.");
-  }
-  deal.choices[actor.id] = choice;
-  resolveDeal(room, deal);
-}
-
-function negoDeal(
-  room: Room,
-  actor: ServerPlayer,
-  price: number,
-) {
-  assertPlaying(room);
-  const deal = room.pendingDeal;
-  if (!deal) throw new Error("진행 중인 거래가 없습니다.");
-  if (actor.id !== deal.ownerId && actor.id !== deal.requesterId) {
-    throw new Error("거래 당사자만 흥정할 수 있습니다.");
-  }
-  if (deal.lastOfferPlayerId === actor.id) {
-    throw new Error("상대방의 제안에 대해서만 흥정할 수 있습니다.");
-  }
-  if (price < 0) {
-    throw new Error("가격은 0원 이상이어야 합니다.");
-  }
-  if (actor.id === deal.requesterId && actor.money < price) {
-    throw new Error("소지금보다 높은 가격으로 제안할 수 없습니다.");
-  }
-
-  deal.currentOffer = price;
-  deal.lastOfferPlayerId = actor.id;
-  deal.negoCount = (deal.negoCount ?? 0) + 1;
-  // 역제안을 보낸 사람은 자동으로 cool 상태가 되며, 제안을 받은 상대방의 선택지는 비웁니다.
-  deal.choices = {
-    [actor.id]: "cool",
-  };
-
-  room.logs.push(
-    `${actor.name}님이 가격을 ${formatWon(price)}으로 흥정(역제안)했습니다.`,
-  );
-}
-
-function reviewTrade(
-  room: Room,
-  actor: ServerPlayer,
-  targetPlayerId: string,
-  satisfied: boolean,
-) {
-  assertPlaying(room);
-  const review = room.pendingReviews.find(
-    (candidate) =>
-      candidate.reviewerId === actor.id &&
-      candidate.targetPlayerId === targetPlayerId,
-  );
-  if (!review) throw new Error("평가할 거래가 없습니다.");
-
-  const target = findPlayerById(room, targetPlayerId);
-  const outcome = calculateTradeReviewOutcome({
-    reviewerReputationTokens: actor.reputationTokens,
-    targetReputationTokens: target.reputationTokens,
-    targetManner: target.manner,
-    targetLikes: target.likes,
-    targetDislikes: target.dislikes,
-    satisfied,
-  });
-
-  actor.reputationTokens = outcome.reviewerReputationTokens;
-  target.reputationTokens = outcome.targetReputationTokens;
-  target.likes = outcome.targetLikes;
-  target.dislikes = outcome.targetDislikes;
-  target.manner = outcome.targetManner;
-
-  if (satisfied) {
-    room.logs.push(`${actor.name}님이 ${target.name}님에게 좋아요 토큰을 선물했습니다.`);
-    if (outcome.eliminatedPlayer === "reviewer") finishByReputation(room, actor);
-  } else {
-    if (outcome.eliminatedPlayer === "target") finishByReputation(room, target);
-    room.logs.push(`${actor.name}님이 ${target.name}님의 좋아요 토큰을 소멸시켰습니다.`);
-  }
-
-  actor.reviewsSubmitted += 1;
-  const msg = evaluateCitizenMission(actor);
-  if (msg) room.logs.push(msg);
-
-  room.pendingReviews = room.pendingReviews.filter(
-    (candidate) => candidate !== review,
-  );
-}
-
-function terrorReview(room: Room, actor: ServerPlayer, targetPlayerId: string) {
-  assertPlaying(room);
-  assertCurrentTurn(room, actor);
-  if (room.currentActionCard?.type !== "badReview") {
-    throw new Error("악플테러 행동카드에서만 사용할 수 있습니다.");
-  }
-  const target = findPlayerById(room, targetPlayerId);
-  if (target.id === actor.id) throw new Error("자기 자신을 지목할 수 없습니다.");
-  adjustReputation(room, target, -1);
-  room.logs.push(`${actor.name}님이 ${target.name}님에게 악플테러를 사용했습니다.`);
-  room.currentActionCard = null;
-  nextTurn(room);
-}
-
-function recycleBrick(room: Room, actor: ServerPlayer, itemInstanceId: string) {
-  assertPlaying(room);
-  assertCurrentTurn(room, actor);
-  if (room.currentActionCard?.type !== "recycle") {
-    throw new Error("분리수거 행동카드에서만 사용할 수 있습니다.");
-  }
-  const item = actor.hand.find((owned) => owned.instanceId === itemInstanceId);
-  if (!item || !item.isBrick) throw new Error("분리수거할 벽돌 카드가 없습니다.");
-  actor.hand = actor.hand.filter((owned) => owned.instanceId !== itemInstanceId);
-  room.logs.push(`${actor.name}님이 벽돌 카드를 분리수거했습니다.`);
-  room.currentActionCard = null;
-  nextTurn(room);
-}
-
-function swapRandomItem(room: Room, actor: ServerPlayer, targetPlayerId: string) {
-  assertPlaying(room);
-  assertCurrentTurn(room, actor);
-  if (room.currentActionCard?.type !== "swap") {
-    throw new Error("물물교환 행동카드에서만 사용할 수 있습니다.");
-  }
-  const target = findPlayerById(room, targetPlayerId);
-  if (target.id === actor.id) throw new Error("자기 자신과 교환할 수 없습니다.");
-  if (actor.hand.length === 0 || target.hand.length === 0) {
-    throw new Error("교환할 물건 카드가 없습니다.");
-  }
-
-  const actorItemIndex = Math.floor(Math.random() * actor.hand.length);
-  const targetItemIndex = Math.floor(Math.random() * target.hand.length);
-  const actorItem = actor.hand[actorItemIndex]!;
-  const targetItem = target.hand[targetItemIndex]!;
-  actor.hand[actorItemIndex] = targetItem;
-  target.hand[targetItemIndex] = actorItem;
-  room.logs.push(`${actor.name}님과 ${target.name}님이 물건 카드를 맞교환했습니다.`);
-  room.currentActionCard = null;
-  nextTurn(room);
-}
-
-function checkVillainMissionComplete(room: Room, villain: ServerPlayer): boolean {
-  return evaluateVillainMission(villain);
-}
-
-function reportSuspiciousPlayer(
-  room: Room,
-  actor: ServerPlayer,
-  targetPlayerId: string,
-) {
-  if (room.status !== "reporting") {
-    throw new Error("신고할 수 없는 상태입니다.");
-  }
-  if (!room.players.some((player) => player.id === targetPlayerId)) {
-    throw new Error("신고 대상이 존재하지 않습니다.");
-  }
-  if (room.reports[actor.id]) throw new Error("이미 신고했습니다.");
-
-  room.status = "reporting";
-  room.currentTurnPlayerId = null;
-  room.reports[actor.id] = targetPlayerId;
-  room.logs.push(`${actor.name}님이 사기 의심 계정을 신고했습니다.`);
-
-  if (Object.keys(room.reports).length === room.players.length) {
-    const villain = room.players.find((player) => player.role === "villain");
-    if (!villain) throw new Error("빌런 정보가 없습니다.");
-    const missionComplete = checkVillainMissionComplete(room, villain);
-    room.result = calculateReportResult(
-      room.players,
-      room.reports,
-      villain.id,
-      missionComplete,
-    );
-    room.result.villainMissionComplete = missionComplete;
-    room.status = "finished";
-    room.logs.push("최종 신고가 접수되었습니다. 분쟁 심사 결과를 공개합니다.");
-  }
-}
-
 function addBot(room: Room, actor: ServerPlayer) {
   if (!actor.isHost) throw new Error("호스트만 봇을 추가할 수 있습니다.");
   if (room.mode !== "botTest") throw new Error("봇 테스트 방에서만 봇을 추가할 수 있습니다.");
@@ -768,181 +113,18 @@ function addBot(room: Room, actor: ServerPlayer) {
 
   const botNumber = room.players.filter((player) => player.isBot).length + 1;
   const bot = createPlayer(`자동봇 ${botNumber}`, false, `자동봇 ${botNumber}`, true);
+  
+  const pool = loadGenePool();
+  const unassigned = pool.filter((g) => !room.players.some((p) => p.genes?.id === g.id));
+  const selectedGene = unassigned.length > 0
+    ? unassigned[Math.floor(Math.random() * unassigned.length)]!
+    : pool[Math.floor(Math.random() * pool.length)]!;
+    
+  bot.genes = { ...selectedGene };
+  bot.suspectScores = {};
+
   room.players.push(bot);
   room.logs.push(`${bot.name}님이 테스트 봇으로 추가되었습니다.`);
-}
-
-function chooseBotTarget(
-  room: Room,
-  actor: ServerPlayer,
-  predicate: (player: ServerPlayer) => boolean = () => true,
-) {
-  const candidates = room.players.filter(
-    (player) => player.id !== actor.id && predicate(player),
-  );
-  return candidates.find((player) => player.isBot) ?? candidates[0];
-}
-
-function botEndTurn(room: Room, actor: ServerPlayer) {
-  if (room.currentActionCard) room.discardPile.push(room.currentActionCard);
-  room.currentActionCard = null;
-  room.pendingDeal = null;
-  room.logs.push(`${actor.name}님이 자동으로 턴을 넘겼습니다.`);
-  nextTurn(room);
-}
-
-function autoResolveBotDeal(room: Room) {
-  const deal = room.pendingDeal;
-  if (!deal) return false;
-
-  let changed = false;
-  for (const playerId of [deal.ownerId, deal.requesterId]) {
-    const player = room.players.find((candidate) => candidate.id === playerId);
-    if (player?.isBot && !deal.choices[player.id]) {
-      deal.choices[player.id] = "cool";
-      room.logs.push(`${player.name}님이 자동으로 쿨거래를 선택했습니다.`);
-      changed = true;
-    }
-  }
-
-  if (changed) resolveDeal(room, deal);
-  return changed;
-}
-
-function autoReviewBotTrades(room: Room) {
-  if (room.status !== "playing") return false;
-
-  let changed = false;
-  for (const review of [...room.pendingReviews]) {
-    const reviewer = room.players.find((player) => player.id === review.reviewerId);
-    if (!reviewer?.isBot) continue;
-    reviewTrade(room, reviewer, review.targetPlayerId, true);
-    changed = true;
-    if ((room.status as RoomStatus) === "finished") break;
-  }
-  return changed;
-}
-
-function autoReportBots(room: Room) {
-  if (room.status !== "reporting") return false;
-
-  let changed = false;
-  for (const bot of room.players.filter((player) => player.isBot)) {
-    if (room.reports[bot.id]) continue;
-    const target = chooseBotTarget(room, bot);
-    if (!target) continue;
-    reportSuspiciousPlayer(room, bot, target.id);
-    changed = true;
-    if ((room.status as RoomStatus) === "finished") break;
-  }
-  return changed;
-}
-
-function autoRunCurrentBotTurn(room: Room) {
-  if (room.status !== "playing" || room.pendingDeal) return false;
-  const actor = room.players.find((player) => player.id === room.currentTurnPlayerId);
-  if (!actor?.isBot) return false;
-
-  if (!room.currentActionCard) {
-    drawActionCard(room, actor);
-    return true;
-  }
-
-  const card = room.currentActionCard;
-  if (isTradeAction(card)) {
-    const tradeOption = room.players
-      .filter((player) => player.id !== actor.id && player.hand.length > 0)
-      .sort((a, b) => Number(b.isBot) - Number(a.isBot))
-      .map((owner) => {
-        const item = owner.hand.find((owned) => !owned.isBrick) ?? owner.hand[0];
-        if (!item) return null;
-        const offerPrice =
-          card.type === "freeGive"
-            ? 0
-            : Math.max(0, Math.round((item.marketPrice * 0.8) / 10000) * 10000);
-        return { owner, item, offerPrice };
-      })
-      .find(
-        (
-          option,
-        ): option is {
-          owner: ServerPlayer;
-          item: ServerItemCard;
-          offerPrice: number;
-        } => Boolean(option && actor.money >= option.offerPrice),
-      );
-    if (!tradeOption) {
-      botEndTurn(room, actor);
-      return true;
-    }
-
-    requestTrade(
-      room,
-      actor,
-      tradeOption.owner.id,
-      tradeOption.item.instanceId,
-      tradeOption.offerPrice,
-    );
-    return true;
-  }
-
-  if (card.type === "badReview") {
-    const target = room.players
-      .filter((player) => player.id !== actor.id)
-      .sort((a, b) => b.reputationTokens - a.reputationTokens)[0];
-    if (target) {
-      terrorReview(room, actor, target.id);
-    } else {
-      botEndTurn(room, actor);
-    }
-    return true;
-  }
-
-  if (card.type === "recycle") {
-    const brick = actor.hand.find((item) => item.isBrick);
-    if (brick) {
-      recycleBrick(room, actor, brick.instanceId);
-    } else {
-      botEndTurn(room, actor);
-    }
-    return true;
-  }
-
-  if (card.type === "swap") {
-    const target = chooseBotTarget(
-      room,
-      actor,
-      (player) => player.hand.length > 0,
-    );
-    if (target) {
-      swapRandomItem(room, actor, target.id);
-    } else {
-      botEndTurn(room, actor);
-    }
-    return true;
-  }
-
-  botEndTurn(room, actor);
-  return true;
-}
-
-function autoPlayBots(room: Room) {
-  if (room.mode !== "botTest") return false;
-
-  let changed = false;
-
-  for (let guard = 0; guard < 30; guard += 1) {
-    if (room.status === "finished") break;
-    const stepped =
-      autoResolveBotDeal(room) ||
-      autoReviewBotTrades(room) ||
-      autoReportBots(room) ||
-      autoRunCurrentBotTurn(room);
-    if (!stepped) break;
-    changed = true;
-  }
-
-  return changed;
 }
 
 export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionResult {
@@ -963,7 +145,7 @@ export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionRe
         mode === "botTest" ? "봇 테스트 방" : "실제 플레이 방"
       }을 만들었습니다.`,
     ],
-    actionDeck: makeActionDeck(),
+    actionDeck: [],
     discardPile: [],
     currentActionCard: null,
     pendingDeal: null,
@@ -1022,6 +204,12 @@ export function submitRoomAction(
       break;
     case "startGame":
       startGame(room, actor);
+      // 봇 플레이어의 사전 준비 즉시 처리
+      room.players.forEach((player) => {
+        if (player.isBot) {
+          autoPrepareBot(room, player);
+        }
+      });
       break;
     case "drawActionCard":
       drawActionCard(room, actor);
@@ -1077,6 +265,12 @@ export function submitRoomAction(
       break;
     case "reportSuspiciousPlayer":
       reportSuspiciousPlayer(room, actor, action.targetPlayerId);
+      break;
+    case "fixPreparation":
+      fixPreparation(room, actor, action.itemsConfig);
+      break;
+    case "updateCustomCondition":
+      updateCustomCondition(room, actor, action.itemInstanceId, action.customCondition);
       break;
   }
 

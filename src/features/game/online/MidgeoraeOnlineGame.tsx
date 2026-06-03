@@ -1,11 +1,9 @@
 "use client";
 
 import {
-  useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
+  useEffect,
   type ReactNode,
 } from "react";
 import {
@@ -52,32 +50,23 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { GameTutorialModal } from "../components/GameTutorialModal";
+import { FoldableHelperCard } from "../components/FoldableHelperCard";
+import type { ItemCondition } from "../types";
+import { ALL_ITEMS } from "../data/items";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../rules/game-rules";
 import type {
   ActionCardSnapshot,
   ActionCardType,
   DealCardChoice,
   ItemCardSnapshot,
-  PlayerRole,
   PublicPlayer,
-  RoomAction,
   RoomMode,
-  RoomSessionResult,
   RoomSnapshot,
   PlayerSnapshot,
+  PlayerRole,
 } from "@/features/game/server/types";
+import { useOnlineGame } from "./hooks/useOnlineGame";
 
-interface Session {
-  code: string;
-  playerId: string;
-  playerToken: string;
-}
-
-interface NetworkInviteResponse {
-  inviteUrls: string[];
-}
-
-const SESSION_KEY = "midgeorae-online-session";
 const CARD_BACK = "/game-cards/backs/item-back.png";
 
 const ACTION_PREVIEW_CARDS = [
@@ -87,23 +76,6 @@ const ACTION_PREVIEW_CARDS = [
   { title: "즉시 구매", body: "시장 아이템을 즉시 구매.", accent: "orange" },
   { title: "리뷰 작성", body: "거래 후 리뷰 작성.", accent: "green" },
 ] as const;
-
-async function readJson<T>(response: Response): Promise<T> {
-  const data = (await response.json()) as T | { error?: string };
-  if (!response.ok) {
-    const errorData = data as { error?: string };
-    throw new Error(errorData.error ?? "요청에 실패했습니다.");
-  }
-  return data as T;
-}
-
-async function requestSnapshot(activeSession: Session) {
-  const response = await fetch(
-    `/api/game/rooms/${activeSession.code}?token=${activeSession.playerToken}`,
-    { cache: "no-store" },
-  );
-  return readJson<RoomSnapshot>(response);
-}
 
 function moneyLabel(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
@@ -211,321 +183,50 @@ function isTradeRequestAction(card: ActionCardSnapshot | null) {
 }
 
 export function MidgeoraeOnlineGame() {
-  const [name, setName] = useState("");
-  const [joinCode, setJoinCode] = useState("");
-  const [session, setSession] = useState<Session | null>(null);
-  const [pendingDealItem, setPendingDealItem] =
-    useState<ItemCardSnapshot | null>(null);
-
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [lanInviteUrls, setLanInviteUrls] = useState<string[]>([]);
-  const [selectedItemId, setSelectedItemId] = useState("");
-  const [dealTargetId, setDealTargetId] = useState("");
-  const [askingPrice, setAskingPrice] = useState(100000);
-  const [actionTargetId, setActionTargetId] = useState("");
-  const sessionRef = useRef<Session | null>(null);
-  const sessionChangeRef = useRef(0);
-  const tutorialShownRef = useRef(false);
-
-  const shareUrl = useMemo(() => {
-    if (!session || typeof window === "undefined") return "";
-    return `${window.location.origin}/game?room=${session.code}`;
-  }, [session]);
-  const primaryInviteUrl = lanInviteUrls[0] ?? shareUrl;
-  const networkUrls = lanInviteUrls.length > 0 ? lanInviteUrls : [shareUrl];
-
-  const me = snapshot?.me ?? null;
-  const myHand = useMemo(() => me?.hand ?? [], [me?.hand]);
-  const currentPlayer = snapshot?.players.find(
-    (player) => player.id === snapshot.currentTurnPlayerId,
-  );
-  const isMyTurn = Boolean(me && me.id === snapshot?.currentTurnPlayerId);
-  const otherPlayers = useMemo(
-    () => snapshot?.players.filter((player) => player.id !== me?.id) ?? [],
-    [me?.id, snapshot?.players],
-  );
-  const selectedOwner = useMemo(
-    () => otherPlayers.find((player) => player.id === dealTargetId),
-    [dealTargetId, otherPlayers],
-  );
-  const requestableItems = useMemo(
-    () => selectedOwner?.publicItems ?? [],
-    [selectedOwner?.publicItems],
-  );
-  const currentAction = snapshot?.currentActionCard ?? null;
-  const pendingDeal = snapshot?.pendingDeal ?? null;
-  const tradeActionActive = isTradeRequestAction(currentAction);
-  const pendingReviews = snapshot?.pendingReviews ?? [];
-  const isDealParty = Boolean(
-    pendingDeal &&
-      me &&
-      (pendingDeal.ownerId === me.id || pendingDeal.requesterId === me.id),
-  );
-  const myDealChoice =
-    pendingDeal && me ? pendingDeal.choices[me.id] : undefined;
-
-  useEffect(() => {
-    sessionRef.current = session;
-  }, [session]);
-
-  const fetchSnapshot = useCallback(async (activeSession = sessionRef.current) => {
-    if (!activeSession) return;
-    const nextSnapshot = await requestSnapshot(activeSession);
-    if (sessionRef.current?.playerToken === activeSession.playerToken) {
-      setSnapshot(nextSnapshot);
-      setError("");
-    }
-  }, []);
-
-  useEffect(() => {
-    const restoreId = ++sessionChangeRef.current;
-    const saved = localStorage.getItem(SESSION_KEY);
-    const params = new URLSearchParams(window.location.search);
-    const roomFromUrl = params.get("room");
-    if (roomFromUrl) setJoinCode(roomFromUrl.toUpperCase());
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Session;
-        void requestSnapshot(parsed)
-          .then((restoredSnapshot) => {
-            if (sessionChangeRef.current !== restoreId) return;
-            setSession(parsed);
-            setSnapshot(restoredSnapshot);
-          })
-          .catch(() => {
-            if (sessionChangeRef.current !== restoreId) return;
-            localStorage.removeItem(SESSION_KEY);
-            setSession(null);
-            setSnapshot(null);
-          });
-      } catch {
-        localStorage.removeItem(SESSION_KEY);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!session) return;
-    const activeSession = session;
-    const timer = window.setInterval(() => {
-      void fetchSnapshot(activeSession).catch((fetchError: unknown) => {
-        if (sessionRef.current?.playerToken !== activeSession.playerToken) return;
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "방 상태를 불러오지 못했습니다.",
-        );
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [fetchSnapshot, session]);
-
-  useEffect(() => {
-    if (!session) {
-      setLanInviteUrls([]);
-      return;
-    }
-
-    const activeSession = session;
-    const controller = new AbortController();
-
-    async function refreshInviteUrls() {
-      try {
-        const response = await fetch(
-          `/api/game/network?room=${encodeURIComponent(activeSession.code)}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-        const data = await readJson<NetworkInviteResponse>(response);
-        setLanInviteUrls(data.inviteUrls);
-      } catch {
-        if (!controller.signal.aborted) setLanInviteUrls([]);
-      }
-    }
-
-    void refreshInviteUrls();
-    const timer = window.setInterval(refreshInviteUrls, 5000);
-
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-    };
-  }, [session]);
-
-  useEffect(() => {
-    const selectableItems = isTradeRequestAction(currentAction)
-      ? requestableItems
-      : myHand;
-    if (
-      selectableItems.length > 0 &&
-      !selectableItems.some((item) => item.instanceId === selectedItemId)
-    ) {
-      setSelectedItemId(selectableItems[0]?.instanceId ?? "");
-    }
-  }, [currentAction, myHand, requestableItems, selectedItemId]);
-
-  useEffect(() => {
-    if (currentAction?.type === "freeGive") {
-      setAskingPrice(0);
-      return;
-    }
-    const selectableItems = isTradeRequestAction(currentAction)
-      ? requestableItems
-      : myHand;
-    const selected = selectableItems.find((item) => item.instanceId === selectedItemId);
-    if (selected && selected.originalPrice) {
-      setAskingPrice(selected.originalPrice);
-    }
-  }, [selectedItemId, currentAction, requestableItems, myHand]);
-
-  useEffect(() => {
-    if (snapshot?.status === "playing" && !tutorialShownRef.current) {
-      tutorialShownRef.current = true;
-      const doNotShow = localStorage.getItem("midgeorae-tutorial-hide");
-      if (!doNotShow) {
-        setIsTutorialOpen(true);
-      }
-    }
-  }, [snapshot?.status]);
-
-  useEffect(() => {
-    if (otherPlayers.length > 0 && !otherPlayers.some((player) => player.id === dealTargetId)) {
-      setDealTargetId(otherPlayers[0]?.id ?? "");
-    }
-    if (otherPlayers.length > 0 && !otherPlayers.some((player) => player.id === actionTargetId)) {
-      setActionTargetId(otherPlayers[0]?.id ?? "");
-    }
-  }, [actionTargetId, dealTargetId, otherPlayers]);
-
-  async function createGameRoom(mode: RoomMode) {
-    sessionChangeRef.current += 1;
-    setError("");
-    setLoading(true);
-    try {
-      const response = await fetch("/api/game/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, mode }),
-      });
-      const data = await readJson<RoomSessionResult>(response);
-      const nextSession = {
-        code: data.room.code,
-        playerId: data.playerId,
-        playerToken: data.playerToken,
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-      setSession(nextSession);
-      setSnapshot(data.room);
-    } catch (createError) {
-      setError(
-        createError instanceof Error
-          ? createError.message
-          : "방을 만들지 못했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function joinGameRoom() {
-    sessionChangeRef.current += 1;
-    setError("");
-    setLoading(true);
-    try {
-      const code = joinCode.trim().toUpperCase();
-      const response = await fetch(`/api/game/rooms/${code}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      const data = await readJson<RoomSessionResult>(response);
-      const nextSession = {
-        code: data.room.code,
-        playerId: data.playerId,
-        playerToken: data.playerToken,
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(nextSession));
-      setSession(nextSession);
-      setSnapshot(data.room);
-    } catch (joinError) {
-      setError(
-        joinError instanceof Error ? joinError.message : "방에 입장하지 못했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function submitAction(action: RoomAction) {
-    if (!session) return;
-    setError("");
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/game/rooms/${session.code}/actions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: session.playerToken, action }),
-      });
-      const data = await readJson<RoomSnapshot>(response);
-      setSnapshot(data);
-    } catch (actionError) {
-      setError(
-        actionError instanceof Error
-          ? actionError.message
-          : "액션을 처리하지 못했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function leaveRoom() {
-    sessionChangeRef.current += 1;
-    localStorage.removeItem(SESSION_KEY);
-    setSession(null);
-    setSnapshot(null);
-    setError("");
-  }
-
-  async function copyInvite() {
-    if (!primaryInviteUrl) return;
-    const inviteText = `${primaryInviteUrl}\n방 코드: ${session?.code ?? ""}`;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(inviteText);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = inviteText;
-        textArea.setAttribute("readonly", "");
-        textArea.style.position = "fixed";
-        textArea.style.opacity = "0";
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand("copy");
-        textArea.remove();
-      }
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-    } catch {
-      setError(`초대 주소: ${primaryInviteUrl} / 방 코드: ${session?.code ?? ""}`);
-    }
-  }
-
-  function requestSelectedItem() {
-    const price = currentAction?.type === "freeGive" ? 0 : askingPrice;
-    void submitAction({
-      type: "requestTrade",
-      ownerId: dealTargetId,
-      itemInstanceId: selectedItemId,
-      offerPrice: price,
-    });
-  }
+  const {
+    name,
+    setName,
+    joinCode,
+    setJoinCode,
+    session,
+    pendingDealItem,
+    activeTutorialStep,
+    setActiveTutorialStep,
+    isFullManualOpen,
+    setIsFullManualOpen,
+    snapshot,
+    error,
+    loading,
+    copied,
+    selectedItemId,
+    setSelectedItemId,
+    dealTargetId,
+    setDealTargetId,
+    askingPrice,
+    setAskingPrice,
+    actionTargetId,
+    setActionTargetId,
+    me,
+    myHand,
+    currentPlayer,
+    isMyTurn,
+    otherPlayers,
+    requestableItems,
+    currentAction,
+    pendingDeal,
+    tradeActionActive,
+    pendingReviews,
+    isDealParty,
+    myDealChoice,
+    fetchSnapshot,
+    handleDoNotShowAgain,
+    createGameRoom,
+    joinGameRoom,
+    submitAction,
+    leaveRoom,
+    copyInvite,
+    requestSelectedItem,
+  } = useOnlineGame();
 
   if (!session || !snapshot) {
     return (
@@ -562,55 +263,55 @@ export function MidgeoraeOnlineGame() {
 
             <div className="motion-panel market-card-table p-5">
               <div className="relative">
-              <label className="text-sm font-bold text-stone-700">
-                플레이어 이름
-              </label>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="예: 경수"
-                className="mt-2 w-full border border-stone-300 px-4 py-3 text-base font-semibold outline-none focus:border-orange-600"
-              />
+                <label className="text-sm font-bold text-stone-700">
+                  플레이어 이름
+                </label>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="예: 경수"
+                  className="mt-2 w-full border border-stone-300 px-4 py-3 text-base font-semibold outline-none focus:border-orange-600"
+                />
 
-              <div className="mt-4 grid gap-2">
+                <div className="mt-4 grid gap-2">
+                  <button
+                    onClick={() => createGameRoom("botTest")}
+                    disabled={loading}
+                    className="motion-button flex w-full items-center justify-center gap-2 bg-orange-600 px-4 py-3 text-base font-black text-white hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    <Play size={18} />
+                    봇 테스트로 시작
+                  </button>
+                  <button
+                    onClick={() => createGameRoom("real")}
+                    disabled={loading}
+                    className="motion-button flex w-full items-center justify-center gap-2 border border-stone-900 px-4 py-3 text-base font-black text-stone-950 hover:bg-stone-950 hover:text-white disabled:opacity-50"
+                  >
+                    <Users size={18} />
+                    실제 플레이 방 만들기
+                  </button>
+                </div>
+
+                <div className="my-5 h-px bg-stone-200" />
+
+                <label className="text-sm font-bold text-stone-700">방 코드</label>
+                <input
+                  value={joinCode}
+                  onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                  placeholder="ABCD"
+                  className="mt-2 w-full border border-stone-300 px-4 py-3 text-center text-2xl font-black uppercase tracking-[0.25em] outline-none focus:border-orange-600"
+                  maxLength={4}
+                />
                 <button
-                  onClick={() => createGameRoom("botTest")}
+                  onClick={joinGameRoom}
                   disabled={loading}
-                  className="motion-button flex w-full items-center justify-center gap-2 bg-orange-600 px-4 py-3 text-base font-black text-white hover:bg-orange-700 disabled:opacity-50"
-                >
-                  <Play size={18} />
-                  봇 테스트로 시작
-                </button>
-                <button
-                  onClick={() => createGameRoom("real")}
-                  disabled={loading}
-                  className="motion-button flex w-full items-center justify-center gap-2 border border-stone-900 px-4 py-3 text-base font-black text-stone-950 hover:bg-stone-950 hover:text-white disabled:opacity-50"
+                  className="motion-button mt-4 flex w-full items-center justify-center gap-2 border border-stone-900 px-4 py-3 text-base font-black text-stone-950 hover:bg-stone-950 hover:text-white disabled:opacity-50"
                 >
                   <Users size={18} />
-                  실제 플레이 방 만들기
+                  방 입장
                 </button>
-              </div>
 
-              <div className="my-5 h-px bg-stone-200" />
-
-              <label className="text-sm font-bold text-stone-700">방 코드</label>
-              <input
-                value={joinCode}
-                onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                placeholder="ABCD"
-                className="mt-2 w-full border border-stone-300 px-4 py-3 text-center text-2xl font-black uppercase tracking-[0.25em] outline-none focus:border-orange-600"
-                maxLength={4}
-              />
-              <button
-                onClick={joinGameRoom}
-                disabled={loading}
-                className="motion-button mt-4 flex w-full items-center justify-center gap-2 border border-stone-900 px-4 py-3 text-base font-black text-stone-950 hover:bg-stone-950 hover:text-white disabled:opacity-50"
-              >
-                <Users size={18} />
-                방 입장
-              </button>
-
-              {error && <ErrorNotice message={error} />}
+                {error && <ErrorNotice message={error} />}
               </div>
             </div>
           </div>
@@ -621,17 +322,21 @@ export function MidgeoraeOnlineGame() {
 
   return (
     <main className="game-shell game-play-shell min-h-screen text-stone-950">
-      <GameTutorialModal
-        isOpen={isTutorialOpen}
-        onClose={() => setIsTutorialOpen(false)}
-        onDoNotShowAgain={(checked) => {
-          if (checked) {
-            localStorage.setItem("midgeorae-tutorial-hide", "true");
-          } else {
-            localStorage.removeItem("midgeorae-tutorial-hide");
-          }
-        }}
-      />
+      {isFullManualOpen && (
+        <GameTutorialModal
+          isOpen={true}
+          onClose={() => setIsFullManualOpen(false)}
+          isFullManual={true}
+        />
+      )}
+      {activeTutorialStep !== undefined && (
+        <GameTutorialModal
+          isOpen={true}
+          onClose={() => setActiveTutorialStep(undefined)}
+          stepId={activeTutorialStep}
+          onDoNotShowAgain={handleDoNotShowAgain}
+        />
+      )}
       <div className="game-screen-viewport mx-auto">
         <section className="game-frame-shell motion-panel">
           <header className="game-top-strip p-3">
@@ -661,7 +366,7 @@ export function MidgeoraeOnlineGame() {
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                <FrameIconButton label="게임 안내" onClick={() => setIsTutorialOpen(true)}>
+                <FrameIconButton label="게임 안내" onClick={() => setIsFullManualOpen(true)}>
                   <HelpCircle size={18} />
                 </FrameIconButton>
                 <FrameIconButton label="새로고침" onClick={() => fetchSnapshot()}>
@@ -690,83 +395,113 @@ export function MidgeoraeOnlineGame() {
             </aside>
 
             <section className="game-board-stage">
-          {snapshot.status === "waiting" && (
-            <WaitingRoom
-              mode={snapshot.mode}
-              isHost={Boolean(me?.isHost)}
-              playerCount={snapshot.players.length}
-              loading={loading}
-              onAddBot={() => submitAction({ type: "addBot" })}
-            />
-          )}
-
-          {snapshot.status === "playing" && (
-            <div className="min-w-0 space-y-3">
-              {pendingDeal && (
-                <PendingDealPanel
-                  snapshot={snapshot}
-                  item={pendingDealItem}
-                  isDealParty={isDealParty}
-                  myChoice={myDealChoice}
-                  onChoose={(choice) =>
-                    submitAction({ type: "chooseDealCard", choice })
-                  }
-                  onNego={(price) =>
-                    submitAction({ type: "negoDeal", price })
-                  }
-                  me={me}
-                />
+              {snapshot.status === "waiting" && (
+                <div className="space-y-3">
+                  <FoldableHelperCard stepId="waiting" />
+                  <WaitingRoom
+                    mode={snapshot.mode}
+                    isHost={Boolean(me?.isHost)}
+                    playerCount={snapshot.players.length}
+                    loading={loading}
+                    onAddBot={() => submitAction({ type: "addBot" })}
+                  />
+                </div>
               )}
 
-              {tradeActionActive ? (
-                <MarketView
-                  otherPlayers={otherPlayers}
-                  dealTargetId={dealTargetId}
-                  selectedItemId={selectedItemId}
-                  onSelectTarget={(ownerId, itemId) => {
-                    setDealTargetId(ownerId);
-                    setSelectedItemId(itemId);
-                  }}
-                />
-              ) : (
-                <MyDashboard
-                  me={me}
-                  myHand={myHand}
-                  isMyTurn={isMyTurn}
-                  selectedItemId={selectedItemId}
-                  setSelectedItemId={setSelectedItemId}
-                />
+              {snapshot.status === "preparing" && (
+                <div className="space-y-3">
+                  <FoldableHelperCard stepId="preparing" />
+                  <PreparationPanel
+                    me={me}
+                    myHand={myHand}
+                    loading={loading}
+                    onSubmit={(configs) =>
+                      submitAction({ type: "fixPreparation", itemsConfig: configs })
+                    }
+                  />
+                </div>
               )}
 
-              {pendingReviews.length > 0 && (
-                <ReviewPanel
-                  snapshot={snapshot}
-                  onReview={(targetPlayerId, satisfied) =>
-                    submitAction({
-                      type: "reviewTrade",
-                      targetPlayerId,
-                      satisfied,
-                    })
-                  }
-                />
+              {snapshot.status === "playing" && (
+                <div className="min-w-0 space-y-3">
+                  <FoldableHelperCard stepId={
+                    pendingDeal && isDealParty && !myDealChoice
+                      ? "pending_deal"
+                      : currentAction
+                        ? "playing_action"
+                        : "playing_draw"
+                  } />
+
+                  {pendingDeal && (
+                    <PendingDealPanel
+                      snapshot={snapshot}
+                      item={pendingDealItem}
+                      isDealParty={isDealParty}
+                      myChoice={myDealChoice}
+                      onChoose={(choice) =>
+                        submitAction({ type: "chooseDealCard", choice })
+                      }
+                      onNego={(price) =>
+                        submitAction({ type: "negoDeal", price })
+                      }
+                      me={me}
+                    />
+                  )}
+
+                  {tradeActionActive ? (
+                    <MarketView
+                      otherPlayers={otherPlayers}
+                      dealTargetId={dealTargetId}
+                      selectedItemId={selectedItemId}
+                      onSelectTarget={(ownerId, itemId) => {
+                        setDealTargetId(ownerId);
+                        setSelectedItemId(itemId);
+                      }}
+                    />
+                  ) : (
+                    <MyDashboard
+                      me={me}
+                      myHand={myHand}
+                      isMyTurn={isMyTurn}
+                      selectedItemId={selectedItemId}
+                      setSelectedItemId={setSelectedItemId}
+                    />
+                  )}
+
+                  {pendingReviews.length > 0 && (
+                    <ReviewPanel
+                      snapshot={snapshot}
+                      onReview={(targetPlayerId, satisfied) =>
+                        submitAction({
+                          type: "reviewTrade",
+                          targetPlayerId,
+                          satisfied,
+                        })
+                      }
+                    />
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          {snapshot.status === "reporting" && (
-            <ReportPanel
-              snapshot={snapshot}
-              otherPlayers={otherPlayers}
-              onReport={(targetPlayerId) =>
-                submitAction({ type: "reportSuspiciousPlayer", targetPlayerId })
-              }
-            />
-          )}
+              {snapshot.status === "reporting" && (
+                <div className="space-y-3">
+                  <FoldableHelperCard stepId="reporting" />
+                  <ReportPanel
+                    snapshot={snapshot}
+                    otherPlayers={otherPlayers}
+                    onReport={(targetPlayerId) =>
+                      submitAction({ type: "reportSuspiciousPlayer", targetPlayerId })
+                    }
+                  />
+                </div>
+              )}
 
-          {snapshot.status === "finished" && snapshot.result && (
-            <ResultPanel snapshot={snapshot} />
-          )}
-
+              {snapshot.status === "finished" && snapshot.result && (
+                <div className="space-y-3">
+                  <FoldableHelperCard stepId="finished" />
+                  <ResultPanel snapshot={snapshot} />
+                </div>
+              )}
             </section>
 
             <div className="game-right-rail">
@@ -781,7 +516,6 @@ export function MidgeoraeOnlineGame() {
                   otherPlayers={otherPlayers}
                   requestableItems={requestableItems}
                   dealTargetId={dealTargetId}
-                  setDealTargetId={setDealTargetId}
                   askingPrice={askingPrice}
                   setAskingPrice={setAskingPrice}
                   actionTargetId={actionTargetId}
@@ -907,6 +641,7 @@ function DeckRail({
 }) {
   const statusCopy = {
     waiting: ["대기", `${MIN_PLAYERS}-${MAX_PLAYERS}명 모이면 시작`],
+    preparing: ["준비", "매물 사전 등록 단계"],
     playing: ["진행", "턴 종료만 남김"],
     finished: ["종료", "결과 확인"],
   }[status as Exclude<RoomSnapshot["status"], "reporting">] ?? [
@@ -1288,7 +1023,7 @@ function MyDashboard({
                   selected={selectedItemId === item.instanceId}
                   onSelect={() => setSelectedItemId(item.instanceId)}
                 />
-              ))}
+               ))}
             </div>
           )}
         </div>
@@ -1676,7 +1411,6 @@ function ActionPanel({
   otherPlayers,
   requestableItems,
   dealTargetId,
-  setDealTargetId,
   askingPrice,
   setAskingPrice,
   actionTargetId,
@@ -1700,7 +1434,6 @@ function ActionPanel({
   otherPlayers: PublicPlayer[];
   requestableItems: ItemCardSnapshot[];
   dealTargetId: string;
-  setDealTargetId: (value: string) => void;
   askingPrice: number;
   setAskingPrice: (value: number) => void;
   actionTargetId: string;
@@ -2070,7 +1803,7 @@ function ResultPanel({ snapshot }: { snapshot: RoomSnapshot }) {
                       <td className="px-4 py-3 text-center">{player.reputationTokens}/5</td>
                     </tr>
                   );
-              })}
+                })}
             </tbody>
           </table>
         </div>
@@ -2148,8 +1881,254 @@ function CardImage({
       width={420}
       height={600}
       unoptimized
+      className={className}
     />
   );
 }
 
+function PreparationPanel({
+  me,
+  myHand,
+  loading,
+  onSubmit,
+}: {
+  me: RoomSnapshot["me"];
+  myHand: ItemCardSnapshot[];
+  loading: boolean;
+  onSubmit: (
+    configs: {
+      instanceId: string;
+      customCondition: ItemCondition;
+      askingPrice: number;
+      fakeItemId?: string;
+    }[],
+  ) => void;
+}) {
+  const [configs, setConfigs] = useState<
+    Record<
+      string,
+      {
+        customCondition: ItemCondition;
+        askingPrice: number;
+        fakeItemId?: string;
+      }
+    >
+  >(() => {
+    const initial: Record<
+      string,
+      {
+        customCondition: ItemCondition;
+        askingPrice: number;
+        fakeItemId?: string;
+      }
+    > = {};
+    myHand.forEach((item) => {
+      initial[item.instanceId] = {
+        customCondition: item.customCondition ?? item.condition ?? "used",
+        askingPrice: item.askingPrice || item.originalPrice || 500000,
+        fakeItemId: undefined,
+      };
+    });
+    return initial;
+  });
 
+  if (!me) return null;
+
+  if (me.isPrepared) {
+    return (
+      <div className="motion-panel-strong p-8 text-center text-stone-700 bg-orange-50/50 border border-orange-200 rounded-xl space-y-4">
+        <div className="mx-auto w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin" />
+        <h2 className="text-xl font-black text-orange-950">내 매물 사전 등록 완료!</h2>
+        <p className="text-sm font-bold text-stone-500">
+          다른 플레이어들이 매물 설정을 마치고 게임 준비를 완료할 때까지 기다리고 있습니다...
+        </p>
+      </div>
+    );
+  }
+
+  const isVillain = me.role === "villain";
+
+  const handleConditionChange = (instanceId: string, value: ItemCondition) => {
+    setConfigs((prev) => ({
+      ...prev,
+      [instanceId]: { ...prev[instanceId]!, customCondition: value },
+    }));
+  };
+
+  const handlePriceChange = (instanceId: string, amount: number) => {
+    setConfigs((prev) => {
+      const current = prev[instanceId]!;
+      const nextPrice = Math.max(0, current.askingPrice + amount);
+      return {
+        ...prev,
+        [instanceId]: { ...prev[instanceId]!, askingPrice: nextPrice },
+      };
+    });
+  };
+
+  const handleFakeItemChange = (instanceId: string, fakeId: string) => {
+    setConfigs((prev) => ({
+      ...prev,
+      [instanceId]: { ...prev[instanceId]!, fakeItemId: fakeId },
+    }));
+  };
+
+  const handleConfirm = () => {
+    if (isVillain) {
+      const brickItem = myHand.find((i) => i.isBrick);
+      if (brickItem) {
+        const config = configs[brickItem.instanceId];
+        if (!config?.fakeItemId) {
+          alert("벽돌 카드를 위장할 제품을 선택해 주세요!");
+          return;
+        }
+      }
+    }
+
+    const payload = Object.entries(configs).map(([instanceId, config]) => ({
+      instanceId,
+      customCondition: config.customCondition,
+      askingPrice: config.askingPrice,
+      fakeItemId: config.fakeItemId,
+    }));
+    onSubmit(payload);
+  };
+
+  return (
+    <div className="motion-panel-strong bg-white p-6 rounded-xl border border-stone-200 shadow-md space-y-6">
+      <div>
+        <h2 className="text-2xl font-black text-stone-950">📦 사전 매물 등록 단계</h2>
+        <p className="text-sm font-bold text-stone-500 mt-1">
+          내 물건 5장에 기입할 상태와 희망가를 셋팅해 주세요. 다른 유저들은 기입된 상태만 볼 수 있습니다.
+        </p>
+        {isVillain && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-900 font-bold text-sm">
+            😈 당신은 **빌런**입니다! 소지하고 있는 벽돌 카드를 위장할 제품을 반드시 둔갑시켜야 합니다.
+          </div>
+        )}
+      </div>
+
+      <div className="bg-stone-50 border border-stone-150 p-4 rounded-2xl space-y-3">
+        <h3 className="text-lg font-black text-stone-800">내 비밀 프로필</h3>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <StatusBox label="내 자금" value={moneyLabel(me.money ?? 0)} />
+          <div
+            className={`status-tile border p-3 flex flex-col justify-center ${
+              isVillain
+                ? "border-red-200 bg-red-50/50 text-red-950"
+                : "border-green-200 bg-green-50/50 text-green-950"
+            }`}
+          >
+            <div className="text-xs font-black uppercase opacity-60">내 역할</div>
+            <div className="mt-1 text-lg font-black">{roleLabel(me.role)}</div>
+          </div>
+        </div>
+        {isVillain && (
+          <div className="p-3 bg-red-100/70 border border-red-200 rounded text-red-900 font-bold text-sm">
+            🎯 **빌런 행동 미션:** {me.mission}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {myHand.map((item) => {
+          const config = configs[item.instanceId]!;
+          return (
+            <div
+              key={item.instanceId}
+              className="p-4 border border-stone-200 rounded-xl bg-stone-50/50 flex flex-col md:flex-row gap-4"
+            >
+              <div className="w-24 shrink-0 mx-auto">
+                <CardImage src={item.imagePath} alt={item.name} />
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <span className="font-bold text-stone-900">{item.name}</span>
+                  {item.isBrick && (
+                    <span className="ml-2 rounded bg-red-700 px-2 py-0.5 text-[10px] font-black text-white">
+                      벽돌
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-stone-500">
+                  실제 정가: {moneyLabel(item.originalPrice)} · 실제 시세: {moneyLabel(item.marketPrice)}
+                </div>
+                <div className="text-xs font-bold text-red-600">
+                  실제 상태: {conditionLabel(item.condition)}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SelectLabel label="표기 상태 설정">
+                    <select
+                      value={config.customCondition}
+                      onChange={(event) =>
+                        handleConditionChange(item.instanceId, event.target.value as ItemCondition)
+                      }
+                      className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
+                    >
+                      <option value="mint">민트급 (새 상품 수준)</option>
+                      <option value="used">사용감 있음 (일반 중고)</option>
+                      <option value="defective">하자 있음 (결함 존재)</option>
+                      <option value="broken">파손 (동작 불가)</option>
+                    </select>
+                  </SelectLabel>
+
+                  <SelectLabel label="판매 희망가 설정">
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePriceChange(item.instanceId, -50000)}
+                        className="flex h-9 w-9 items-center justify-center border border-stone-300 bg-white hover:bg-stone-100 disabled:opacity-50 text-stone-700 font-black text-sm"
+                      >
+                        -5만
+                      </button>
+                      <span className="flex-1 text-center font-bold text-stone-900 border border-stone-300 py-1.5 bg-white text-sm">
+                        {moneyLabel(config.askingPrice)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handlePriceChange(item.instanceId, 50000)}
+                        className="flex h-9 w-9 items-center justify-center border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 font-black text-sm"
+                      >
+                        +5만
+                      </button>
+                    </div>
+                  </SelectLabel>
+                </div>
+
+                {item.isBrick && isVillain && (
+                  <div className="mt-3 p-3 bg-red-50/50 border border-red-200 rounded">
+                    <SelectLabel label="벽돌 위장 타겟 설정 (필수)">
+                      <select
+                        value={config.fakeItemId ?? ""}
+                        onChange={(event) => handleFakeItemChange(item.instanceId, event.target.value)}
+                        className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold text-red-950"
+                      >
+                        <option value="">-- 위장할 제품 선택 --</option>
+                        {ALL_ITEMS.map((ai) => (
+                          <option key={ai.id} value={ai.id}>
+                            {ai.name} (시세: {moneyLabel(ai.marketPrice)})
+                          </option>
+                        ))}
+                      </select>
+                    </SelectLabel>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end pt-3">
+        <button
+          onClick={handleConfirm}
+          disabled={loading}
+          className="motion-button inline-flex items-center justify-center bg-orange-600 px-6 py-3 text-base font-black text-white hover:bg-orange-700 disabled:bg-stone-300"
+        >
+          등록 및 준비 완료
+        </button>
+      </div>
+    </div>
+  );
+}
