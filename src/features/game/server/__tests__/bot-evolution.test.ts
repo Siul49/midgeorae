@@ -7,7 +7,7 @@ import {
   calculateFitness,
   evolveNewGeneration,
 } from "../bot-evolution";
-import type { ServerPlayer } from "../types";
+import type { ServerPlayer } from "../types/game-server-types";
 
 const GENE_POOL_DIR = path.join(process.cwd(), "src", "features", "game", "server", "data");
 const GENE_POOL_FILE = path.join(GENE_POOL_DIR, "bot-genes.json");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { settleAcceptedDeal } from "../trade";
-import type { PendingDeal, ServerPlayer } from "../../server/types";
+import type { PendingDeal, ServerPlayer } from "../../server/types/game-server-types";
 
 function makePlayer(
   id: string,

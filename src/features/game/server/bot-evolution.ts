@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { BotGenes, ServerPlayer } from "./types";
+import type { BotGenes, ServerPlayer } from "./types/game-server-types";
 
 const GENE_POOL_DIR = path.join(process.cwd(), "bot-data");
 const GENE_POOL_FILE = path.join(GENE_POOL_DIR, "bot-genes.json");

@@ -1,5 +1,5 @@
 import { ALL_ITEMS } from "../data/items";
-import type { ActionCardSnapshot, ServerItemCard } from "./types";
+import type { ActionCardSnapshot, ServerItemCard } from "./types/game-server-types";
 
 const CARDS_PER_PLAYER = 5;
 
@@ -38,14 +38,14 @@ export const ITEM_IMAGE_BY_ID: Record<string, string> = {
 export const ACTION_CARDS: ActionCardSnapshot[] = [
   {
     type: "tradeRequest",
-    title: "거래 신청",
-    description: "다른 플레이어의 물건 카드 1장에 구매 요청을 보냅니다.",
+    title: "구매 신청",
+    description: "다른 플레이어의 물건 카드 1장에 구매 신청을 보냅니다.",
     imagePath: "/game-cards/actions/trade-request.png",
   },
   {
     type: "freeGive",
-    title: "무료나눔",
-    description: "다른 플레이어의 물건 카드 1장에 0원 거래 신청을 보냅니다.",
+    title: "기부천사",
+    description: "지목한 상대방의 물건 카드 1장을 강제로 0원에 가져옵니다. (즉시 성사)",
     imagePath: "/game-cards/actions/free-give.png",
   },
   {
@@ -72,6 +72,18 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
     description: "지목한 플레이어와 물건 카드 1장을 무작위로 맞교환합니다.",
     imagePath: "/game-cards/cards/event-15-e15.png",
   },
+  {
+    type: "forceBuy",
+    title: "호갱모집",
+    description: "자신의 물건 카드 1장을 지목한 상대방에게 설정한 가격으로 강제 판매합니다. (즉시 성사)",
+    imagePath: "/game-cards/cards/event-15-e15.png",
+  },
+  {
+    type: "freeShare",
+    title: "무료나눔",
+    description: "자신의 물건 카드 1장을 지목한 상대방에게 강제로 무료나눔합니다. (즉시 성사)",
+    imagePath: "/game-cards/actions/free-give.png",
+  },
 ];
 
 export function makeActionDeck() {
@@ -80,14 +92,24 @@ export function makeActionDeck() {
     ACTION_CARDS[0],
     ACTION_CARDS[0],
     ACTION_CARDS[0],
+    ACTION_CARDS[0],
+    ACTION_CARDS[0],
     ACTION_CARDS[1],
     ACTION_CARDS[1],
     ACTION_CARDS[2],
     ACTION_CARDS[2],
+    ACTION_CARDS[2],
+    ACTION_CARDS[2],
+    ACTION_CARDS[3],
     ACTION_CARDS[3],
     ACTION_CARDS[3],
     ACTION_CARDS[4],
+    ACTION_CARDS[4],
     ACTION_CARDS[5],
+    ACTION_CARDS[6],
+    ACTION_CARDS[6],
+    ACTION_CARDS[7],
+    ACTION_CARDS[7],
   ].map((card) => ({ ...card }));
 }
 
@@ -144,8 +166,12 @@ export function dealItemHands(
       
       const isVillain = ownerId === villainId;
       let card = deck.shift();
-      if (!isVillain) {
-        // 시민은 벽돌을 가질 수 없으므로 벽돌 카드가 뽑히면 덱 맨 뒤로 돌림
+      if (!isVillain && card && card.isBrick) {
+        // 시민은 벽돌을 가질 수 없으므로 덱에 일반 카드가 아예 없다면 덱을 충전함
+        while (!deck.some((c) => !c.isBrick)) {
+          deck.push(...makeItemDeck().sort(() => Math.random() - 0.5));
+        }
+        // 일반 카드가 덱에 존재하므로, 일반 카드를 찾을 때까지 뽑은 벽돌을 뒤로 보냄
         while (card && card.isBrick) {
           deck.push(card);
           card = deck.shift();

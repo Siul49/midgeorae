@@ -1,4 +1,4 @@
-import type { RoomResult, ServerPlayer } from "../server/types";
+import type { RoomResult, ServerPlayer } from "../server/types/game-server-types";
 
 export function countReports(
   reports: Record<string, string>,

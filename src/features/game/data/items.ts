@@ -1,4 +1,4 @@
-import type { Item } from "../types";
+import type { Item } from "../types/game-core-types";
 
 export const ALL_ITEMS: Item[] = [
   { id: "iphone", name: "아이폰 15", emoji: "📱", originalPrice: 1200000, marketPrice: 500000, category: "electronics", condition: "mint" },

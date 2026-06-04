@@ -1,38 +1,41 @@
-import type { ServerPlayer } from "../server/types";
+import type { ServerPlayer, Room } from "../server/types/game-server-types";
 import { VILLAIN_MISSION_DESCRIPTIONS } from "../rules/game-rules";
 
 /**
- * 시민 직업 미션 평가 함수
- * 조건 충족 시 알맞은 토큰을 1개 증가시키고 알림 메시지를 반환합니다.
- * 중복 지급을 방지하기 위해 카운터가 임계치인 "2"에 정확히 도달하는 최초 1회만 지급합니다.
+ * 시민 직업 및 공통 미션 진행률을 업데이트하고
+ * 목표 달성 시 적절한 토큰/소지금 보상을 지급하는 공통 함수
  */
-export function evaluateCitizenMission(player: ServerPlayer): string | null {
-  if (!player.job) return null;
+export function updateCitizenMissionProgress(
+  room: Room,
+  player: ServerPlayer,
+  missionId: string,
+  amount = 1,
+) {
+  if (!player.citizenMissions) return;
+  const mission = player.citizenMissions.find((m) => m.id === missionId);
+  if (!mission || mission.completed) return;
 
-  switch (player.job.id) {
-    case "inspector":
-      if (player.tradeParticipations === 2 && player.inspectTokens === 0) {
-        player.inspectTokens += 1;
-        return `${player.name}님이 '검수자' 미션(거래 2회 참여)을 달성하여 [감정 토큰] 1개를 획득했습니다!`;
-      }
-      break;
+  mission.progress = Math.min(mission.target, mission.progress + amount);
 
-    case "negotiator":
-      if (player.negoOffersSent === 2 && player.negoTokens === 0) {
-        player.negoTokens += 1;
-        return `${player.name}님이 '흥정가' 미션(흥정 제안 2회 전송)을 달성하여 [네고 토큰] 1개를 획득했습니다!`;
-      }
-      break;
+  if (mission.progress >= mission.target) {
+    mission.completed = true;
 
-    case "reporter":
-      if (player.reviewsSubmitted === 2 && player.evidenceTokens === 0) {
-        player.evidenceTokens += 1;
-        return `${player.name}님이 '신고자' 미션(후기 2회 작성)을 달성하여 [증거 토큰] 1개를 획득했습니다!`;
-      }
-      break;
+    let rewardLabel = "";
+    if (mission.rewardType === "inspectToken") {
+      player.inspectTokens += mission.rewardAmount;
+      rewardLabel = `감정 토큰 ${mission.rewardAmount}개`;
+    } else if (mission.rewardType === "negoToken") {
+      player.negoTokens += mission.rewardAmount;
+      rewardLabel = `네고 토큰 ${mission.rewardAmount}개`;
+    } else if (mission.rewardType === "money") {
+      player.money += mission.rewardAmount;
+      rewardLabel = `소지금 ${mission.rewardAmount.toLocaleString()}원`;
+    }
+
+    room.logs.push(
+      `🎉 [미션 성공] ${player.name}님이 '${mission.title}' 미션을 완료하여 [${rewardLabel}]을 획득했습니다!`,
+    );
   }
-
-  return null;
 }
 
 /**

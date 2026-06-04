@@ -1,4 +1,4 @@
-import type { BoardSpace } from "../types";
+import type { BoardSpace } from "../types/game-core-types";
 
 export const BOARD_SPACES: BoardSpace[] = [
   { id: 0, type: "start", name: "출발", description: "게임 시작! 지나갈 때마다 월급 100,000원", emoji: "🏠" },

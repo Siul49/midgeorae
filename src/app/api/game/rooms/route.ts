@@ -1,6 +1,6 @@
 import { jsonError, jsonOk } from "@/features/game/api/http";
 import { createRoom } from "@/features/game/server/room-store";
-import type { RoomMode } from "@/features/game/server/types";
+import type { RoomMode } from "@/features/game/server/types/game-server-types";
 
 export const runtime = "nodejs";
 

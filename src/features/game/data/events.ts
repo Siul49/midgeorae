@@ -1,4 +1,4 @@
-import type { EventCard } from "../types";
+import type { EventCard } from "../types/game-core-types";
 
 export const EVENT_CARDS: EventCard[] = [
   {

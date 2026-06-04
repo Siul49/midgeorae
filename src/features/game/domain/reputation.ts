@@ -36,7 +36,7 @@ export function calculateTradeReviewOutcome(
     targetReputationTokens,
     targetLikes: input.targetLikes,
     targetDislikes: input.targetDislikes + 1,
-    targetManner: Math.max(30, Number((input.targetManner - 1).toFixed(1))),
+    targetManner: Math.max(30, Number((input.targetManner - 0.5).toFixed(1))),
     eliminatedPlayer: null,
   };
 }

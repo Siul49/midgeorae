@@ -50,19 +50,19 @@
 
 :root {
   --background: oklch(0.98 0.01 75); /* 한지 미색 (Off-white with slight warmth) */
-  --foreground: oklch(0.15 0.02 45); /* 다크 브라운/차콜 */
+  --foreground: oklch(0.08 0.01 45); /* 가독성 극대화 다크 차콜 (명도 낮춤) */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.02 45);
+  --card-foreground: oklch(0.08 0.01 45);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.02 45);
-  --primary: oklch(0.65 0.2 45); /* 귤색 (Tangerine Orange) */
+  --popover-foreground: oklch(0.08 0.01 45);
+  --primary: oklch(0.65 0.2 45); /* 당근 주황 (Tangerine Orange) */
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.92 0.04 75); /* 따뜻한 베이지 */
-  --secondary-foreground: oklch(0.25 0.04 45);
+  --secondary-foreground: oklch(0.18 0.02 45); /* 가독성 극대화 다크 베이지 (명도 낮춤) */
   --muted: oklch(0.94 0.02 75);
-  --muted-foreground: oklch(0.5 0.02 45);
-  --accent: oklch(0.85 0.15 45); /* 연한 귤색 */
-  --accent-foreground: oklch(0.2 0.05 45);
+  --muted-foreground: oklch(0.38 0.01 45); /* 보조 글씨 가독성 극대화 (명도 낮춤) */
+  --accent: oklch(0.85 0.15 45); /* 연한 주황 */
+  --accent-foreground: oklch(0.12 0.03 45); /* 명도 낮춤 */
   --destructive: oklch(0.6 0.2 25);
   --border: oklch(0.88 0.03 75);
   --input: oklch(0.9 0.03 75);
@@ -74,46 +74,47 @@
   --chart-5: oklch(0.8 0.1 75);
   --radius: 0.75rem; /* 약간 더 둥글게 */
   --sidebar: oklch(0.98 0.01 75);
-  --sidebar-foreground: oklch(0.15 0.02 45);
+  --sidebar-foreground: oklch(0.08 0.01 45);
   --sidebar-primary: oklch(0.65 0.2 45);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.92 0.04 75);
-  --sidebar-accent-foreground: oklch(0.25 0.04 45);
+  --sidebar-accent-foreground: oklch(0.18 0.02 45);
   --sidebar-border: oklch(0.88 0.03 75);
   --sidebar-ring: oklch(0.65 0.2 45);
 }
 
 .dark {
-  --background: oklch(0.15 0.01 45); /* 다크 브라운 계열 배경 */
-  --foreground: oklch(0.95 0.02 75);
-  --card: oklch(0.2 0.01 45);
-  --card-foreground: oklch(0.95 0.02 75);
-  --popover: oklch(0.2 0.01 45);
-  --popover-foreground: oklch(0.95 0.02 75);
-  --primary: oklch(0.65 0.2 45); /* 귤색 유지 */
+  /* 다크모드 배제를 위해 라이트 테마 변수와 완전 동기화 */
+  --background: oklch(0.98 0.01 75);
+  --foreground: oklch(0.08 0.01 45);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.08 0.01 45);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.08 0.01 45);
+  --primary: oklch(0.65 0.2 45);
   --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.25 0.02 45);
-  --secondary-foreground: oklch(0.95 0.02 75);
-  --muted: oklch(0.25 0.02 45);
-  --muted-foreground: oklch(0.7 0.02 75);
-  --accent: oklch(0.3 0.05 45);
-  --accent-foreground: oklch(0.95 0.02 75);
+  --secondary: oklch(0.92 0.04 75);
+  --secondary-foreground: oklch(0.18 0.02 45);
+  --muted: oklch(0.94 0.02 75);
+  --muted-foreground: oklch(0.38 0.01 45);
+  --accent: oklch(0.85 0.15 45);
+  --accent-foreground: oklch(0.12 0.03 45);
   --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.3 0.02 45);
-  --input: oklch(0.3 0.02 45);
+  --border: oklch(0.88 0.03 75);
+  --input: oklch(0.9 0.03 75);
   --ring: oklch(0.65 0.2 45);
   --chart-1: oklch(0.65 0.2 45);
   --chart-2: oklch(0.55 0.15 140);
   --chart-3: oklch(0.45 0.1 200);
   --chart-4: oklch(0.7 0.15 90);
   --chart-5: oklch(0.8 0.1 75);
-  --sidebar: oklch(0.2 0.01 45);
-  --sidebar-foreground: oklch(0.95 0.02 75);
+  --sidebar: oklch(0.98 0.01 75);
+  --sidebar-foreground: oklch(0.08 0.01 45);
   --sidebar-primary: oklch(0.65 0.2 45);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.25 0.02 45);
-  --sidebar-accent-foreground: oklch(0.95 0.02 75);
-  --sidebar-border: oklch(0.3 0.02 45);
+  --sidebar-accent: oklch(0.92 0.04 75);
+  --sidebar-accent-foreground: oklch(0.18 0.02 45);
+  --sidebar-border: oklch(0.88 0.03 75);
   --sidebar-ring: oklch(0.65 0.2 45);
 }
 
@@ -202,21 +203,6 @@
     min-height: 0;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(160, 122, 74, 0.45);
-    border-radius: 18px;
-    background:
-      linear-gradient(180deg, rgba(39, 39, 36, 0.98), rgba(17, 19, 18, 0.99)),
-      repeating-linear-gradient(
-        0deg,
-        rgba(255, 255, 255, 0.025) 0,
-        rgba(255, 255, 255, 0.025) 1px,
-        transparent 1px,
-        transparent 7px
-      );
-    box-shadow:
-      inset 0 0 0 2px rgba(255, 255, 255, 0.045),
-      inset 0 0 0 8px rgba(0, 0, 0, 0.24),
-      0 28px 80px rgba(0, 0, 0, 0.38);
     padding: clamp(8px, 0.8vw, 12px);
   }
 
@@ -234,14 +220,11 @@
     align-items: center;
     justify-content: center;
     gap: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(72, 65, 54, 0.85), rgba(27, 27, 25, 0.92));
+    background: rgba(54, 49, 41, 0.92); 
     color: #f9e8c8;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.12),
-      0 5px 0 rgba(0, 0, 0, 0.26);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
   }
 
   .game-table-layout {
@@ -281,7 +264,10 @@
     .game-left-rail {
       grid-area: social;
       min-height: 0;
-      overflow: auto;
+      overflow-y: auto;
+      position: sticky;
+      top: 14px;
+      max-height: calc(100vh - 28px);
     }
   }
 
@@ -334,25 +320,19 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    border: 1px solid rgba(160, 122, 74, 0.28);
+    border: 1px solid rgba(160, 122, 74, 0.2);
     border-radius: 14px;
-    background:
-      linear-gradient(180deg, rgba(35, 36, 32, 0.98), rgba(18, 19, 17, 0.98));
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-      0 9px 0 rgba(0, 0, 0, 0.24);
+    background: rgba(35, 36, 32, 0.98); 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16); 
     padding: 10px;
   }
 
   .game-log-drawer {
     min-height: 86px;
-    border: 1px solid rgba(160, 122, 74, 0.25);
+    border: 1px solid rgba(160, 122, 74, 0.2);
     border-radius: 10px;
-    background:
-      linear-gradient(180deg, rgba(32, 31, 28, 0.98), rgba(14, 15, 14, 0.98));
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.045),
-      0 6px 0 rgba(0, 0, 0, 0.2);
+    background: rgba(32, 31, 28, 0.98); 
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15); 
   }
 
   .deck-rail-title {
@@ -376,23 +356,20 @@
   .market-card-table {
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(246, 216, 168, 0.66);
+    border: 1px solid rgba(168, 132, 82, 0.35); 
     border-radius: 8px;
     background:
-      linear-gradient(180deg, rgba(255, 252, 242, 0.98), rgba(250, 240, 218, 0.97)),
+      rgba(250, 243, 228, 0.98), 
       repeating-linear-gradient(
         0deg,
-        rgba(116, 79, 36, 0.035) 0,
-        rgba(116, 79, 36, 0.035) 1px,
+        rgba(116, 79, 36, 0.025) 0,
+        rgba(116, 79, 36, 0.025) 1px,
         transparent 1px,
         transparent 5px
       ),
-      linear-gradient(90deg, rgba(249, 115, 22, 0.08) 1px, transparent 1px);
+      linear-gradient(90deg, rgba(249, 115, 22, 0.04) 1px, transparent 1px);
     background-size: auto, auto, 24px 24px;
-    box-shadow:
-      0 10px 0 rgba(0, 0, 0, 0.24),
-      0 26px 54px rgba(0, 0, 0, 0.28),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); 
   }
 
   .market-card-table::before {
@@ -401,32 +378,27 @@
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.38), transparent),
       repeating-linear-gradient(
         0deg,
-        rgba(255, 255, 255, 0.18) 0,
-        rgba(255, 255, 255, 0.18) 1px,
+        rgba(255, 255, 255, 0.08) 0,
+        rgba(255, 255, 255, 0.08) 1px,
         transparent 1px,
         transparent 5px
       );
-    opacity: 0.48;
+    opacity: 0.3;
   }
 
   .market-card-lane {
     position: relative;
-    border: 1px solid rgba(168, 132, 82, 0.42);
+    border: 1px solid rgba(168, 132, 82, 0.28);
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 249, 235, 0.9), rgba(244, 228, 202, 0.78));
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
-      0 4px 0 rgba(120, 53, 15, 0.08);
+    background: rgba(245, 236, 218, 0.95); 
+    box-shadow: none;
   }
 
   .market-card-slot {
-    border: 1px dashed rgba(120, 113, 108, 0.52);
-    background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 247, 237, 0.64));
+    border: 1px dashed rgba(120, 113, 108, 0.4);
+    background: rgba(255, 253, 250, 0.7); 
   }
 
   .market-board-grid {
@@ -440,21 +412,19 @@
   .table-center-board {
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(188, 137, 61, 0.46);
+    border: 1px solid rgba(188, 137, 61, 0.35);
     border-radius: 8px;
     background:
-      linear-gradient(180deg, rgba(255, 251, 238, 0.98), rgba(249, 231, 196, 0.9)),
+      rgba(253, 248, 235, 0.98), 
       repeating-linear-gradient(
         90deg,
-        rgba(120, 53, 15, 0.038) 0,
-        rgba(120, 53, 15, 0.038) 1px,
+        rgba(120, 53, 15, 0.02) 0,
+        rgba(120, 53, 15, 0.02) 1px,
         transparent 1px,
         transparent 12px
       );
     background-size: auto, auto;
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.78),
-      0 12px 0 rgba(120, 53, 15, 0.16);
+    box-shadow: 0 4px 12px rgba(120, 53, 15, 0.04); 
   }
 
   .table-center-board::before {
@@ -462,19 +432,15 @@
     position: absolute;
     inset: 12px;
     pointer-events: none;
-    border: 1px solid rgba(180, 83, 9, 0.24);
+    border: 1px solid rgba(180, 83, 9, 0.15);
     border-radius: 7px;
   }
 
   .turn-command-bar {
-    border: 1px solid rgba(21, 80, 40, 0.72);
+    border: 1px solid rgba(21, 80, 40, 0.4);
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, #5f8b3e 0%, #2d6b3f 100%);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.32),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.18),
-      0 8px 0 rgba(22, 101, 52, 0.22);
+    background: #3e7343; 
+    box-shadow: 0 2px 6px rgba(22, 101, 52, 0.08); 
   }
 
   .table-side-rail {
@@ -486,31 +452,36 @@
   }
 
   .table-player-mat {
-    border: 1px solid rgba(125, 93, 55, 0.34);
+    border: 1px solid rgba(125, 93, 55, 0.22);
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 251, 239, 0.92), rgba(246, 232, 205, 0.84));
+    background: rgba(250, 244, 230, 0.92); 
+    box-shadow: 0 2px 6px rgba(28, 25, 23, 0.05); 
+  }
+
+  .table-player-mat-my {
     box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.58),
-      0 5px 0 rgba(28, 25, 23, 0.12);
+      0 2px 6px rgba(28, 25, 23, 0.05),
+      0 0 0 2.5px #ea580c;
+  }
+
+  .table-player-mat-turn {
+    box-shadow:
+      0 2px 6px rgba(28, 25, 23, 0.05),
+      0 0 0 2.5px #16a34a;
   }
 
   .table-deck-rail {
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(37, 39, 36, 0.96), rgba(24, 25, 23, 0.96));
+    background: rgba(37, 39, 36, 0.96);
     padding: 10px;
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-      0 8px 0 rgba(0, 0, 0, 0.22);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
   }
 
   .table-deck-rail .market-card-lane {
     border-color: rgba(255, 255, 255, 0.16);
-    background:
-      linear-gradient(180deg, rgba(60, 61, 56, 0.92), rgba(38, 39, 36, 0.92));
+    background: rgba(54, 49, 41, 0.92); 
     color: #fff7ed;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    box-shadow: none;
   }
 
   .public-market-row {
@@ -541,13 +512,11 @@
     flex-direction: column;
     justify-content: center;
     gap: 3px;
-    border: 1px solid rgba(168, 132, 82, 0.42);
+    border: 1px solid rgba(168, 132, 82, 0.3);
     border-radius: 8px;
     padding: 10px 12px;
-    background: linear-gradient(180deg, rgba(255, 249, 235, 0.94), rgba(244, 228, 202, 0.8));
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
-      0 4px 0 rgba(120, 53, 15, 0.08);
+    background: rgba(250, 241, 224, 0.95); 
+    box-shadow: none; 
   }
 
   .my-role-chip span {
@@ -566,17 +535,21 @@
   }
 
   .my-role-chip-villain {
-    border-color: rgba(248, 113, 113, 0.56);
-    background: linear-gradient(180deg, rgba(254, 242, 242, 0.96), rgba(254, 226, 226, 0.86));
+    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba(254, 238, 238, 0.96); 
   }
 
   .my-role-chip-citizen {
-    border-color: rgba(74, 222, 128, 0.36);
-    background: linear-gradient(180deg, rgba(240, 253, 244, 0.96), rgba(220, 252, 231, 0.82));
+    border-color: rgba(74, 222, 128, 0.28);
+    background: rgba(235, 251, 240, 0.96); 
   }
 
   .my-role-chip-job {
     border-color: rgba(251, 146, 60, 0.44);
+    flex-direction: row !important;
+    align-items: center;
+    gap: 12px;
+    flex: 2 1 180px;
   }
 
   .player-hand-grid {
@@ -587,23 +560,30 @@
 
   .hand-item-card {
     min-height: 214px;
+    max-width: 220px;
+    width: 100%;
   }
 
   .hand-product-art {
     display: flex;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1 / 1; /* 1:1 정방형 비율 강제 */
     width: 100%;
-    max-height: 118px;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(168, 132, 82, 0.28);
+    border: 1px solid rgba(168, 132, 82, 0.12);
     border-radius: 8px;
-    background:
-      radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.92), rgba(255, 247, 237, 0.4) 52%, rgba(245, 158, 11, 0.14) 100%);
+    background: rgba(250, 245, 235, 0.8); 
     color: #164e63;
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.72),
-      0 4px 0 rgba(82, 50, 20, 0.08);
+    box-shadow: none;
+    overflow: hidden;
+    padding: 0; /* 패딩을 제거하여 가로폭을 채움 */
+  }
+
+  .hand-product-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 프레임을 채워서 크게 노출 */
+    transition: transform 0.3s ease;
   }
 
   .hand-product-art svg {
@@ -614,16 +594,15 @@
   }
 
   .hand-product-art-brick {
-    background:
-      radial-gradient(circle at 50% 38%, rgba(254, 242, 242, 0.98), rgba(254, 226, 226, 0.52) 55%, rgba(220, 38, 38, 0.18) 100%);
+    background: rgba(254, 242, 242, 0.8);
     color: #991b1b;
+    border-color: rgba(220, 38, 38, 0.15);
   }
 
   .action-draw-pad {
-    border: 1px dashed rgba(194, 65, 12, 0.34);
+    border: 1px dashed rgba(194, 65, 12, 0.28);
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 247, 237, 0.86), rgba(254, 215, 170, 0.45));
+    background: rgba(254, 245, 232, 0.6); 
     padding: 10px;
   }
 
@@ -631,20 +610,18 @@
     position: relative;
     overflow: hidden;
     min-width: 0;
-    border: 1px solid rgba(120, 78, 38, 0.34);
+    border: 1px solid rgba(120, 78, 38, 0.24);
     border-radius: 8px;
     background:
-      linear-gradient(180deg, rgba(255, 250, 238, 0.98), rgba(244, 225, 194, 0.94)),
+      rgba(252, 246, 232, 0.98), 
       repeating-linear-gradient(
         0deg,
-        rgba(120, 53, 15, 0.04) 0,
-        rgba(120, 53, 15, 0.04) 1px,
+        rgba(120, 53, 15, 0.02) 0,
+        rgba(120, 53, 15, 0.02) 1px,
         transparent 1px,
         transparent 4px
       );
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.72),
-      0 7px 0 rgba(82, 50, 20, 0.16);
+    box-shadow: 0 2px 8px rgba(82, 50, 20, 0.06); 
     transform-origin: center bottom;
   }
 
@@ -653,28 +630,25 @@
     position: absolute;
     inset: 8px;
     pointer-events: none;
-    border: 1px solid rgba(214, 211, 209, 0.85);
+    border: 1px solid rgba(214, 211, 209, 0.6);
     border-radius: 6px;
   }
 
   .table-card-accent-orange {
-    border-color: rgba(234, 88, 12, 0.84);
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.76),
-      0 7px 0 rgba(234, 88, 12, 0.28);
+    border-color: rgba(234, 88, 12, 0.6);
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.1);
   }
 
   .table-card-accent-green {
-    border-color: rgba(46, 125, 50, 0.74);
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.76),
-      0 7px 0 rgba(46, 125, 50, 0.2);
+    border-color: rgba(46, 125, 50, 0.5);
+    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.08);
   }
 
   .table-card-image {
-    aspect-ratio: 1 / 0.72;
+    aspect-ratio: 1 / 1; /* 1:1 정방형 꽉 채우기 */
     width: 100%;
-    object-fit: contain;
+    object-fit: cover; /* 잘림 없이 꽉 차게 노출 */
+    border-radius: 6px;
   }
 
   .table-chip {
@@ -688,7 +662,7 @@
       linear-gradient(180deg, rgba(247, 220, 150, 0.98), rgba(150, 96, 43, 0.94));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.36),
-      0 4px 0 rgba(28, 25, 23, 0.18);
+      0 1px 3px rgba(28, 25, 23, 0.15);
     color: #2d1b0f;
   }
 
@@ -707,7 +681,7 @@
       );
     box-shadow:
       inset 0 0 0 1px rgba(255, 255, 255, 0.68),
-      0 8px 0 rgba(82, 50, 20, 0.14);
+      0 3px 8px rgba(82, 50, 20, 0.1);
     padding: 18px;
   }
 
@@ -728,7 +702,7 @@
     position: relative;
     border-radius: 8px;
     transform: rotate(1.8deg);
-    filter: drop-shadow(0 8px 0 rgba(28, 25, 23, 0.12));
+    filter: drop-shadow(0 3px 6px rgba(28, 25, 23, 0.1));
   }
 
   .card-stack::before,
@@ -775,19 +749,19 @@
   }
 
   .player-lane:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 9px 0 rgba(21, 128, 61, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(21, 128, 61, 0.08);
   }
 
   .motion-panel {
     animation: panel-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    box-shadow: 0 10px 0 rgba(0, 0, 0, 0.16);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   .motion-panel-strong {
     animation: panel-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both,
       deal-glow 1800ms ease-in-out infinite;
-    box-shadow: 0 12px 0 rgba(154, 52, 18, 0.12);
+    box-shadow: 0 4px 16px rgba(154, 52, 18, 0.1);
   }
 
   .motion-button {
@@ -801,13 +775,13 @@
   }
 
   .motion-button:not(:disabled):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0 rgba(28, 25, 23, 0.14);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(28, 25, 23, 0.1);
   }
 
   .motion-button:not(:disabled):active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 0 rgba(28, 25, 23, 0.18);
+    transform: translateY(0px);
+    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.12);
   }
 
   .deck-idle {
@@ -828,8 +802,8 @@
   }
 
   .game-card-hover:hover {
-    transform: translateY(-6px) rotate(-1deg);
-    box-shadow: 0 12px 0 rgba(28, 25, 23, 0.12);
+    transform: translateY(-4px) rotate(-1deg);
+    box-shadow: 0 6px 16px rgba(28, 25, 23, 0.1);
   }
 
   .token-pop {
@@ -848,8 +822,8 @@
   }
 
   .status-tile:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 0 rgba(28, 25, 23, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(28, 25, 23, 0.06);
   }
 
   .turn-badge {
@@ -871,10 +845,10 @@
 @keyframes deal-glow {
   0%,
   100% {
-    box-shadow: 0 12px 0 rgba(154, 52, 18, 0.1);
+    box-shadow: 0 4px 16px rgba(154, 52, 18, 0.08);
   }
   50% {
-    box-shadow: 0 12px 0 rgba(154, 52, 18, 0.24);
+    box-shadow: 0 4px 16px rgba(154, 52, 18, 0.18);
   }
 }
 
@@ -1177,4 +1151,36 @@
     transform: none;
     box-shadow: none;
   }
+}
+
+/* 가격 스크롤 휠 피커 스타일 */
+.price-wheel-viewport {
+  height: 96px; /* 32px * 3개 노출 */
+  overflow-y: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: y mandatory;
+}
+.price-wheel-viewport::-webkit-scrollbar {
+  display: none;
+}
+.price-wheel-center-line {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 32px;
+  height: 32px;
+  border-top: 1px solid rgba(234, 88, 12, 0.25);
+  border-bottom: 1px solid rgba(234, 88, 12, 0.25);
+  background-color: rgba(249, 115, 22, 0.04);
+  pointer-events: none;
+  border-radius: 4px;
+}
+.price-wheel-item {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  transition: color 200ms ease, transform 200ms ease, font-size 200ms ease;
 }

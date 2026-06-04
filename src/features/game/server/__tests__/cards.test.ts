@@ -12,13 +12,13 @@ describe("server item cards", () => {
     expect(new Set(normalCards.map((card) => card.id)).size).toBe(24);
   });
 
-  it("deals five players without repeating normal item ids in the first deal", () => {
-    const hands = dealItemHands(["p1", "p2", "p3", "p4", "p5"], null);
+  it("deals players without repeating normal item ids in the first deal", () => {
+    const hands = dealItemHands(["p1", "p2", "p3", "p4"], null); // 4명에게 20장 지급 (전체 24장 중 소요되어 덱 리필 없음)
     const cards = Object.values(hands).flat();
     const normalCards = cards.filter((card) => !card.isBrick);
 
-    expect(cards).toHaveLength(25);
-    expect(new Set(cards.map((card) => card.instanceId)).size).toBe(25);
+    expect(cards).toHaveLength(20);
+    expect(new Set(cards.map((card) => card.instanceId)).size).toBe(20);
     expect(new Set(normalCards.map((card) => card.id)).size).toBe(
       normalCards.length,
     );

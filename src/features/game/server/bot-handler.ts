@@ -6,7 +6,7 @@ import type {
   RoomStatus,
   ServerItemCard,
   ServerPlayer,
-} from "./types";
+} from "./types/game-server-types";
 import {
   applyPreparationConfig,
   isTradeAction,
@@ -289,29 +289,48 @@ export function autoRunCurrentBotTurn(room: Room): boolean {
   if (isTradeAction(card)) {
     const tradeOptions: { owner: ServerPlayer; item: ServerItemCard; offerPrice: number }[] = [];
 
-    for (const owner of room.players.filter((p) => p.id !== actor.id)) {
-      for (const item of owner.hand) {
-        let offerPrice = item.marketPrice;
-        
-        if (job?.id === "negotiator" && !isVillain) {
-          if (Math.random() < jobPriority) {
-            const markup = genes?.priceMarkupRatio ?? 1.1;
-            offerPrice = Math.round((item.marketPrice * (Math.random() > 0.5 ? markup : 0.9)) / 10000) * 10000;
+    if (card.type === "forceBuy" || card.type === "freeShare") {
+      // 내 물건을 남에게 강매(forceBuy)하거나 무료나눔(freeShare)하는 경우
+      const myItems = actor.hand.filter((i) => i.acquiredPrice === null);
+      if (myItems.length > 0) {
+        for (const targetPlayer of room.players.filter((p) => p.id !== actor.id)) {
+          for (const item of myItems) {
+            let offerPrice = 0;
+            if (card.type === "forceBuy") {
+              const markup = genes?.priceMarkupRatio ?? 1.1;
+              offerPrice = Math.round((item.marketPrice * markup) / 10000) * 10000;
+              if (targetPlayer.money < offerPrice) continue;
+            }
+            tradeOptions.push({ owner: targetPlayer, item, offerPrice });
           }
         }
-        
-        if (isVillain) {
-          if (actor.mission === VILLAIN_MISSION_DESCRIPTIONS.VILLAIN_MISSION_OVERPRICE) {
-            offerPrice = Math.round((item.marketPrice * 1.15) / 10000) * 10000;
+      }
+    } else {
+      // 상대방 물건을 내가 구매하거나 뺏는 경우 (tradeRequest, directTrade, freeGive)
+      for (const owner of room.players.filter((p) => p.id !== actor.id)) {
+        for (const item of owner.hand.filter((i) => i.acquiredPrice === null)) {
+          let offerPrice = item.marketPrice;
+          
+          if (job?.id === "negotiator" && !isVillain) {
+            if (Math.random() < jobPriority) {
+              const markup = genes?.priceMarkupRatio ?? 1.1;
+              offerPrice = Math.round((item.marketPrice * (Math.random() > 0.5 ? markup : 0.9)) / 10000) * 10000;
+            }
           }
-        }
+          
+          if (isVillain) {
+            if (actor.mission === VILLAIN_MISSION_DESCRIPTIONS.VILLAIN_MISSION_OVERPRICE) {
+              offerPrice = Math.round((item.marketPrice * 1.15) / 10000) * 10000;
+            }
+          }
 
-        if (card.type === "freeGive") {
-          offerPrice = 0;
-        }
+          if (card.type === "freeGive") {
+            offerPrice = 0;
+          }
 
-        if (actor.money >= offerPrice) {
-          tradeOptions.push({ owner, item, offerPrice });
+          if (actor.money >= offerPrice) {
+            tradeOptions.push({ owner, item, offerPrice });
+          }
         }
       }
     }

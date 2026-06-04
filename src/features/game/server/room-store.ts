@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   LOBBY_MONEY,
   MAX_PLAYERS,
-  STARTING_MANNER,
+  STARTING_MANNER_TEMP,
   STARTING_REPUTATION,
 } from "../rules/game-rules";
 import { makeRoomCode } from "./room-code";
@@ -14,7 +14,7 @@ import type {
   RoomSessionResult,
   RoomSnapshot,
   ServerPlayer,
-} from "./types";
+} from "./types/game-server-types";
 import {
   touch,
   toSnapshot,
@@ -30,6 +30,8 @@ import {
   reportSuspiciousPlayer,
   fixPreparation,
   updateCustomCondition,
+  useInspectToken,
+  useNegoToken,
   assertPlaying,
   assertCurrentTurn,
   enterReporting,
@@ -74,7 +76,7 @@ function createPlayer(
     isBot,
     money: LOBBY_MONEY,
     reputationTokens: STARTING_REPUTATION,
-    manner: STARTING_MANNER,
+    manner: STARTING_MANNER_TEMP,
     likes: 0,
     dislikes: 0,
     position: 0,
@@ -224,7 +226,7 @@ export function submitRoomAction(
       );
       break;
     case "chooseDealCard":
-      chooseDealCard(room, actor, action.choice);
+      chooseDealCard(room, actor, action.choice, action.scam);
       break;
     case "negoDeal":
       negoDeal(room, actor, action.price);
@@ -271,6 +273,12 @@ export function submitRoomAction(
       break;
     case "updateCustomCondition":
       updateCustomCondition(room, actor, action.itemInstanceId, action.customCondition);
+      break;
+    case "useInspectToken":
+      useInspectToken(room, actor);
+      break;
+    case "useNegoToken":
+      useNegoToken(room, actor);
       break;
   }
 

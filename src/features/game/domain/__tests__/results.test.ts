@@ -5,7 +5,7 @@ import {
   calculateReputationEliminationResult,
   countReports,
 } from "../results";
-import type { ServerPlayer } from "../../server/types";
+import type { ServerPlayer } from "../../server/types/game-server-types";
 
 function makePlayer(
   id: string,

@@ -48,7 +48,7 @@ describe("game reputation domain", () => {
     ).toEqual({
       reviewerReputationTokens: 5,
       targetReputationTokens: 4,
-      targetManner: 35.5,
+      targetManner: 36,
       targetLikes: 0,
       targetDislikes: 1,
       eliminatedPlayer: null,

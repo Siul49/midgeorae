@@ -1,6 +1,6 @@
 import { jsonError, jsonOk } from "@/features/game/api/http";
 import { submitRoomAction } from "@/features/game/server/room-store";
-import type { RoomAction } from "@/features/game/server/types";
+import type { RoomAction } from "@/features/game/server/types/game-server-types";
 
 export const runtime = "nodejs";
 

@@ -5,7 +5,7 @@ import type {
   RoomMode,
   RoomSessionResult,
   RoomSnapshot,
-} from "@/features/game/server/types";
+} from "@/features/game/server/types/game-server-types";
 
 export interface Session {
   code: string;
@@ -41,7 +41,8 @@ function isTradeRequestAction(card: { type: string } | null) {
   return (
     card?.type === "tradeRequest" ||
     card?.type === "freeGive" ||
-    card?.type === "directTrade"
+    card?.type === "directTrade" ||
+    card?.type === "forceBuy"
   );
 }
 
@@ -65,6 +66,8 @@ export function useOnlineGame() {
   const sessionRef = useRef<Session | null>(null);
   const sessionChangeRef = useRef(0);
   const lastShownStepRef = useRef<string | null>(null);
+  const lastInitializedItemIdRef = useRef<string | null>(null);
+  const lastInitializedActionRef = useRef<string | null>(null);
 
   const shareUrl = useMemo(() => {
     if (!session || typeof window === "undefined") return "";
@@ -112,7 +115,7 @@ export function useOnlineGame() {
   );
 
   const requestableItems = useMemo(
-    () => selectedOwner?.publicItems ?? [],
+    () => selectedOwner?.publicItems.filter((i) => i.acquiredPrice === null) ?? [],
     [selectedOwner?.publicItems],
   );
 
@@ -223,9 +226,14 @@ export function useOnlineGame() {
   }, [session]);
 
   useEffect(() => {
-    const selectableItems = isTradeRequestAction(currentAction)
+    const isRequestFromOther =
+      currentAction?.type !== "forceBuy" &&
+      currentAction?.type !== "freeShare";
+
+    const selectableItems = isRequestFromOther
       ? requestableItems
-      : myHand;
+      : myHand.filter((i) => i.acquiredPrice === null);
+
     if (
       selectableItems.length > 0 &&
       !selectableItems.some((item) => item.instanceId === selectedItemId)
@@ -235,16 +243,30 @@ export function useOnlineGame() {
   }, [currentAction, myHand, requestableItems, selectedItemId]);
 
   useEffect(() => {
-    if (currentAction?.type === "freeGive") {
+    if (
+      currentAction?.type === "freeGive" ||
+      currentAction?.type === "freeShare"
+    ) {
       setAskingPrice(0);
+      lastInitializedItemIdRef.current = null;
+      lastInitializedActionRef.current = currentAction?.type ?? null;
       return;
     }
-    const selectableItems = isTradeRequestAction(currentAction)
+    const isRequestFromOther = currentAction?.type !== "forceBuy";
+
+    const selectableItems = isRequestFromOther
       ? requestableItems
-      : myHand;
+      : myHand.filter((i) => i.acquiredPrice === null);
+
     const selected = selectableItems.find((item) => item.instanceId === selectedItemId);
-    if (selected) {
+    if (
+      selected &&
+      (lastInitializedItemIdRef.current !== selectedItemId ||
+        lastInitializedActionRef.current !== (currentAction?.type ?? null))
+    ) {
       setAskingPrice(selected.askingPrice ?? selected.originalPrice);
+      lastInitializedItemIdRef.current = selectedItemId;
+      lastInitializedActionRef.current = currentAction?.type ?? null;
     }
   }, [selectedItemId, currentAction, requestableItems, myHand]);
 

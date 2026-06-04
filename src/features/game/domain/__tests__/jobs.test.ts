@@ -1,7 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { evaluateCitizenMission, evaluateVillainMission } from "../jobs";
+import { updateCitizenMissionProgress, evaluateVillainMission } from "../jobs";
 import { VILLAIN_MISSION_DESCRIPTIONS } from "../../rules/game-rules";
-import type { ServerPlayer } from "../../server/types";
+import type { ServerPlayer, Room } from "../../server/types/game-server-types";
+
+function mockRoom(): Room {
+  return {
+    code: "TEST",
+    mode: "real",
+    status: "playing",
+    hostPlayerId: "p1",
+    players: [],
+    currentTurnPlayerId: "p1",
+    turnCount: 1,
+    usedActionCount: 0,
+    marketActionLimit: 5,
+    logs: [],
+    actionDeck: [],
+    discardPile: [],
+    currentActionCard: null,
+    pendingDeal: null,
+    pendingReviews: [],
+    reports: {},
+    result: null,
+    version: 1,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+}
 
 function mockPlayer(id: string, role: "citizen" | "villain", jobId?: string, missionText?: string): ServerPlayer {
   return {
@@ -38,50 +63,66 @@ function mockPlayer(id: string, role: "citizen" | "villain", jobId?: string, mis
     brickSalesCount: 0,
     defectSalesCount: 0,
     overpriceSalesCount: 0,
+    citizenMissions: [],
   };
 }
 
 describe("game jobs domain", () => {
-  describe("evaluateCitizenMission", () => {
-    it("gives inspectToken to inspector on their 2nd trade participation", () => {
-      const player = mockPlayer("p1", "citizen", "inspector");
-      player.tradeParticipations = 2;
+  describe("updateCitizenMissionProgress", () => {
+    it("updates progress and awards token when target reached", () => {
+      const room = mockRoom();
+      const player = mockPlayer("p1", "citizen");
+      player.citizenMissions = [
+        {
+          id: "inspector_trade",
+          title: "현장 검수",
+          description: "",
+          progress: 0,
+          target: 2,
+          completed: false,
+          rewardType: "inspectToken",
+          rewardAmount: 1,
+        },
+      ];
 
-      const result = evaluateCitizenMission(player);
-
-      expect(player.inspectTokens).toBe(1);
-      expect(result).toContain("검수자");
-    });
-
-    it("does not reward inspector twice or when threshold not reached", () => {
-      const player = mockPlayer("p1", "citizen", "inspector");
-
-      // 1회 도달 시 무반응
-      player.tradeParticipations = 1;
-      expect(evaluateCitizenMission(player)).toBeNull();
+      // 1. 1회 진행도 증가
+      updateCitizenMissionProgress(room, player, "inspector_trade", 1);
+      expect(player.citizenMissions[0]!.progress).toBe(1);
+      expect(player.citizenMissions[0]!.completed).toBe(false);
       expect(player.inspectTokens).toBe(0);
 
-      // 2회 도달 시 1개 충전
-      player.tradeParticipations = 2;
-      expect(evaluateCitizenMission(player)).not.toBeNull();
+      // 2. 2회차 도달 -> 완료 및 토큰 충전
+      updateCitizenMissionProgress(room, player, "inspector_trade", 1);
+      expect(player.citizenMissions[0]!.progress).toBe(2);
+      expect(player.citizenMissions[0]!.completed).toBe(true);
       expect(player.inspectTokens).toBe(1);
+      expect(room.logs.length).toBe(1);
 
-      // 3회 도달 시 추가 충전 안 함
-      player.tradeParticipations = 3;
-      expect(evaluateCitizenMission(player)).toBeNull();
+      // 3. 초과 진행 시 중복 보상 방지
+      updateCitizenMissionProgress(room, player, "inspector_trade", 1);
+      expect(player.citizenMissions[0]!.progress).toBe(2);
       expect(player.inspectTokens).toBe(1);
     });
 
-    it("rewards negotiator and reporter accordingly", () => {
-      const negotiator = mockPlayer("p2", "citizen", "negotiator");
-      negotiator.negoOffersSent = 2;
-      expect(evaluateCitizenMission(negotiator)).toContain("흥정가");
-      expect(negotiator.negoTokens).toBe(1);
+    it("awards money reward properly", () => {
+      const room = mockRoom();
+      const player = mockPlayer("p1", "citizen");
+      player.citizenMissions = [
+        {
+          id: "cool_deal",
+          title: "쿨거래",
+          description: "",
+          progress: 0,
+          target: 1,
+          completed: false,
+          rewardType: "money",
+          rewardAmount: 150000,
+        },
+      ];
 
-      const reporter = mockPlayer("p3", "citizen", "reporter");
-      reporter.reviewsSubmitted = 2;
-      expect(evaluateCitizenMission(reporter)).toContain("신고자");
-      expect(reporter.evidenceTokens).toBe(1);
+      updateCitizenMissionProgress(room, player, "cool_deal", 1);
+      expect(player.citizenMissions[0]!.completed).toBe(true);
+      expect(player.money).toBe(1150000); // 1,000,000 + 150,000
     });
   });
 
