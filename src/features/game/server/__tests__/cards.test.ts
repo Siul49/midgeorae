@@ -8,7 +8,7 @@ describe("server item cards", () => {
     const brickCards = deck.filter((card) => card.isBrick);
 
     expect(normalCards).toHaveLength(24);
-    expect(brickCards).toHaveLength(4);
+    expect(brickCards).toHaveLength(8);
     expect(new Set(normalCards.map((card) => card.id)).size).toBe(24);
   });
 

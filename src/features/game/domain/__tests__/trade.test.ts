@@ -71,7 +71,7 @@ describe("game trade domain", () => {
       instanceId: "owner-item-0",
       acquiredPrice: 120_000,
       revealed: false,
-      revealedToPlayerIds: ["owner"],
+      revealedToPlayerIds: [],
     });
     expect(settlement.pendingReviews).toEqual([
       {
@@ -102,7 +102,7 @@ describe("game trade domain", () => {
       instanceId: "owner-item-0",
       acquiredPrice: 120_000,
       revealed: false,
-      revealedToPlayerIds: ["owner", "requester"],
+      revealedToPlayerIds: ["requester"],
     });
   });
 

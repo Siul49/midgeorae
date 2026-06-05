@@ -35,6 +35,8 @@ import {
   Recycle,
   RefreshCw,
   Repeat2,
+  Settings,
+  HelpCircle,
   Shirt,
   ShoppingBag,
   Smartphone,
@@ -47,7 +49,8 @@ import {
   Watch,
 } from "lucide-react";
 import Image from "next/image";
-import { MAX_PLAYERS, MIN_PLAYERS } from "../rules/game-rules";
+import { MAX_PLAYERS, MIN_PLAYERS, JOB_CARDS } from "../rules/game-rules";
+import { ALL_ITEMS, GOLDEN_ITEMS } from "../data/items";
 import type {
   ActionCardSnapshot,
   ActionCardType,
@@ -154,8 +157,8 @@ function actionIcon(type: ActionCardType) {
   }
 }
 
-function productIcon(item: ItemCardSnapshot) {
-  const iconProps = { size: 72, strokeWidth: 1.8 };
+function productIcon(item: ItemCardSnapshot, size = 72) {
+  const iconProps = { size, strokeWidth: 1.8 };
   if (item.isBrick) return <BrickWall {...iconProps} />;
 
   switch (item.id) {
@@ -217,8 +220,17 @@ export function MidgeoraeOnlineGame() {
   const [dealTargetId, setDealTargetId] = useState("");
   const [askingPrice, setAskingPrice] = useState(100000);
   const [actionTargetId, setActionTargetId] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isPriceListOpen, setIsPriceListOpen] = useState(false);
+  const [isMissionListOpen, setIsMissionListOpen] = useState(false);
   const sessionRef = useRef<Session | null>(null);
   const sessionChangeRef = useRef(0);
+
+  const selectCardFromTable = useCallback((playerId: string, itemInstanceId: string) => {
+    setDealTargetId(playerId);
+    setSelectedItemId(itemInstanceId);
+  }, []);
 
   const shareUrl = useMemo(() => {
     if (!session || typeof window === "undefined") return "";
@@ -228,6 +240,10 @@ export function MidgeoraeOnlineGame() {
 
   const me = snapshot?.me ?? null;
   const myHand = useMemo(() => me?.hand ?? [], [me?.hand]);
+  const totalAssets = useMemo(() => {
+    if (!me) return 0;
+    return (me.money ?? 0) + myHand.reduce((sum, item) => sum + (item.marketPrice ?? 0), 0);
+  }, [me, myHand]);
   const currentPlayer = snapshot?.players.find(
     (player) => player.id === snapshot.currentTurnPlayerId,
   );
@@ -248,6 +264,86 @@ export function MidgeoraeOnlineGame() {
   const pendingDeal = snapshot?.pendingDeal ?? null;
   const pendingDealItem = snapshot?.pendingDealItem ?? null;
   const pendingReviews = snapshot?.pendingReviews ?? [];
+
+  const [roleAcknowledged, setRoleAcknowledged] = useState(false);
+
+  useEffect(() => {
+    if (snapshot?.status !== "playing") {
+      setRoleAcknowledged(false);
+    }
+  }, [snapshot?.status]);
+
+  const myPendingReviews = useMemo(() => {
+    return pendingReviews.filter((r) => r.reviewerId === me?.id);
+  }, [pendingReviews, me?.id]);
+
+  const getPlayerReviewChoice = useCallback((playerId: string) => {
+    if (!snapshot) return null;
+    const reviewLog = [...(snapshot.logs || [])].reverse().find(
+      (log) => log.includes(`${playerName(snapshot, playerId)}님이`) && log.includes("거래 후기")
+    );
+    if (!reviewLog) return null;
+    if (reviewLog.includes("만족") && !reviewLog.includes("불만족")) return "만족 👍";
+    if (reviewLog.includes("불만족")) return "불만족 👎";
+    return null;
+  }, [snapshot]);
+
+  const isActionCardFullyAcked = useMemo(() => {
+    if (!snapshot) return false;
+    return snapshot.currentActionAcks.length === snapshot.players.length;
+  }, [snapshot]);
+
+  const hasMyAck = useMemo(() => {
+    if (!me || !snapshot) return false;
+    return snapshot.currentActionAcks.includes(me.id);
+  }, [me, snapshot]);
+
+  const activeActionType = currentAction?.type;
+  
+  const isPlayerInteractive = Boolean(
+    isMyTurn &&
+    (activeActionType === "badReview" ||
+     activeActionType === "swap" ||
+     activeActionType === "directTrade" ||
+     activeActionType === "tradeRequest" ||
+     activeActionType === "freeGive" ||
+     activeActionType === "saleRequest")
+  );
+
+  const isCardInteractive = Boolean(
+    isMyTurn &&
+    (activeActionType === "tradeRequest" ||
+     activeActionType === "freeGive" ||
+     activeActionType === "directTrade" ||
+     activeActionType === "saleRequest" ||
+     activeActionType === "swap" ||
+     activeActionType === "badReview")
+  );
+
+  const handleSelectOpponentCard = (playerId: string, itemId: string) => {
+    onSelectPlayer(playerId);
+    if (
+      activeActionType === "tradeRequest" ||
+      activeActionType === "freeGive" ||
+      activeActionType === "directTrade"
+    ) {
+      setSelectedItemId(itemId);
+    }
+  };
+
+  const onSelectPlayer = (id: string) => {
+    if (
+      activeActionType === "directTrade" ||
+      activeActionType === "tradeRequest" ||
+      activeActionType === "freeGive" ||
+      activeActionType === "saleRequest"
+    ) {
+      setDealTargetId(id);
+    } else {
+      setActionTargetId(id);
+    }
+  };
+
   const isDealParty = Boolean(
     pendingDeal &&
       me &&
@@ -583,188 +679,627 @@ export function MidgeoraeOnlineGame() {
     );
   }
 
+
   return (
-    <main className="game-shell game-play-shell min-h-screen text-stone-950">
-      <div className="game-screen-viewport mx-auto">
-        <section className="game-frame-shell motion-panel">
-          <header className="game-top-strip p-3">
-            <div className="game-top-grid relative">
-              <div className="min-w-0 border-r border-white/10 pr-4">
-                <h1 className="truncate text-4xl font-black tracking-normal text-orange-500">
-                  믿거래
-                </h1>
-                <p className="mt-1 text-xs font-bold text-amber-100/80">
-                  3-5인 / 친구와 즐기는 거래 게임
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-4">
-                <FrameStat label="Room code" value={snapshot.code} />
-                <FrameStat label="Market" value={marketProgressLabel(snapshot)} />
-                <FrameStat label="My money" value={moneyLabel(me?.money ?? 0)} />
-                <FrameStat
-                  label="Turn"
-                  value={
-                    snapshot.status === "waiting"
-                      ? "대기 중"
-                      : currentPlayer?.name
-                        ? `${currentPlayer.name} 차례`
-                        : "대기 중"
-                  }
-                  accent
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                <FrameIconButton label="새로고침" onClick={() => fetchSnapshot()}>
-                  <RefreshCw size={18} />
-                </FrameIconButton>
-                <FrameIconButton label={copied ? "복사됨" : "초대복사"} onClick={copyInvite}>
-                  {copied ? <Check size={18} /> : <Copy size={18} />}
-                </FrameIconButton>
-                <FrameIconButton label="나가기" onClick={leaveRoom}>
-                  <LogOut size={18} />
-                </FrameIconButton>
-              </div>
-            </div>
-          </header>
+    <main className="fullscreen-game-container text-stone-950">
+      {/* Settings Gear Icon - top right */}
+      <button
+        type="button"
+        onClick={() => setIsMenuOpen(true)}
+        className="absolute top-3 right-3 z-50 motion-button bg-stone-900/80 hover:bg-stone-800 border border-stone-700 text-white rounded-full w-10 h-10 flex items-center justify-center cursor-pointer"
+        title="설정 메뉴"
+      >
+        <Settings size={18} />
+      </button>
 
-          {error && <ErrorNotice message={error} />}
-
-          <div className="game-table-layout">
-            <aside className="game-left-rail">
-              <PlayerList
-                players={snapshot.players}
-                myPlayerId={me?.id ?? ""}
-                currentTurnPlayerId={snapshot.currentTurnPlayerId}
-              />
-              <LogPanel logs={snapshot.logs} />
-            </aside>
-
-            <section className="game-board-stage">
-          {snapshot.status === "waiting" && (
-            <WaitingRoom
-              mode={snapshot.mode}
-              isHost={Boolean(me?.isHost)}
-              playerCount={snapshot.players.length}
-              loading={loading}
-              onAddBot={() => submitAction({ type: "addBot" })}
+      <div className="table-wood-frame">
+        <div className="seat-top">
+          {otherPlayers[0] && (
+            <SidePlayerSeat
+              player={otherPlayers[0]}
+              isTurn={otherPlayers[0].id === snapshot.currentTurnPlayerId}
+              isInteractive={isPlayerInteractive}
+              isCardInteractive={isCardInteractive}
+              onSelectPlayer={onSelectPlayer}
+              onSelectCard={handleSelectOpponentCard}
+              selectedItemId={selectedItemId}
+              dealTargetId={dealTargetId}
+              activeActionType={snapshot.currentActionCard?.type}
             />
           )}
+        </div>
+        
+        <div className="seat-left seat-left-rotated">
+          {otherPlayers[1] && (
+            <SidePlayerSeat
+              player={otherPlayers[1]}
+              isTurn={otherPlayers[1].id === snapshot.currentTurnPlayerId}
+              isInteractive={isPlayerInteractive}
+              isCardInteractive={isCardInteractive}
+              onSelectPlayer={onSelectPlayer}
+              onSelectCard={handleSelectOpponentCard}
+              selectedItemId={selectedItemId}
+              dealTargetId={dealTargetId}
+              activeActionType={snapshot.currentActionCard?.type}
+            />
+          )}
+        </div>
 
-          {snapshot.status === "playing" && (
-            <div className="min-w-0 space-y-3">
-              {pendingDeal && (
-                <PendingDealPanel
-                  snapshot={snapshot}
-                  item={pendingDealItem}
-                  isDealParty={isDealParty}
-                  myChoice={myDealChoice}
-                  onChoose={(choice) =>
-                    submitAction({ type: "chooseDealCard", choice })
-                  }
-                />
-              )}
+        <div className="center-play-area">
+          <div className="w-full max-w-2xl mx-auto h-full relative flex items-center justify-center">
+            {snapshot.status === "waiting" && (
+              <WaitingRoom
+                mode={snapshot.mode}
+                isHost={Boolean(me?.isHost)}
+                playerCount={snapshot.players.length}
+                loading={loading}
+                onAddBot={() => submitAction({ type: "addBot" })}
+              />
+            )}
 
+            {snapshot.status === "playing" && (
+              <div className="w-full h-full relative flex items-center justify-center">
+                {/* Role Reveal Overlay Modal */}
+                {!roleAcknowledged && me && (
+                  <div className="absolute inset-0 bg-stone-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 rounded-xl text-center space-y-6 animate-fade-in border border-orange-500/30">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">게임 시작</span>
+                      <h2 className={`text-3xl font-black ${me.role === "villain" ? "text-red-500" : "text-sky-400"}`}>
+                        당신은 {me.role === "villain" ? "빌런" : "시민"}입니다.
+                      </h2>
+                    </div>
+                    <div className="w-full max-w-sm bg-stone-900/80 p-4 rounded-lg border border-stone-800 space-y-3">
+                      <p className="text-xs font-bold text-stone-300 leading-relaxed">
+                        {me.role === "villain"
+                          ? "이 정보는 본인 화면에만 보입니다. 들키지 않고 빌런 미션을 완수하세요!"
+                          : "거래 기록과 평판을 보고 빌런을 찾아내어 신고하세요."}
+                      </p>
+                      {me.role === "villain" && (
+                        <div className="text-xs font-black text-red-400 bg-red-950/40 p-2.5 rounded border border-red-900/40">
+                          🔥 빌런 미션: {me.mission}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRoleAcknowledged(true)}
+                      className="motion-button w-full max-w-xs bg-orange-600 hover:bg-orange-500 text-stone-950 text-sm font-black py-2.5 rounded-lg shadow-lg cursor-pointer"
+                    >
+                      역할 확인 완료
+                    </button>
+                  </div>
+                )}
+
+                {/* Underlay: Action panel or draw deck */}
+                {!pendingDeal && currentAction && !isActionCardFullyAcked ? (
+                  <div className="flex flex-col gap-3 text-white text-center justify-center w-full max-w-sm p-5 bg-stone-900/90 border-2 border-amber-500/40 rounded-xl shadow-2xl animate-fade-in relative z-25">
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest leading-none">
+                      📢 {playerName(snapshot, snapshot.currentTurnPlayerId ?? "")}님이 행동 카드를 뽑았습니다!
+                    </span>
+                    <div className="bg-stone-950/60 p-4 rounded-lg border border-white/5 space-y-2">
+                      <h2 className="text-base font-black text-white">{currentAction.title}</h2>
+                      <p className="text-xs font-bold text-stone-300 leading-relaxed">{currentAction.description}</p>
+                    </div>
+                    
+                    {!hasMyAck ? (
+                      <button
+                        type="button"
+                        onClick={() => submitAction({ type: "ackActionCard" })}
+                        disabled={loading}
+                        className="motion-button bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-stone-950 text-xs font-black py-2 rounded-lg shadow-md cursor-pointer"
+                      >
+                        {loading ? "처리 중..." : "확인"}
+                      </button>
+                    ) : (
+                      <div className="text-xs font-black text-amber-300 bg-amber-950/30 py-2 rounded-lg border border-amber-900/30 animate-pulse">
+                        다른 플레이어들의 확인을 기다리는 중... ({snapshot.currentActionAcks.length}/{snapshot.players.length})
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  !pendingDeal && isMyTurn && !currentAction ? (
+                    <div className="flex flex-col items-center justify-center p-6 bg-stone-900/40 border border-white/5 rounded-xl shadow-lg text-center w-full min-h-[220px]">
+                      <button
+                        onClick={() => submitAction({ type: "drawActionCard" })}
+                        disabled={loading}
+                        className="motion-button action-deck-stack pulse-draw flex flex-col items-center justify-center gap-2 border-orange-500 shadow-2xl relative cursor-pointer"
+                      >
+                        <ShoppingBag size={32} className="text-orange-400" />
+                        <span className="text-[11px] font-black tracking-widest text-amber-200">ACTION DECK</span>
+                        <div className="text-sm font-black text-white mt-2">행동 카드 뽑기</div>
+                      </button>
+                      <p className="mt-4 text-xs font-bold text-stone-400">내 턴이 되었습니다. 카드를 뽑아 행동을 진행하세요.</p>
+                    </div>
+                  ) : (
+                    currentAction && isActionCardFullyAcked && (
+                      <div className="w-full max-w-lg pr-1">
+                        <ActionPanel
+                          action={currentAction}
+                          isMyTurn={isMyTurn}
+                          loading={loading}
+                          myHand={myHand}
+                          selectedItemId={selectedItemId}
+                          setSelectedItemId={setSelectedItemId}
+                          otherPlayers={otherPlayers}
+                          requestableItems={requestableItems}
+                          dealTargetId={dealTargetId}
+                          setDealTargetId={setDealTargetId}
+                          askingPrice={askingPrice}
+                          setAskingPrice={setAskingPrice}
+                          actionTargetId={actionTargetId}
+                          setActionTargetId={setActionTargetId}
+                          pendingDealActive={Boolean(pendingDeal)}
+                          currentPlayerName={playerName(snapshot, snapshot.currentTurnPlayerId ?? "")}
+                          onDraw={() => submitAction({ type: "drawActionCard" })}
+                          onRequestTrade={requestSelectedItem}
+                          onTerror={() =>
+                            submitAction({
+                              type: "terrorReview",
+                              targetPlayerId: actionTargetId,
+                            })
+                          }
+                          onRecycle={(itemInstanceId) =>
+                            submitAction({
+                              type: "recycleBrick",
+                              itemInstanceId,
+                            })
+                          }
+                          onSwap={() =>
+                            submitAction({
+                              type: "swapRandomItem",
+                              targetPlayerId: actionTargetId,
+                            })
+                          }
+                          onSkip={() => submitAction({ type: "endTurn" })}
+                          compact
+                        />
+                      </div>
+                    )
+                  )
+                )}
+
+                {/* Overlays inside play area */}
+                {pendingDeal && (
+                  <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm z-20 flex items-center justify-center p-2 rounded-xl">
+                    <div className="w-full max-w-lg">
+                      <PendingDealPanel
+                        snapshot={snapshot}
+                        item={pendingDealItem}
+                        isDealParty={isDealParty}
+                        myChoice={myDealChoice}
+                        onChoose={(choice) =>
+                          submitAction({ type: "chooseDealCard", choice })
+                        }
+                        onPropose={(price) =>
+                          submitAction({ type: "proposePrice", price })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+                {myPendingReviews.length > 0 && (
+                  <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm z-20 flex items-center justify-center p-2 rounded-xl">
+                    <div className="w-full max-w-lg">
+                      <ReviewPanel
+                        snapshot={snapshot}
+                        onReview={(targetPlayerId, satisfied) =>
+                          submitAction({
+                            type: "reviewTrade",
+                            targetPlayerId,
+                            satisfied,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+                {myPendingReviews.length === 0 && pendingReviews.length > 0 && (
+                  <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm z-20 flex items-center justify-center p-2 rounded-xl">
+                    <div className="w-full max-w-md bg-stone-900 border border-stone-800 p-5 rounded-xl shadow-2xl text-center space-y-4 mx-auto relative z-25 text-white">
+                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">거래 완료</span>
+                      <div className="bg-stone-950/20 py-2 px-3 rounded-lg border border-emerald-800/40 text-emerald-400 text-sm font-black animate-pulse">
+                        🎉 거래가 성사되었습니다!
+                      </div>
+                      <h3 className="text-xs font-bold text-stone-300">두 플레이어가 거래 후기를 작성 중입니다...</h3>
+                      <div className="bg-stone-950/50 p-3 rounded-lg border border-white/5 space-y-2">
+                        {pendingReviews[0] && (
+                          <div className="flex justify-between items-center text-xs font-bold px-2 py-1">
+                            <span className="text-stone-300">{playerName(snapshot, pendingReviews[0].reviewerId)}</span>
+                            <span className="text-amber-400 font-black animate-pulse">작성 중... ✍️</span>
+                          </div>
+                        )}
+                        {pendingReviews[0] && (
+                          <div className="flex justify-between items-center text-xs font-bold px-2 py-1 border-t border-white/5">
+                            <span className="text-stone-300">{playerName(snapshot, pendingReviews[0].targetPlayerId)}</span>
+                            <span className={pendingReviews.some(r => r.reviewerId === pendingReviews[0].targetPlayerId) ? "text-amber-400 font-black animate-pulse" : "text-emerald-400 font-black"}>
+                              {pendingReviews.some(r => r.reviewerId === pendingReviews[0].targetPlayerId) ? "작성 중... ✍️" : (getPlayerReviewChoice(pendingReviews[0].targetPlayerId) || "완료 👍")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {snapshot.status === "reporting" && (
+              <ReportPanel
+                snapshot={snapshot}
+                otherPlayers={otherPlayers}
+                onReport={(targetPlayerId) =>
+                  submitAction({ type: "reportSuspiciousPlayer", targetPlayerId })
+                }
+              />
+            )}
+
+            {snapshot.status === "finished" && snapshot.result && (
+              <ResultPanel
+                snapshot={snapshot}
+                submitAction={submitAction}
+                leaveRoom={leaveRoom}
+                loading={loading}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="seat-right seat-right-rotated">
+          {otherPlayers[2] && (
+            <SidePlayerSeat
+              player={otherPlayers[2]}
+              isTurn={otherPlayers[2].id === snapshot.currentTurnPlayerId}
+              isInteractive={isPlayerInteractive}
+              isCardInteractive={isCardInteractive}
+              onSelectPlayer={onSelectPlayer}
+              onSelectCard={handleSelectOpponentCard}
+              selectedItemId={selectedItemId}
+              dealTargetId={dealTargetId}
+              activeActionType={snapshot.currentActionCard?.type}
+            />
+          )}
+          {otherPlayers[3] && (
+            <div className="mt-4">
+              <SidePlayerSeat
+                player={otherPlayers[3]}
+                isTurn={otherPlayers[3].id === snapshot.currentTurnPlayerId}
+                isInteractive={isPlayerInteractive}
+                isCardInteractive={isCardInteractive}
+                onSelectPlayer={onSelectPlayer}
+                onSelectCard={handleSelectOpponentCard}
+                selectedItemId={selectedItemId}
+                dealTargetId={dealTargetId}
+                activeActionType={snapshot.currentActionCard?.type}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* BOTTOM SEAT (Me) */}
+        <div className="seat-bottom">
+          {me && (
+            <div className="asset-banner">
+              <span>💰 총 자산: {moneyLabel(totalAssets)}</span>
+              <span className="text-stone-500 font-normal mx-1">|</span>
+              <span>💵 보유 현금: <strong className="text-amber-400 font-black">{moneyLabel(me.money ?? 0)}</strong></span>
+            </div>
+          )}
+          <div className="w-full h-[140px] min-w-0">
+            {me && (
               <MyDashboard
                 me={me}
                 myHand={myHand}
                 isMyTurn={isMyTurn}
                 selectedItemId={selectedItemId}
                 setSelectedItemId={setSelectedItemId}
+                likes={snapshot.players.find((p) => p.id === me.id)?.likes ?? 0}
+                dislikes={snapshot.players.find((p) => p.id === me.id)?.dislikes ?? 0}
               />
+            )}
+          </div>
+        </div>
+      </div>
 
-              {pendingReviews.length > 0 && (
-                <ReviewPanel
-                  snapshot={snapshot}
-                  onReview={(targetPlayerId, satisfied) =>
-                    submitAction({
-                      type: "reviewTrade",
-                      targetPlayerId,
-                      satisfied,
-                    })
-                  }
-                />
-              )}
+      {/* Floating Center Deck Controls */}
+      {snapshot.status === "waiting" && !pendingDeal && (
+        <div className="absolute bottom-3 right-3 z-30">
+          <DeckRail
+            mode={snapshot.mode}
+            status={snapshot.status}
+            isHost={Boolean(me?.isHost)}
+            loading={loading}
+            canStart={
+              snapshot.players.length >= MIN_PLAYERS &&
+              snapshot.players.length <= MAX_PLAYERS
+            }
+            onStart={() => submitAction({ type: "startGame" })}
+            onEndTurn={() => submitAction({ type: "endTurn" })}
+          />
+        </div>
+      )}
+
+      {/* Logs overlay box inside table */}
+      <div className="logs-box-center border border-white/5">
+        <div className="text-[11px] font-black text-amber-200/50 mb-1 border-b border-white/5 pb-0.5">게임 로그</div>
+        <div className="space-y-0.5 max-h-[75px] overflow-y-auto">
+          {snapshot.logs.slice().reverse().slice(0, 5).map((log, index) => (
+            <div key={index} className="truncate text-[10px] opacity-75">{log}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* Settings menu Modal overlay */}
+      {isMenuOpen && (
+        <div className="settings-menu-overlay" onClick={() => setIsMenuOpen(false)}>
+          <div className="settings-menu-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+              <h3 className="text-lg font-black text-purple-400 flex items-center gap-2">
+                <Settings size={20} /> 설정 메뉴
+              </h3>
+              <button
+                onClick={() => setIsMenuOpen(false)}
+                className="text-stone-400 hover:text-white font-black text-sm cursor-pointer"
+              >
+                닫기
+              </button>
             </div>
-          )}
-
-          {snapshot.status === "reporting" && (
-            <ReportPanel
-              snapshot={snapshot}
-              otherPlayers={otherPlayers}
-              onReport={(targetPlayerId) =>
-                submitAction({ type: "reportSuspiciousPlayer", targetPlayerId })
-              }
-            />
-          )}
-
-          {snapshot.status === "finished" && snapshot.result && (
-            <ResultPanel snapshot={snapshot} />
-          )}
-
-            </section>
-
-            <div className="game-right-rail">
-              {snapshot.status === "playing" && (
-                <ActionPanel
-                  action={currentAction}
-                  isMyTurn={isMyTurn}
-                  loading={loading}
-                  myHand={myHand}
-                  selectedItemId={selectedItemId}
-                  setSelectedItemId={setSelectedItemId}
-                  otherPlayers={otherPlayers}
-                  requestableItems={requestableItems}
-                  dealTargetId={dealTargetId}
-                  setDealTargetId={setDealTargetId}
-                  askingPrice={askingPrice}
-                  setAskingPrice={setAskingPrice}
-                  actionTargetId={actionTargetId}
-                  setActionTargetId={setActionTargetId}
-                  pendingDealActive={Boolean(pendingDeal)}
-                  currentPlayerName={currentPlayer?.name ?? ""}
-                  onDraw={() => submitAction({ type: "drawActionCard" })}
-                  onRequestTrade={requestSelectedItem}
-                  onTerror={() =>
-                    submitAction({
-                      type: "terrorReview",
-                      targetPlayerId: actionTargetId,
-                    })
-                  }
-                  onRecycle={(itemInstanceId) =>
-                    submitAction({
-                      type: "recycleBrick",
-                      itemInstanceId,
-                    })
-                  }
-                  onSwap={() =>
-                    submitAction({
-                      type: "swapRandomItem",
-                      targetPlayerId: actionTargetId,
-                    })
-                  }
-                  onSkip={() => submitAction({ type: "endTurn" })}
-                  compact
-                />
-              )}
-              <DeckRail
-                mode={snapshot.mode}
-                status={snapshot.status}
-                isHost={Boolean(me?.isHost)}
-                loading={loading}
-                canStart={
-                  snapshot.players.length >= MIN_PLAYERS &&
-                  snapshot.players.length <= MAX_PLAYERS
-                }
-                onStart={() => submitAction({ type: "startGame" })}
-                onEndTurn={() => submitAction({ type: "endTurn" })}
-              />
+            <div className="space-y-4">
+              <div className="bg-stone-900 p-3 rounded-lg border border-purple-500/20 text-center">
+                <span className="text-xs text-stone-400 block mb-1">방 코드 (Room Code)</span>
+                <strong className="text-2xl text-white tracking-[0.2em]">{snapshot.code}</strong>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    fetchSnapshot();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-stone-800 hover:bg-stone-750 text-white py-2.5 rounded-lg border border-stone-700 font-bold text-xs cursor-pointer"
+                >
+                  <RefreshCw size={14} /> 새로고침
+                </button>
+                <button
+                  onClick={() => {
+                    copyInvite();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-stone-800 hover:bg-stone-750 text-white py-2.5 rounded-lg border border-stone-700 font-bold text-xs cursor-pointer"
+                >
+                  <Copy size={14} /> {copied ? "복사됨!" : "초대 복사"}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsHelpOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-stone-800 hover:bg-stone-750 text-white py-2.5 rounded-lg border border-stone-700 font-bold text-xs cursor-pointer"
+                >
+                  <HelpCircle size={14} /> 도움말
+                </button>
+                <button
+                  onClick={() => {
+                    leaveRoom();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-red-900 hover:bg-red-800 text-white py-2.5 rounded-lg border border-red-700 font-bold text-xs cursor-pointer"
+                >
+                  <LogOut size={14} /> 나가기
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsPriceListOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-purple-950/70 hover:bg-purple-900/85 text-purple-300 py-2.5 rounded-lg border border-purple-800/40 font-bold text-xs cursor-pointer shadow-sm transition-all"
+                >
+                  📋 물건 시세표 보기
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsMissionListOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-purple-950/70 hover:bg-purple-900/85 text-purple-300 py-2.5 rounded-lg border border-purple-800/40 font-bold text-xs cursor-pointer shadow-sm transition-all"
+                >
+                  🎭 직업 미션표 보기
+                </button>
+              </div>
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      )}
+
+      {/* Help Modal Overlay */}
+      {isHelpOpen && (
+        <div className="settings-menu-overlay" onClick={() => setIsHelpOpen(false)}>
+          <div className="settings-menu-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+              <h3 className="text-lg font-black text-purple-400 flex items-center gap-2">
+                <HelpCircle size={20} /> 믿거래 도움말
+              </h3>
+              <button
+                onClick={() => setIsHelpOpen(false)}
+                className="text-stone-400 hover:text-white font-black text-sm cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-stone-300 overflow-y-auto max-h-[300px] leading-relaxed pr-1 select-text">
+              <p className="font-extrabold text-orange-400 text-sm">중고거래를 진행하며 숨어 있는 빌런을 찾는 3~4인용 추론 웹 보드게임입니다.</p>
+              <div>
+                <h4 className="font-black text-white text-xs mb-1">🎮 게임 진행 순서:</h4>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li><strong>행동 카드 뽑기</strong>: 자기 턴에 행동 카드를 뽑습니다. (거래 신청, 보호 등)</li>
+                  <li><strong>거래 제안/액션</strong>: 뽑은 카드에 따라 거래를 하거나 기타 액션을 실행합니다.</li>
+                  <li><strong>거래 수락/취소</strong>: 거래 상대방과 서로 카드를 내어 쿨거래 시 거래 성공, 어느 한쪽이라도 취소 시 실패합니다. (벽돌 카드는 거래 후 1턴 뒤에 정체가 공개됩니다!)</li>
+                  <li><strong>거래 후 평판 평가</strong>: 거래 완료 후 만족/불만족 리뷰를 남겨 평판 토큰을 뺏거나 깎습니다.</li>
+                  <li><strong>시장 마감 &amp; 최종 신고</strong>: 액션 제한 횟수가 모두 소진되면 의심스러운 빌런을 지목해 최종 고발합니다.</li>
+                </ol>
+              </div>
+              <div className="border-t border-white/10 pt-2">
+                <h4 className="font-black text-white text-xs mb-1">🎭 역할 설명:</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>시민</strong>: 정상 거래를 하며 빌런을 찾습니다.</li>
+                  <li><strong>빌런</strong>: 사기 거래(벽돌 판매 등)나 가짜 평판 테러 등을 통해 정체를 숨기고 시민들을 교란합니다.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price List Modal Overlay */}
+      {isPriceListOpen && (
+        <div className="settings-menu-overlay" onClick={() => setIsPriceListOpen(false)}>
+          <div className="settings-menu-content flex flex-col" style={{ maxWidth: "600px", width: "95%" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-lg font-black text-purple-400 flex items-center gap-2">
+                📋 모든 물건 시세표
+              </h3>
+              <button
+                onClick={() => setIsPriceListOpen(false)}
+                className="text-stone-400 hover:text-white font-black text-sm cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+            
+            <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs select-text" style={{ maxHeight: "65vh" }}>
+              {(["electronics", "fashion", "hobby", "living", "golden"] as const).map((cat) => {
+                const items = cat === "golden"
+                  ? GOLDEN_ITEMS
+                  : ALL_ITEMS.filter((item) => item.category === cat);
+                
+                const catName = {
+                  electronics: "🔌 전자제품 (Electronics)",
+                  fashion: "👜 패션잡화 (Fashion)",
+                  hobby: "🎨 취미/레저 (Hobby)",
+                  living: "🪑 생활용품 (Living)",
+                  golden: "✨ 희귀/황금 아이템 (Golden)",
+                }[cat];
+
+                const cardBg = cat === "golden"
+                  ? "bg-amber-950/25 border-amber-500/30 hover:bg-amber-950/45 text-amber-200"
+                  : "bg-stone-900/50 border-white/5 hover:bg-stone-900/80 text-stone-200";
+
+                return (
+                  <div key={cat} className="space-y-1.5">
+                    <h4 className="font-extrabold text-purple-300 text-xs px-1">
+                      {catName}
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 animate-fade-in">
+                      {items.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between p-2.5 rounded-lg border ${cardBg} transition-colors`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xl" role="img" aria-label={item.name}>
+                              {item.emoji}
+                            </span>
+                            <div>
+                              <div className="font-bold leading-tight">
+                                {item.name}
+                              </div>
+                              <div className="text-[9px] text-stone-500 mt-0.5 uppercase tracking-wide">
+                                {item.condition === "mint"
+                                  ? "신품급"
+                                  : item.condition === "used"
+                                  ? "중고"
+                                  : item.condition === "defective"
+                                  ? "하자있음"
+                                  : "고장"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-black text-amber-500">
+                              {item.marketPrice.toLocaleString("ko-KR")}원
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Job Mission List Modal Overlay */}
+      {isMissionListOpen && (
+        <div className="settings-menu-overlay" onClick={() => setIsMissionListOpen(false)}>
+          <div className="settings-menu-content flex flex-col" style={{ maxWidth: "550px", width: "95%" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-lg font-black text-purple-400 flex items-center gap-2">
+                🎭 모든 직업 미션표
+              </h3>
+              <button
+                onClick={() => setIsMissionListOpen(false)}
+                className="text-stone-400 hover:text-white font-black text-sm cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+            
+            <div className="space-y-2 overflow-y-auto pr-1 flex-1 text-xs select-text animate-fade-in" style={{ maxHeight: "65vh" }}>
+              <p className="text-stone-400 font-bold mb-3 px-1">
+                시민 승리 시 아래 비밀 미션을 단독으로 달성한 플레이어가 최종 우승자가 됩니다. (동점/미달성 시 자산 순)
+              </p>
+              <div className="space-y-2">
+                {JOB_CARDS.map((job) => {
+                  const emoji = {
+                    developer: "💻",
+                    model: "👜",
+                    housewife: "🪑",
+                    "brick-collector": "🧱",
+                    collector: "📦",
+                    citizen: "👑",
+                  }[job.id] || "🎭";
+
+                  const borderGlow = job.id === "citizen"
+                    ? "border-amber-500/20 bg-amber-950/10"
+                    : "border-purple-500/10 bg-purple-950/5";
+
+                  return (
+                    <div
+                      key={job.id}
+                      className={`p-3 rounded-xl border ${borderGlow} flex items-start gap-3 hover:bg-white/5 transition-colors`}
+                    >
+                      <span className="text-2xl pt-0.5" role="img" aria-label={job.title}>
+                        {emoji}
+                      </span>
+                      <div className="space-y-0.5">
+                        <div className="font-extrabold text-white text-sm">
+                          {job.title}
+                        </div>
+                        <div className="font-bold text-stone-300 leading-normal">
+                          {job.description}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute bottom-16 left-3 z-30 max-w-sm">
+          <ErrorNotice message={error} />
+        </div>
+      )}
     </main>
   );
 }
+
+
 
 function ErrorNotice({ message }: { message: string }) {
   return (
@@ -876,14 +1411,9 @@ function DeckRail({
           호스트 시작 대기
         </div>
       ) : status === "playing" ? (
-        <button
-          type="button"
-          onClick={onEndTurn}
-          className="motion-button mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-4 text-base font-black text-white shadow-[0_7px_0_rgba(124,45,18,0.55)] hover:bg-orange-500"
-        >
-          <RefreshCw size={18} />
-          턴 종료
-        </button>
+        <div className="mt-auto rounded border border-white/10 bg-white/5 px-3 py-3 text-center text-xs font-black text-amber-100/70">
+          게임 진행 중
+        </div>
       ) : status === "reporting" ? (
         <button
           type="button"
@@ -1013,6 +1543,12 @@ function turnStateCopy({
       body: "상대의 물건을 고르고 가격을 정해 거래를 신청하세요.",
     };
   }
+  if (action?.type === "saleRequest") {
+    return {
+      title: `내 턴: ${action.title}`,
+      body: "내 물건을 골라 상대에게 판매를 신청하세요.",
+    };
+  }
   return {
     title: `내 턴: ${action.title}`,
     body: action.description,
@@ -1041,93 +1577,246 @@ function MyDashboard({
   isMyTurn,
   selectedItemId,
   setSelectedItemId,
+  likes,
+  dislikes,
 }: {
   me: RoomSnapshot["me"];
   myHand: ItemCardSnapshot[];
   isMyTurn: boolean;
   selectedItemId: string;
   setSelectedItemId: (value: string) => void;
+  likes: number;
+  dislikes: number;
 }) {
   if (!me) return null;
   const isVillain = me.role === "villain";
 
   return (
-    <section
-      className={`motion-panel-strong market-card-table p-4 ${
-        isMyTurn ? "ring-2 ring-orange-500/75" : ""
-      }`}
-    >
-      <div className="relative z-10 space-y-3">
-        <div className="my-status-strip">
-          <div
-            className={`inline-flex items-center justify-center rounded px-3 py-2 text-xs font-black text-white ${
-              isMyTurn ? "bg-orange-600" : "bg-stone-700"
-            }`}
-          >
-            {isMyTurn ? "내 턴" : "대기"}
+    <div className="w-full flex items-center gap-4 h-full min-w-0 px-4 text-stone-100">
+      {/* Left: Profile Card (exactly like other players' seats) */}
+      <div className="relative shrink-0 select-none">
+        {me.assetRank !== undefined && (
+          <div className="absolute -top-3 left-4 z-20 px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-black text-[10px] shadow border border-amber-400">
+            👑 {me.assetRank}위
           </div>
-          <StatusBox label="내 자금" value={moneyLabel(me.money ?? 0)} />
-          <StatusBox label="평판" value={`${me.reputationTokens ?? 0}/5`} />
-          <div
-            className={`my-role-chip ${
-              isVillain ? "my-role-chip-villain" : "my-role-chip-citizen"
-            }`}
-            title={roleDescription(me.role)}
-          >
-            <span>내 역할</span>
-            <strong>{roleLabel(me.role)}</strong>
-          </div>
-          {me.job && (
-            <div className="my-role-chip my-role-chip-job">
-              <span>직업</span>
-              <strong>{me.job.title}</strong>
+        )}
+        <div
+          className={`side-player-card transition-all w-[180px] p-3 text-center ${
+            isMyTurn ? "active-turn shadow-[0_0_15px_rgba(249,115,22,0.4)] border-orange-500/50" : ""
+          }`}
+        >
+          <div className="flex items-center gap-2 justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_25%,#f8d9a4,#b87332)] text-base font-black text-stone-950">
+              {me.name.slice(0, 1)}
             </div>
-          )}
+            <div className="truncate text-lg font-black max-w-[110px] text-white">
+              {me.name} (나)
+            </div>
+          </div>
+          <div className="mt-2 flex justify-around text-sm font-black text-stone-300">
+            <span>평판 {me.reputationTokens ?? 0}/5</span>
+            <span>물건 {myHand.length}</span>
+          </div>
+          <div className="mt-2 flex justify-center gap-3 border-t border-white/10 pt-2 text-xs text-stone-400">
+            <span>👍 {likes}</span>
+            <span>👎 {dislikes}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Info, Mission & Cards */}
+      <div className="flex-1 flex flex-col justify-between h-full min-w-0 py-1">
+        {/* Top Info row (Role, Job, turn status) */}
+        <div className="flex items-center justify-between text-xs font-bold border-b border-white/5 pb-1 select-none">
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-0.5 rounded text-[10px] font-black text-white ${isMyTurn ? "bg-orange-600 animate-pulse" : "bg-stone-850"}`}>
+              {isMyTurn ? "내 턴" : "대기 중"}
+            </span>
+            {me.job && (
+              <span className="text-stone-300">
+                직업: <strong className="text-purple-400">{me.job.title}</strong>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`} title={roleDescription(me.role)}>
+              {roleLabel(me.role)}
+            </div>
+          </div>
         </div>
 
+        {/* Mission Row */}
         {isVillain && (
-          <div className="rounded border-2 border-red-300 bg-red-50/95 px-4 py-3">
-            <div className="text-[11px] font-black uppercase text-red-700">
-              빌런 행동 미션
-            </div>
-            <div className="mt-1 text-sm font-black leading-6 text-red-900">
-              {me.mission ?? "게임이 시작되면 빌런 미션이 표시됩니다."}
-            </div>
+          <div className="mt-1 text-[10px] font-black leading-tight text-red-400 bg-red-950/50 p-1 rounded border border-red-900/50 select-text">
+            🔥 빌런 미션: {me.mission ?? "대기 중..."}
           </div>
         )}
 
-        <div className="market-card-lane p-4">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-xl font-black text-stone-950">내 손패</h2>
-              <p className="mt-1 text-xs font-bold text-stone-500">
-                사진과 시세를 보고 거래할 물건을 바로 선택하세요.
-              </p>
-            </div>
-            <span className="table-chip px-3 py-1 text-xs font-black">
-              {myHand.length}장
-            </span>
+        {!isVillain && me.job && (
+          <div className="mt-1 text-[10px] font-black leading-tight text-purple-400 bg-purple-950/45 p-1 rounded border border-purple-900/40 select-text">
+            ✨ 시민 미션 ({me.job.title}): {me.job.description}
           </div>
+        )}
 
+        {/* Cards Row */}
+        <div className="flex-1 flex items-center gap-1.5 mt-1 overflow-x-auto min-h-0">
           {myHand.length === 0 ? (
-            <div className="mt-4 rounded border border-dashed border-stone-300 bg-white/70 px-4 py-6 text-center text-sm font-bold text-stone-500">
-              게임이 시작되면 내 물건 카드가 여기에 표시됩니다.
-            </div>
+            <div className="text-xs text-stone-500 font-bold select-none">게임 시작 대기 중...</div>
           ) : (
-            <div className="player-hand-grid mt-4">
-              {myHand.map((item) => (
-                <TableHandCard
+            myHand.map((item) => {
+              const selected = selectedItemId === item.instanceId;
+              return (
+                <button
                   key={item.instanceId}
-                  item={item}
-                  selected={selectedItemId === item.instanceId}
-                  onSelect={() => setSelectedItemId(item.instanceId)}
-                />
-              ))}
-            </div>
+                  type="button"
+                  onClick={() => setSelectedItemId(item.instanceId)}
+                  className={`motion-button flex flex-col items-center justify-between bg-stone-900 hover:bg-stone-850 border rounded p-1 text-center cursor-pointer transition-all w-[76px] h-[76px] shrink-0 select-none ${
+                    selected
+                      ? "border-orange-500 ring-2 ring-orange-500/50 scale-105 shadow-[0_0_12px_rgba(249,115,22,0.4)]"
+                      : "border-stone-700"
+                  }`}
+                >
+                  <div className="text-[18px] leading-none text-stone-300 flex-1 flex items-center justify-center">
+                    {productIcon(item, 22)}
+                  </div>
+                  <div className="text-[9px] font-black text-white truncate w-full leading-tight">
+                    {item.name}
+                  </div>
+                  <div className="text-[8px] font-bold text-orange-400 truncate w-full">
+                    {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
+                  </div>
+                  {item.isBrick && (
+                    <span className="bg-red-700 text-white font-black rounded px-1 py-0.2 text-[7px] transform scale-90">
+                      벽돌
+                    </span>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </div>
-    </section>
+    </div>
+  );
+}
+
+
+function SidePlayerSeat({
+  player,
+  isTurn,
+  isInteractive,
+  isCardInteractive,
+  onSelectPlayer,
+  onSelectCard,
+  selectedItemId,
+  dealTargetId,
+  activeActionType,
+}: {
+  player: PublicPlayer;
+  isTurn: boolean;
+  isInteractive: boolean;
+  isCardInteractive?: boolean;
+  onSelectPlayer?: (id: string) => void;
+  onSelectCard?: (playerId: string, itemId: string) => void;
+  selectedItemId?: string;
+  dealTargetId?: string;
+  activeActionType?: string;
+}) {
+  const isPlayerSelected = dealTargetId === player.id;
+
+  return (
+    <div className="flex flex-col items-center gap-2 relative">
+      {player.assetRank !== undefined && (
+        <div className="absolute -top-3 left-4 z-20 px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-black text-[10px] shadow border border-amber-400">
+          👑 {player.assetRank}위
+        </div>
+      )}
+      <button
+        type="button"
+        disabled={!isInteractive}
+        onClick={() => onSelectPlayer && onSelectPlayer(player.id)}
+        className={`side-player-card transition-all w-[180px] p-3 text-center ${
+          isTurn ? "active-turn" : ""
+        } ${
+          isInteractive
+            ? "cursor-pointer hover:scale-105 shadow-lg border-amber-400/50 hover:shadow-[0_0_15px_rgba(251,191,36,0.6)]"
+            : ""
+        } ${
+          isPlayerSelected
+            ? "border-amber-400 bg-amber-950/60 ring-2 ring-amber-400 shadow-[0_0_20px_#fbbf24] scale-105 z-10"
+            : ""
+        }`}
+      >
+        <div className="flex items-center gap-2 justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_25%,#f8d9a4,#b87332)] text-base font-black text-stone-950">
+            {player.name.slice(0, 1)}
+          </div>
+          <div className="truncate text-lg font-black max-w-[110px] text-white">{player.name}</div>
+        </div>
+        <div className="mt-2 flex justify-around text-sm font-black text-stone-300">
+          <span>평판 {player.reputationTokens}/5</span>
+          <span>물건 {player.itemCount}</span>
+        </div>
+        <div className="mt-2 flex justify-center gap-3 border-t border-white/10 pt-2 text-xs text-stone-400">
+          <span>👍 {player.likes}</span>
+          <span>👎 {player.dislikes}</span>
+        </div>
+        {player.isBot && (
+          <span className="absolute -top-1.5 -right-1.5 rounded bg-stone-850 border border-stone-600 px-2 py-0.5 text-xs font-black text-white">
+            BOT
+          </span>
+        )}
+      </button>
+
+      <div className="flex flex-wrap gap-1.5 justify-center mt-1.5 max-w-[200px]">
+        {player.publicItems && player.publicItems.map((item: ItemCardSnapshot) => {
+          const isSelected = selectedItemId === item.instanceId && dealTargetId === player.id;
+          const showFaceUp = item.revealed;
+          
+          const showCategory = showFaceUp || (activeActionType === "directTrade");
+          const cardTooltip = showFaceUp
+            ? item.name
+            : isSelected && showCategory && item.category
+            ? `${categoryLabel(item.category)} 물건`
+            : "뒤집힌 물건";
+
+          return (
+            <button
+              key={item.instanceId}
+              type="button"
+              disabled={!isCardInteractive}
+              onClick={() => onSelectCard && onSelectCard(player.id, item.instanceId)}
+              className={`w-[44px] h-[64px] border rounded transition-all flex flex-col items-center justify-between p-1 select-none relative ${
+                isCardInteractive ? "card-glowing-interactive pulse-active" : ""
+              } ${
+                isSelected
+                  ? "border-amber-400 bg-amber-900/60 ring-2 ring-amber-400 shadow-[0_0_15px_#fbbf24] scale-125 z-10"
+                  : "border-stone-700 bg-stone-900 hover:scale-105"
+              }`}
+              title={cardTooltip}
+            >
+              {showFaceUp ? (
+                <>
+                  <div className="text-base text-stone-300 mt-0.5">
+                    {productIcon(item, 16)}
+                  </div>
+                  <div className="text-[10px] font-black text-white truncate max-w-full leading-none">{item.name}</div>
+                </>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center p-0.5">
+                  <span className="text-xl font-black text-stone-600">?</span>
+                  {isSelected && showCategory && item.category && (
+                    <span className="text-[9px] font-black text-amber-400 truncate w-full mt-1 animate-pulse">
+                      {categoryLabel(item.category)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -1202,6 +1891,7 @@ function PlayerList({
   );
 }
 
+
 function WaitingRoom({
   mode,
   isHost,
@@ -1216,86 +1906,47 @@ function WaitingRoom({
   onAddBot: () => void;
 }) {
   return (
-    <section className="market-card-table p-5">
-        <div className="relative space-y-4">
-          <div className="table-center-board p-5">
-            <div className="relative z-10">
-            <div className="mb-4 flex justify-center">
-              <span className="table-chip px-4 py-1 text-xs font-black">
-                {mode === "botTest" ? "봇 테스트 버전" : "실제 플레이 버전"}
-              </span>
-            </div>
-            <div className="turn-command-bar mx-auto max-w-3xl px-5 py-4 text-center text-white">
-              <div className="text-xl font-black">테이블 세팅 중</div>
-              <div className="mt-1 text-xs font-bold text-white/80">
-                {mode === "botTest"
-                  ? "봇을 추가해서 혼자 흐름을 테스트할 수 있습니다."
-                  : "친구 3명 이상이 모이면 각자의 손패와 거래 카드가 배정됩니다."}
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <div className="h-px w-24 bg-amber-900/25" />
-              <div className="text-xl font-black text-stone-800">내 손패 자리</div>
-              <div className="h-px w-24 bg-amber-900/25" />
-            </div>
-            <div className="public-market-row mt-4">
-              {Array.from({ length: 5 }, (_, index) => (
-                <div key={index} className="table-card px-3 pb-3 pt-4">
-                  <div className="relative z-10 text-center">
-                    <Image
-                      src={CARD_BACK}
-                      alt="시작 전 손패"
-                      width={240}
-                      height={160}
-                      unoptimized
-                      className="table-card-image mx-auto"
-                    />
-                    <div className="mt-2 text-sm font-black text-stone-900">
-                      게임 시작 후 공개
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-7 flex items-center justify-center gap-3">
-              <div className="h-px w-24 bg-amber-900/25" />
-              <div className="text-xl font-black text-stone-800">행동 카드 미리보기</div>
-              <div className="h-px w-24 bg-amber-900/25" />
-            </div>
-            <div className="hand-card-grid mt-4">
-              {ACTION_PREVIEW_CARDS.map((card) => (
-                <TableActionCard key={card.title} {...card} />
-              ))}
-            </div>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-              <TableChip label="인원" value={`${playerCount}/${MAX_PLAYERS}`} />
-              <TableChip label="손패" value="5장" />
-              <TableChip label="거래 카드" value="2장" />
-              {isHost && (
-                <span className="text-xs font-black text-stone-600">
-                  {loading ? "준비 중" : "오른쪽 버튼으로 시작"}
-                </span>
-              )}
-            </div>
-            {isHost && mode === "botTest" && (
-              <div className="mt-4 flex justify-center">
-                <button
-                  type="button"
-                  onClick={onAddBot}
-                  disabled={loading || playerCount >= MAX_PLAYERS}
-                  className="motion-button inline-flex items-center justify-center gap-2 rounded-lg border border-stone-900 bg-white/70 px-4 py-3 text-sm font-black text-stone-950 hover:bg-stone-950 hover:text-white disabled:border-stone-300 disabled:text-stone-400"
-                >
-                  <Users size={16} />
-                  자동 봇 추가
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="w-full max-w-md bg-stone-900/90 backdrop-blur border-2 border-orange-700 p-8 rounded-2xl shadow-2xl text-center space-y-6 mx-auto animate-fade-in mt-20">
+      <div className="flex justify-center">
+        <span className="bg-orange-950 text-orange-400 border border-orange-700/50 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-inner">
+          {mode === "botTest" ? "봇 테스트 모드" : "멀티플레이 모드"}
+        </span>
       </div>
-    </section>
+      
+      <div className="space-y-2">
+        <h2 className="text-3xl font-black text-white tracking-tight">테이블 세팅 중...</h2>
+        <p className="text-sm font-bold text-stone-400">
+          {mode === "botTest"
+            ? "봇을 추가해서 혼자 흐름을 테스트할 수 있습니다."
+            : "다른 플레이어들이 접속하기를 기다리고 있습니다."}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="bg-stone-800/80 border border-stone-700 px-4 py-2 rounded-lg text-sm font-black text-stone-300">
+          참가 인원 <span className="text-orange-400 ml-1">{playerCount}/4</span>
+        </div>
+        {isHost && (
+          <div className="bg-stone-800/80 border border-stone-700 px-4 py-2 rounded-lg text-sm font-black text-stone-300">
+            {loading ? "준비 중..." : "우측 하단 버튼으로 시작"}
+          </div>
+        )}
+      </div>
+
+      {isHost && mode === "botTest" && (
+        <div className="pt-4 border-t border-stone-800">
+          <button
+            type="button"
+            onClick={onAddBot}
+            disabled={loading || playerCount >= 4}
+            className="motion-button w-full flex items-center justify-center gap-2 bg-stone-800 border border-stone-600 px-5 py-3.5 rounded-xl text-base font-black text-white hover:bg-stone-700 hover:border-stone-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          >
+            <span className="text-stone-400">🤖</span>
+            자동 봇 추가하기
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1305,86 +1956,161 @@ function PendingDealPanel({
   isDealParty,
   myChoice,
   onChoose,
+  onPropose,
 }: {
   snapshot: RoomSnapshot;
   item: ItemCardSnapshot | null;
   isDealParty: boolean;
   myChoice: DealCardChoice | undefined;
   onChoose: (choice: DealCardChoice) => void;
+  onPropose: (price: number) => void;
 }) {
   const deal = snapshot.pendingDeal;
   if (!deal) return null;
 
+  const me = snapshot.me;
+  const isSale = deal.actionType === "saleRequest";
+  const buyerName = playerName(snapshot, deal.requesterId);
+  const sellerName = playerName(snapshot, deal.ownerId);
+  const itemName = item?.name ? `[${item.name}]` : "[물건]";
+
+  const [proposalPrice, setProposalPrice] = useState<number>(
+    item && item.marketPrice > 0 ? Math.round((item.marketPrice * 0.7) / 10000) * 10000 : 100000
+  );
+
+  const isOwner = me && deal.ownerId === me.id;
+  const isPriceNeeded = deal.askingPrice === 0 && deal.actionType !== "freeGive";
+
+  let dealMessage = "거래 진행 중";
+  if (me) {
+    if (deal.actionType === "freeGive") {
+      dealMessage = `📢 ${sellerName}님이 무료나눔(0원) 거래를 제안했습니다.`;
+    } else if (!isPriceNeeded) {
+      dealMessage = `📢 ${sellerName}님이 ${moneyLabel(deal.askingPrice)}을 제시했습니다.`;
+    } else if (!isSale) {
+      if (deal.ownerId === me.id) {
+        dealMessage = `📢 ${buyerName}님이 내 ${itemName}을(를) 원합니다.`;
+      } else if (deal.requesterId === me.id) {
+        dealMessage = `📢 ${sellerName}님에게 ${itemName} 구매 제안을 보냈습니다.`;
+      }
+    } else {
+      if (deal.requesterId === me.id) {
+        dealMessage = `📢 ${sellerName}님이 나에게 ${itemName}을(를) 판매하고 싶어합니다.`;
+      } else if (deal.ownerId === me.id) {
+        dealMessage = `📢 ${buyerName}님에게 ${itemName} 판매 제안을 보냈습니다.`;
+      }
+    }
+  }
+
   return (
-    <section className="motion-panel-strong market-card-table p-5">
-      <div className="relative">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-black text-orange-950">거래 진행 중</h2>
-          <p className="mt-1 text-sm font-bold text-orange-800">
-            {playerName(snapshot, deal.requesterId)} →{" "}
-            {playerName(snapshot, deal.ownerId)} ·{" "}
-            {moneyLabel(deal.askingPrice)}
-          </p>
-        </div>
-        <Handshake className="text-orange-700" size={28} />
+    <div className="flex flex-col gap-2.5 text-white text-center justify-center w-full p-2">
+      {/* Deal Message */}
+      <div className="text-sm font-black flex items-center justify-center gap-1.5 leading-tight">
+        <Handshake size={16} className="text-amber-400 shrink-0" />
+        <span className={!isPriceNeeded ? "text-emerald-400 animate-pulse" : ""}>{dealMessage}</span>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-[128px_1fr]">
-        <div className="deal-card-lift mx-auto w-full max-w-32">
-          {item ? (
-            <CardImage src={item.imagePath} alt={item.name} />
-          ) : (
-            <CardImage src={CARD_BACK} alt="뒤집힌 물건" />
-          )}
-        </div>
-        <div className="market-card-lane bg-white/78 p-4">
-          <div className="text-xs font-black uppercase text-orange-700">물건</div>
-          <div className="mt-1 text-2xl font-black text-stone-950">
-            {item?.name ?? "뒤집힌 물건"}
-          </div>
-          <div className="mt-2 text-sm font-bold text-stone-500">
-            시장가 {item && item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
-          </div>
-          {item?.category && (
-            <div className="mt-2 text-xs font-black text-stone-500">
-              {categoryLabel(item.category)} · {conditionLabel(item.condition)}
-            </div>
-          )}
+      {/* Flat Text Info (No bulky card wrapper) */}
+      <div className="text-xs font-bold text-stone-300 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+        {item ? (
+          <>
+            <span>
+              물건: <span className="text-amber-300 font-black">{item.name ?? "뒤집힌 물건"}</span>
+            </span>
+            <span>
+              시세: <span className="text-stone-400 font-semibold">{item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}</span>
+            </span>
+            {item.category && (
+              <span>
+                분류: <span className="text-stone-400 font-semibold">{categoryLabel(item.category)} ({conditionLabel(item.condition)})</span>
+              </span>
+            )}
+          </>
+        ) : (
+          <span>물건 정보: 가려짐</span>
+        )}
+        {!isPriceNeeded && (
+          <span>
+            제시 가격: <span className="text-emerald-400 font-black">{moneyLabel(deal.askingPrice)}</span>
+          </span>
+        )}
+      </div>
 
-          {isDealParty ? (
-            myChoice ? (
-              <div className="mt-5 inline-flex items-center gap-2 border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-black text-stone-700">
-                <Check size={16} />
-                내 거래 카드 선택 완료
+      {/* Button Actions */}
+      <div className="flex justify-center mt-0.5">
+        {isDealParty ? (
+          isPriceNeeded ? (
+            isOwner ? (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <div className="flex items-center gap-1 text-[11px] font-bold">
+                  <span className="text-stone-400 shrink-0">제시할 가격:</span>
+                  <input
+                    type="number"
+                    value={proposalPrice}
+                    onChange={(e) => setProposalPrice(Number(e.target.value))}
+                    min={10000}
+                    step={10000}
+                    className="w-24 border border-stone-750 bg-stone-950 text-white px-1.5 py-0.5 text-xs font-black rounded"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onPropose(proposalPrice)}
+                    className="motion-button flex items-center gap-1 bg-amber-600 hover:bg-amber-500 text-xs font-black px-3.5 py-1.5 rounded text-stone-950 shadow-md cursor-pointer"
+                  >
+                    가격 제시 및 수락
+                  </button>
+                  <button
+                    onClick={() => onChoose("cancel")}
+                    className="motion-button flex items-center gap-1 border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-950/50 text-xs font-black px-3.5 py-1.5 rounded shadow-md cursor-pointer"
+                  >
+                    거래취소
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                <button
-                  onClick={() => onChoose("cool")}
-                  className="motion-button inline-flex items-center justify-center gap-2 bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700"
-                >
-                  <ThumbsUp size={17} />
-                  쿨거래
-                </button>
+              <div className="flex flex-col gap-1.5 items-center">
+                <div className="text-xs font-bold text-stone-400 animate-pulse">
+                  판매자가 가격을 제시하길 기다리고 있습니다...
+                </div>
                 <button
                   onClick={() => onChoose("cancel")}
-                  className="motion-button inline-flex items-center justify-center gap-2 border border-red-300 bg-red-50 px-4 py-3 text-sm font-black text-red-700 hover:bg-red-100"
+                  className="motion-button flex items-center gap-1 border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-950/50 text-xs font-black px-3.5 py-1.5 rounded shadow-md cursor-pointer"
                 >
-                  <Ban size={17} />
                   거래취소
                 </button>
               </div>
             )
+          ) : myChoice ? (
+            <div className="flex items-center gap-1 text-[11px] font-black text-stone-400 bg-stone-900/50 px-2.5 py-1 rounded border border-stone-800">
+              <Check size={12} className="text-emerald-400" />
+              내 결정 완료
+            </div>
           ) : (
-            <p className="mt-5 text-sm font-bold text-stone-500">
-              거래 당사자의 선택을 기다리는 중입니다.
-            </p>
-          )}
-        </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onChoose("cool")}
+                className="motion-button flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-xs font-black px-3.5 py-1.5 rounded text-white shadow-md cursor-pointer"
+              >
+                <ThumbsUp size={12} />
+                쿨거래
+              </button>
+              <button
+                onClick={() => onChoose("cancel")}
+                className="motion-button flex items-center gap-1 border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-950/50 text-xs font-black px-3.5 py-1.5 rounded shadow-md cursor-pointer"
+              >
+                <Ban size={12} />
+                거래취소
+              </button>
+            </div>
+          )
+        ) : (
+          <div className="text-xs font-bold text-stone-400 animate-pulse">
+            상대방의 결정을 기다리는 중...
+          </div>
+        )}
       </div>
-      </div>
-    </section>
+    </div>
   );
 }
 
@@ -1396,35 +2122,43 @@ function ReviewPanel({
   onReview: (targetPlayerId: string, satisfied: boolean) => void;
 }) {
   return (
-    <section className="motion-panel-strong border border-sky-300 bg-sky-50/90 p-5">
-      <h2 className="text-xl font-black text-sky-950">거래 후기</h2>
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
+    <div className="flex flex-col gap-2.5 text-white text-center justify-center w-full p-2">
+      <div className="bg-stone-950/20 py-2 px-3 rounded-lg border border-emerald-800/40 text-emerald-400 text-sm font-black animate-pulse max-w-sm mx-auto w-full">
+        🎉 거래가 성사되었습니다!
+      </div>
+      <div className="text-sm font-black flex items-center justify-center gap-1.5 mt-1">
+        <ThumbsUp size={16} className="text-sky-400 shrink-0" />
+        <span>거래 후기 작성</span>
+      </div>
+      <div className="flex flex-col gap-2">
         {snapshot.pendingReviews.map((review) => (
-          <div key={`${review.tradeId}-${review.targetPlayerId}`} className="deal-card-lift border border-sky-200 bg-white p-4">
-            <div className="text-sm font-bold text-sky-700">상대</div>
-            <div className="mt-1 text-xl font-black">
-              {playerName(snapshot, review.targetPlayerId)}
+          <div
+            key={`${review.tradeId}-${review.targetPlayerId}`}
+            className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border border-stone-850 bg-stone-900/40 p-2 rounded"
+          >
+            <div className="text-xs font-bold">
+              상대방: <span className="text-amber-300 font-black">{playerName(snapshot, review.targetPlayerId)}</span>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={() => onReview(review.targetPlayerId, true)}
-                className="motion-button inline-flex items-center justify-center gap-2 bg-sky-600 px-3 py-2 text-sm font-black text-white hover:bg-sky-700"
+                className="motion-button flex items-center gap-1 bg-sky-600 hover:bg-sky-500 text-[11px] font-black px-3 py-1 rounded text-white shadow-sm cursor-pointer"
               >
-                <ThumbsUp size={16} />
+                <ThumbsUp size={12} />
                 만족
               </button>
               <button
                 onClick={() => onReview(review.targetPlayerId, false)}
-                className="motion-button inline-flex items-center justify-center gap-2 border border-red-300 bg-red-50 px-3 py-2 text-sm font-black text-red-700 hover:bg-red-100"
+                className="motion-button flex items-center gap-1 border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-950/50 text-[11px] font-black px-3 py-1 rounded shadow-sm cursor-pointer"
               >
-                <ThumbsDown size={16} />
+                <ThumbsDown size={12} />
                 불만족
               </button>
             </div>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -1477,9 +2211,15 @@ function ActionPanel({
   onSkip: () => void;
   compact?: boolean;
 }) {
-  const tradeActionActive = isTradeRequestAction(action);
+  const isRequestingOthersItem = isTradeRequestAction(action);
+  const isDealAction = Boolean(
+    action &&
+    ["tradeRequest", "freeGive", "directTrade", "saleRequest"].includes(action.type)
+  );
+  const isSale = action?.type === "saleRequest";
+
   const selectedItem = (
-    tradeActionActive ? requestableItems : myHand
+    isRequestingOthersItem ? requestableItems : myHand
   ).find((item) => item.instanceId === selectedItemId);
   const bricks = myHand.filter((item) => item.isBrick);
   const recycleItemId = bricks.some((item) => item.instanceId === selectedItemId)
@@ -1494,121 +2234,110 @@ function ActionPanel({
   const panelTitle = action ? action.title : "행동카드";
   const panelBody =
     action || pendingDealActive || !isMyTurn
-      ? panelCopy.body
+      ? (action && isDealAction
+        ? (isSale
+          ? "내 손패에서 판매할 물건을 선택하고 가격을 책정해 판매 제안을 보내세요."
+          : "상대의 물건을 고르고 거래를 신청하세요. (가격은 물건 보유자가 제시합니다)")
+        : panelCopy.body)
       : "내 턴이면 여기서 행동카드를 뽑습니다.";
 
   return (
-    <section
-      className={`motion-panel border ${compact ? "p-4" : "p-5"} ${
+    <div
+      className={`flex flex-col gap-2 w-full p-2.5 rounded-lg border text-white text-center justify-center ${
         isMyTurn
-          ? "border-orange-400 bg-orange-50/95 ring-2 ring-orange-500/40"
-          : "border-stone-300 bg-white/90"
+          ? "border-amber-500/40 bg-stone-900/80"
+          : "border-stone-850 bg-stone-900/40"
       }`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Title & Body Info */}
+      <div className="flex flex-wrap items-center justify-between gap-1 border-b border-white/5 pb-1 text-left">
         <div>
-          <h2 className="text-xl font-black">{panelTitle}</h2>
-          <p className="mt-1 text-sm font-bold text-stone-500">
+          <h3 className="text-xs font-black flex items-center gap-1">
+            {action && <span className="text-amber-400">{actionIcon(action.type)}</span>}
+            {panelTitle}
+          </h3>
+          <p className="text-[9px] font-bold text-stone-400 mt-0.5 leading-none">
             {panelBody}
           </p>
         </div>
-        {action && (
-          <span className="inline-flex items-center gap-2 border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-black text-orange-700">
-            {actionIcon(action.type)}
-            {action.title}
-          </span>
-        )}
       </div>
 
       {!isMyTurn ? (
-        <p className="mt-4 text-sm font-bold text-stone-500">
+        <p className="text-[11px] font-bold text-stone-400">
           지금은 {currentPlayerName || "다른 플레이어"}님의 턴입니다.
         </p>
       ) : pendingDealActive ? (
-        <p className="mt-4 text-sm font-bold text-stone-500">
+        <p className="text-[11px] font-bold text-stone-400">
           진행 중인 거래가 끝나면 다음 턴으로 넘어갑니다.
         </p>
       ) : !action ? (
-        <div className="action-draw-pad mt-4">
+        <div className="flex justify-center">
           <button
             onClick={onDraw}
             disabled={loading}
-            className="motion-button inline-flex w-full items-center justify-center gap-2 bg-orange-600 px-5 py-4 text-sm font-black text-white hover:bg-orange-700 disabled:opacity-50"
+            className="motion-button flex items-center gap-1.5 bg-orange-600 hover:bg-orange-500 px-4 py-1.5 text-xs font-black text-white rounded shadow-md cursor-pointer"
           >
-            <ShoppingBag size={18} />
+            <ShoppingBag size={13} />
             행동카드 뽑기
           </button>
         </div>
-      ) : tradeActionActive ? (
-        <div
-          className={
-            compact
-              ? "mt-4 grid gap-3"
-              : "mt-4 grid gap-4 lg:grid-cols-[220px_1fr]"
-          }
-        >
-          <div className={`deal-card-lift ${compact ? "mx-auto w-full max-w-36" : ""}`}>
-            <CardImage
-              src={selectedItem?.imagePath ?? CARD_BACK}
-              alt={selectedItem?.name ?? "선택한 물건"}
-            />
-          </div>
-          <div className="market-card-lane space-y-3 p-4">
-            <SelectLabel label="요청할 물건">
-              <select
-                value={selectedItemId}
-                onChange={(event) => setSelectedItemId(event.target.value)}
-                className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
-              >
-                {requestableItems.length === 0 ? (
-                  <option value="">요청할 물건 없음</option>
-                ) : (
-                  requestableItems.map((item) => (
-                  <option key={item.instanceId} value={item.instanceId}>
-                    {item.name} · {categoryLabel(item.category)} ·{" "}
-                    {conditionLabel(item.condition)} · 시장가{" "}
-                    {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
-                  </option>
-                  ))
+      ) : isDealAction ? (
+        <div className="w-full space-y-1.5">
+          {/* Target & Item Indicator */}
+          <div>
+            {(!dealTargetId || !selectedItemId) ? (
+              <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
+                <span className="text-[9px] font-black text-red-400 block">⚠️ 대상 미선택</span>
+                <span className="text-[9px] font-bold text-stone-400 mt-0.5 block">
+                  테이블 상단/좌/우에서 상대방과 카드를 직접 클릭하세요!
+                </span>
+              </div>
+            ) : (
+              <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[11px] font-bold">
+                <div>
+                  상대: <span className="text-amber-400 font-black">{otherPlayers.find(p => p.id === dealTargetId)?.name ?? "알 수 없음"}</span>
+                </div>
+                <div>
+                  {isSale ? "판매물건" : "요청물건"}: <span className="text-orange-400 font-black">{selectedItem ? `${selectedItem.name} (${categoryLabel(selectedItem.category)})` : "가려진 카드"}</span>
+                </div>
+                {selectedItem && selectedItem.marketPrice > 0 && (
+                  <div>
+                    시세: <span className="text-stone-300">{moneyLabel(selectedItem.marketPrice)}</span>
+                  </div>
                 )}
-              </select>
-            </SelectLabel>
-            <SelectLabel label="보유자">
-              <select
-                value={dealTargetId}
-                onChange={(event) => setDealTargetId(event.target.value)}
-                className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
-              >
-                {otherPlayers.map((player) => (
-                  <option key={player.id} value={player.id}>
-                    {player.name}
-                  </option>
-                ))}
-              </select>
-            </SelectLabel>
-            <SelectLabel label="제시 가격">
-              <input
-                type="number"
-                value={action.type === "freeGive" ? 0 : askingPrice}
-                onChange={(event) => setAskingPrice(Number(event.target.value))}
-                disabled={action.type === "freeGive"}
-                min={0}
-                step={10000}
-                className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold disabled:bg-stone-100"
-              />
-            </SelectLabel>
-            <div className="grid grid-cols-2 gap-2">
+              </div>
+            )}
+          </div>
+
+          {/* Price & Actions Row */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {isSale && (
+              <div className="flex items-center gap-1 text-[11px] font-bold">
+                <span className="text-stone-400 shrink-0">제시 가격:</span>
+                <input
+                  type="number"
+                  value={action.type === "freeGive" ? 0 : askingPrice}
+                  onChange={(event) => setAskingPrice(Number(event.target.value))}
+                  disabled={action.type === "freeGive"}
+                  min={0}
+                  step={10000}
+                  className="w-24 border border-stone-750 bg-stone-950 text-white px-1.5 py-0.5 text-xs font-black rounded disabled:bg-stone-800 disabled:text-stone-500"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-1.5">
               <button
                 onClick={onRequestTrade}
-                disabled={!selectedItemId || !dealTargetId || requestableItems.length === 0}
-                className="motion-button inline-flex items-center justify-center gap-2 bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-orange-700 disabled:bg-stone-300"
+                disabled={!selectedItemId || !dealTargetId}
+                className="motion-button flex items-center gap-1 bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-xs font-black text-white disabled:bg-stone-800 disabled:text-stone-500 disabled:opacity-50 cursor-pointer"
               >
-                <Handshake size={17} />
+                <Handshake size={12} />
                 거래 신청
               </button>
               <button
                 onClick={onSkip}
-                className="motion-button border border-stone-300 px-4 py-3 text-sm font-black hover:bg-stone-100"
+                className="motion-button border border-stone-700 bg-stone-800 hover:bg-stone-755 px-3 py-1 rounded text-xs font-black text-stone-350 cursor-pointer"
               >
                 넘기기
               </button>
@@ -1621,7 +2350,7 @@ function ActionPanel({
           targetId={actionTargetId}
           setTargetId={setActionTargetId}
           buttonLabel="악플테러"
-          icon={<MessageCircleWarning size={17} />}
+          icon={<MessageCircleWarning size={12} />}
           onSubmit={onTerror}
           onSkip={onSkip}
         />
@@ -1631,48 +2360,50 @@ function ActionPanel({
           targetId={actionTargetId}
           setTargetId={setActionTargetId}
           buttonLabel="물물교환"
-          icon={<Repeat2 size={17} />}
+          icon={<Repeat2 size={12} />}
           onSubmit={onSwap}
           onSkip={onSkip}
         />
       ) : action.type === "recycle" ? (
-        <div className="mt-4 space-y-3">
-          <SelectLabel label="분리수거할 벽돌">
-            <select
-              value={recycleItemId}
-              onChange={(event) => setSelectedItemId(event.target.value)}
-              className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
-            >
-              {bricks.length === 0 ? (
-                <option value="">벽돌 없음</option>
-              ) : (
-                bricks.map((item) => (
-                  <option key={item.instanceId} value={item.instanceId}>
-                    {item.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </SelectLabel>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="w-full space-y-1.5">
+          {/* Recycle Brick Info */}
+          <div>
+            {!recycleItemId ? (
+              <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
+                <span className="text-[9px] font-black text-red-400 block">⚠️ 벽돌 미선택</span>
+                <span className="text-[9px] font-bold text-stone-400 mt-0.5 block">
+                  하단 내 손패에서 분리수거할 벽돌 카드를 직접 클릭하세요!
+                </span>
+              </div>
+            ) : (
+              <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex justify-between items-center text-[11px] font-bold">
+                <span className="text-stone-400">선택된 벽돌</span>
+                <span className="text-teal-400 font-black">
+                  {myHand.find(item => item.instanceId === recycleItemId)?.name ?? "벽돌"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-center gap-1.5">
             <button
               onClick={() => onRecycle(recycleItemId)}
               disabled={!recycleItemId}
-              className="motion-button inline-flex items-center justify-center gap-2 bg-teal-700 px-4 py-3 text-sm font-black text-white hover:bg-teal-800 disabled:bg-stone-300"
+              className="motion-button flex items-center gap-1 bg-teal-600 hover:bg-teal-500 px-3 py-1 rounded text-xs font-black text-white disabled:bg-stone-800 disabled:text-stone-500 disabled:opacity-50 cursor-pointer"
             >
-              <Recycle size={17} />
+              <Recycle size={12} />
               분리수거
             </button>
             <button
               onClick={onSkip}
-              className="motion-button border border-stone-300 px-4 py-3 text-sm font-black hover:bg-stone-100"
+              className="motion-button border border-stone-700 bg-stone-800 hover:bg-stone-755 px-3 py-1 rounded text-xs font-black text-stone-350 cursor-pointer"
             >
               넘기기
             </button>
           </div>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }
 
@@ -1693,33 +2424,38 @@ function TargetAction({
   onSubmit: () => void;
   onSkip: () => void;
 }) {
+  const selectedPlayer = players.find(p => p.id === targetId);
+
   return (
-    <div className="market-card-lane mt-4 space-y-3 p-4">
-      <SelectLabel label="대상">
-        <select
-          value={targetId}
-          onChange={(event) => setTargetId(event.target.value)}
-          className="w-full border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
-        >
-          {players.map((player) => (
-            <option key={player.id} value={player.id}>
-              {player.name}
-            </option>
-          ))}
-        </select>
-      </SelectLabel>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="w-full space-y-1.5">
+      <div>
+        {!targetId ? (
+          <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
+            <span className="text-[9px] font-black text-red-400 block">⚠️ 대상 미지목</span>
+            <span className="text-[9px] font-bold text-stone-400 mt-0.5 block">
+              테이블 상에서 액션을 적용할 대상 플레이어를 직접 클릭하세요!
+            </span>
+          </div>
+        ) : (
+          <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex justify-between items-center text-[11px] font-bold">
+            <span className="text-stone-400">지목된 대상</span>
+            <span className="text-amber-400 font-black">{selectedPlayer?.name ?? "알 수 없음"}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-center gap-1.5">
         <button
           onClick={onSubmit}
           disabled={!targetId}
-          className="motion-button inline-flex items-center justify-center gap-2 bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-orange-700 disabled:bg-stone-300"
+          className="motion-button flex items-center gap-1 bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-xs font-black text-white disabled:bg-stone-800 disabled:text-stone-500 disabled:opacity-50 cursor-pointer"
         >
           {icon}
           {buttonLabel}
         </button>
         <button
           onClick={onSkip}
-          className="motion-button border border-stone-300 px-4 py-3 text-sm font-black hover:bg-stone-100"
+          className="motion-button border border-stone-700 bg-stone-800 hover:bg-stone-755 px-3 py-1 rounded text-xs font-black text-stone-350 cursor-pointer"
         >
           넘기기
         </button>
@@ -1742,22 +2478,22 @@ function ReportPanel({
       <div className="relative">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black">최종 신고</h2>
-          <p className="mt-1 text-sm font-bold text-stone-500">
+          <h2 className="text-xl font-black text-[#ff7e36]">최종 신고</h2>
+          <p className="mt-1.5 text-sm font-bold text-stone-700">
             {snapshot.reportsCast}/{snapshot.players.length}명 신고 접수
           </p>
         </div>
-        <AlertTriangle className="text-orange-600" size={26} />
+        <AlertTriangle className="text-[#ff7e36]" size={26} />
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
         {otherPlayers.map((player) => (
           <button
             key={player.id}
             onClick={() => onReport(player.id)}
-            className="motion-button flex items-center justify-between border border-stone-300 px-3 py-3 text-left font-black hover:bg-stone-100"
+            className="motion-button flex items-center justify-between border border-stone-300 bg-white hover:bg-orange-50 hover:border-[#ff7e36] px-3.5 py-3 rounded-lg text-left font-black text-stone-900 shadow-sm cursor-pointer"
           >
             {player.name}
-            <AlertTriangle size={16} />
+            <AlertTriangle size={16} className="text-[#ff7e36]" />
           </button>
         ))}
       </div>
@@ -1766,7 +2502,17 @@ function ReportPanel({
   );
 }
 
-function ResultPanel({ snapshot }: { snapshot: RoomSnapshot }) {
+function ResultPanel({
+  snapshot,
+  submitAction,
+  leaveRoom,
+  loading,
+}: {
+  snapshot: RoomSnapshot;
+  submitAction: (action: RoomAction) => void;
+  leaveRoom: () => void;
+  loading: boolean;
+}) {
   const result = snapshot.result;
   if (!result) return null;
   const villainName = result.villainId ? playerName(snapshot, result.villainId) : "-";
@@ -1776,13 +2522,13 @@ function ResultPanel({ snapshot }: { snapshot: RoomSnapshot }) {
     : "-";
 
   return (
-    <section className="motion-panel-strong market-card-table p-5">
+    <section className="motion-panel-strong market-card-table p-5 animate-fade-in relative z-25">
       <div className="relative">
       <div className="flex items-center gap-3">
-        <Star className="text-orange-600" size={28} />
+        <Star className="text-[#ff7e36]" size={28} />
         <div>
-          <h2 className="text-2xl font-black">결과 공개</h2>
-          <p className="mt-1 text-sm font-bold text-stone-500">
+          <h2 className="text-2xl font-black text-[#ff7e36]">결과 공개</h2>
+          <p className="mt-1.5 text-base font-black text-stone-950">
             {result.winningSide === "citizens" ? "시민 승리" : "빌런 승리"}
           </p>
         </div>
@@ -1795,6 +2541,32 @@ function ResultPanel({ snapshot }: { snapshot: RoomSnapshot }) {
           label="색출"
           value={result.villainCaught ? "성공" : "실패"}
         />
+      </div>
+
+      <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+        {snapshot.me?.isHost ? (
+          <button
+            onClick={() => submitAction({ type: "restartGame" })}
+            disabled={loading}
+            className="motion-button px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-stone-950 font-black text-sm rounded-xl shadow-lg cursor-pointer flex items-center justify-center gap-2 transition-all border border-orange-500/20"
+          >
+            {loading ? "처리 중..." : "다시하기 🔄"}
+          </button>
+        ) : (
+          <button
+            disabled
+            className="px-5 py-2.5 bg-stone-900 text-stone-500 font-bold text-xs rounded-xl border border-stone-850 flex items-center justify-center gap-2"
+          >
+            호스트 재시작 대기 중... ⏳
+          </button>
+        )}
+        <button
+          onClick={leaveRoom}
+          disabled={loading}
+          className="motion-button px-5 py-2.5 bg-red-950/80 hover:bg-red-900 text-red-200 font-black text-sm rounded-xl border border-red-800 shadow-lg cursor-pointer flex items-center justify-center gap-2 transition-all"
+        >
+          나가기 🚪
+        </button>
       </div>
       </div>
     </section>
@@ -1831,9 +2603,9 @@ function LogPanel({ logs }: { logs: string[] }) {
 
 function StatusBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="status-tile border border-stone-200 bg-white/78 p-3">
-      <div className="text-xs font-black uppercase text-stone-500">{label}</div>
-      <div className="mt-1 text-lg font-black text-stone-950">{value}</div>
+    <div className="status-tile border border-stone-300 bg-white p-3 rounded-lg shadow-sm">
+      <div className="text-xs font-black uppercase text-stone-600">{label}</div>
+      <div className="mt-1 text-lg font-black text-[#ff7e36]">{value}</div>
     </div>
   );
 }

@@ -9,7 +9,8 @@ export type ActionCardType =
   | "directTrade"
   | "badReview"
   | "recycle"
-  | "swap";
+  | "swap"
+  | "saleRequest";
 export type DealCardChoice = "cool" | "cancel";
 
 export interface JobCardSnapshot {
@@ -51,7 +52,7 @@ export interface DealCards {
 
 export interface PendingDeal {
   id: string;
-  actionType: "tradeRequest" | "freeGive" | "directTrade";
+  actionType: "tradeRequest" | "freeGive" | "directTrade" | "saleRequest";
   requesterId: string;
   ownerId: string;
   itemInstanceId: string;
@@ -100,6 +101,7 @@ export interface PublicPlayer {
   position: number;
   itemCount: number;
   publicItems: ItemCardSnapshot[];
+  assetRank?: number;
   money?: never;
   job?: never;
   hand?: never;
@@ -134,7 +136,10 @@ export interface Room {
   pendingReviews: PendingReview[];
   reports: Record<string, string>;
   result: RoomResult | null;
+  currentActionAcks: string[];
   version: number;
+  hostDrawCount?: number;
+  botDrawCount?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -151,6 +156,7 @@ export interface PlayerSnapshot {
   reputationTokens?: number;
   hand?: ItemCardSnapshot[];
   dealCards?: DealCards;
+  assetRank?: number;
 }
 
 export interface RoomSnapshot {
@@ -168,6 +174,7 @@ export interface RoomSnapshot {
   marketActionLimit: number;
   logs: string[];
   reportsCast: number;
+  currentActionAcks: string[];
   result: RoomResult | null;
   version: number;
 }
@@ -175,6 +182,7 @@ export interface RoomSnapshot {
 export type RoomAction =
   | { type: "addBot" }
   | { type: "startGame" }
+  | { type: "restartGame" }
   | { type: "drawActionCard" }
   | {
       type: "requestTrade";
@@ -183,6 +191,7 @@ export type RoomAction =
       offerPrice: number;
     }
   | { type: "chooseDealCard"; choice: DealCardChoice }
+  | { type: "proposePrice"; price: number }
   | {
       type: "reviewTrade";
       targetPlayerId: string;
@@ -197,7 +206,8 @@ export type RoomAction =
   | { type: "ratePlayer"; targetPlayerId: string; rating: "like" | "dislike" }
   | { type: "endTurn" }
   | { type: "startReporting" }
-  | { type: "reportSuspiciousPlayer"; targetPlayerId: string };
+  | { type: "reportSuspiciousPlayer"; targetPlayerId: string }
+  | { type: "ackActionCard" };
 
 export interface RoomSessionResult {
   room: RoomSnapshot;

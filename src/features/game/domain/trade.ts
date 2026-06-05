@@ -30,13 +30,7 @@ export function settleAcceptedDeal({
     acquiredPrice: deal.askingPrice,
     hiddenInfoRevealTurn: deal.hiddenInfoRevealTurn,
     revealed: false,
-    revealedToPlayerIds: Array.from(
-      new Set([
-        ...item.revealedToPlayerIds,
-        owner.id,
-        ...(deal.revealedBeforeDeal ? [requester.id] : []),
-      ]),
-    ),
+    revealedToPlayerIds: deal.revealedBeforeDeal ? [requester.id] : [],
   };
 
   return {

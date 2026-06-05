@@ -16,6 +16,53 @@ export function calculateAsset(player: ServerPlayer) {
   );
 }
 
+export function checkJobMission(player: ServerPlayer): boolean {
+  if (!player.job) return false;
+  const hand = player.hand ?? [];
+  const nonBricks = hand.filter((item) => !item.isBrick);
+  const bricks = hand.filter((item) => item.isBrick);
+
+  switch (player.job.id) {
+    case "developer":
+      return nonBricks.length > 0 && nonBricks.every((item) => item.category === "electronics");
+    case "model":
+      return nonBricks.length > 0 && nonBricks.every((item) => item.category === "fashion");
+    case "housewife":
+      return nonBricks.length > 0 && nonBricks.every((item) => item.category === "living");
+    case "brick-collector":
+      return bricks.length >= 4;
+    case "collector":
+      return hand.length >= 8;
+    case "citizen":
+      return calculateAsset(player) >= 2500000;
+    default:
+      return false;
+  }
+}
+
+export function calculateCitizenWinner(citizens: ServerPlayer[]): string {
+  if (citizens.length === 0) return "";
+
+  const completedCitizens = citizens.filter((p) => checkJobMission(p));
+
+  if (completedCitizens.length === 1) {
+    return completedCitizens[0].id;
+  }
+
+  const pool = completedCitizens.length >= 2 ? completedCitizens : citizens;
+
+  const sorted = [...pool].sort((a, b) => {
+    const assetA = calculateAsset(a);
+    const assetB = calculateAsset(b);
+    if (assetB !== assetA) return assetB - assetA;
+    if (b.reputationTokens !== a.reputationTokens) return b.reputationTokens - a.reputationTokens;
+    if (b.manner !== a.manner) return b.manner - a.manner;
+    return b.money - a.money;
+  });
+
+  return sorted[0]?.id ?? citizens[0].id;
+}
+
 export function calculateReportResult(
   players: ServerPlayer[],
   reports: Record<string, string>,
@@ -26,12 +73,10 @@ export function calculateReportResult(
     Object.entries(countedReports).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
   const villainCaught = mostReportedId === villainId;
 
-  const eligiblePlayers = villainCaught
-    ? players.filter((player) => player.id !== villainId)
-    : players;
-  const winnerId =
-    [...eligiblePlayers].sort((a, b) => calculateAsset(b) - calculateAsset(a))[0]
-      ?.id ?? villainId;
+  const citizens = players.filter((p) => p.id !== villainId);
+  const citizenWinnerId = calculateCitizenWinner(citizens);
+
+  const winnerId = villainCaught ? citizenWinnerId : villainId;
 
   return {
     villainId,
@@ -48,15 +93,14 @@ export function calculateReputationEliminationResult(
 ): RoomResult {
   const villain = players.find((player) => player.role === "villain");
   const villainCaught = eliminatedPlayer.id === villain?.id;
+  
   const citizens = players.filter((player) => player.role === "citizen");
-  const citizenWinner =
-    [...citizens].sort((a, b) => calculateAsset(b) - calculateAsset(a))[0]?.id ??
-    eliminatedPlayer.id;
+  const citizenWinnerId = calculateCitizenWinner(citizens);
 
   return {
     villainId: villain?.id,
     villainCaught,
-    winnerId: villainCaught ? citizenWinner : (villain?.id ?? eliminatedPlayer.id),
+    winnerId: villainCaught ? citizenWinnerId : (villain?.id ?? eliminatedPlayer.id),
     winningSide: villainCaught ? "citizens" : "villain",
     eliminatedPlayerId: eliminatedPlayer.id,
     reports: {},

@@ -1,4 +1,4 @@
-﻿import { ALL_ITEMS } from "../data/items";
+import { ALL_ITEMS } from "../data/items";
 import type { ActionCardSnapshot, ServerItemCard } from "./types";
 
 const CARDS_PER_PLAYER = 5;
@@ -25,8 +25,8 @@ const ITEM_IMAGE_BY_ID: Record<string, string> = {
 export const ACTION_CARDS: ActionCardSnapshot[] = [
   {
     type: "tradeRequest",
-    title: "거래 신청",
-    description: "다른 플레이어의 물건 카드 1장에 구매 요청을 보냅니다.",
+    title: "구매 신청",
+    description: "다른 플레이어의 물건 카드 1장에 구매 신청을 보냅니다.",
     imagePath: "/game-cards/actions/trade-request.svg",
   },
   {
@@ -59,6 +59,12 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
     description: "지목한 플레이어와 물건 카드 1장을 무작위로 맞교환합니다.",
     imagePath: "/game-cards/cards/event-15-e15.svg",
   },
+  {
+    type: "saleRequest",
+    title: "판매 신청",
+    description: "내 물건 카드 1장의 가격을 정해 다른 플레이어에게 판매 신청을 보냅니다.",
+    imagePath: "/game-cards/actions/direct-trade.svg",
+  },
 ];
 
 export function makeActionDeck() {
@@ -66,7 +72,9 @@ export function makeActionDeck() {
     ACTION_CARDS[0],
     ACTION_CARDS[0],
     ACTION_CARDS[0],
-    ACTION_CARDS[0],
+    ACTION_CARDS[6],
+    ACTION_CARDS[6],
+    ACTION_CARDS[6],
     ACTION_CARDS[1],
     ACTION_CARDS[1],
     ACTION_CARDS[2],
@@ -89,7 +97,7 @@ export function makeItemDeck() {
     isBrick: false,
     imagePath: ITEM_IMAGE_BY_ID[item.id] ?? "/game-cards/backs/item-back.svg",
   }));
-  const bricks = Array.from({ length: 4 }, (_, index) => ({
+  const bricks = Array.from({ length: 8 }, (_, index) => ({
     id: `brick-${index + 1}`,
     name: "벽돌",
     marketPrice: 0,

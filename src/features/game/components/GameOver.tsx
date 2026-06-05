@@ -31,7 +31,11 @@ export function GameOver() {
       }
       return { ...p, finalScore: score };
     })
-    .sort((a, b) => b.finalScore - a.finalScore);
+    .sort((a, b) => {
+      if (a.id === state.winner) return -1;
+      if (b.id === state.winner) return 1;
+      return b.finalScore - a.finalScore;
+    });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-4">

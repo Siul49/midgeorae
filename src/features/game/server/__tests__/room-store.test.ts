@@ -73,17 +73,17 @@ describe("room-store", () => {
     expect(session).toBeDefined();
     return session!;
   }
-  it("creates a room and lets up to five players join", () => {
+  it("creates a room and lets up to four players join", () => {
     const host = createRoom("경수");
 
     expect(host.room.code).toMatch(/^[A-Z0-9]{4}$/);
     expect(host.room.mode).toBe("real");
     expect(host.room.players).toHaveLength(1);
 
-    joinPlayers(host.room.code, ["유현", "윤식", "환희", "민지"]);
+    joinPlayers(host.room.code, ["유현", "윤식", "환희"]);
     const fullRoom = getRoomSnapshot(host.room.code, host.playerToken);
 
-    expect(fullRoom.players).toHaveLength(5);
+    expect(fullRoom.players).toHaveLength(4);
     expect(() => joinRoom(host.room.code, "초과")).toThrow(
       "방이 가득 찼습니다.",
     );
@@ -136,11 +136,10 @@ describe("room-store", () => {
 
   it("starts each player with a private job, variable money, five item cards, deal cards, and five reputation tokens", () => {
     const host = createRoom("경수");
-    const [p2, p3, p4, p5] = joinPlayers(host.room.code, [
+    const [p2, p3, p4] = joinPlayers(host.room.code, [
       "유현",
       "윤식",
       "환희",
-      "민지",
     ]);
 
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
@@ -149,19 +148,18 @@ describe("room-store", () => {
     const p2View = getRoomSnapshot(host.room.code, p2.playerToken);
     const p3View = getRoomSnapshot(host.room.code, p3.playerToken);
     const p4View = getRoomSnapshot(host.room.code, p4.playerToken);
-    const p5View = getRoomSnapshot(host.room.code, p5.playerToken);
     const startingMoney = [
       hostView.me?.money,
       p2View.me?.money,
       p3View.me?.money,
       p4View.me?.money,
-      p5View.me?.money,
     ];
 
     expect(hostView.me?.role).toMatch(/citizen|villain/);
     expect(hostView.me?.job?.title).toBeTruthy();
     expect(hostView.me?.hand).toHaveLength(5);
-    expect(new Set(startingMoney).size).toBeGreaterThan(1);
+    expect(new Set(startingMoney).size).toBe(1);
+    expect(hostView.me?.money).toBe(1000000);
     expect(hostView.me?.reputationTokens).toBe(5);
     expect(hostView.me?.dealCards).toEqual({ cool: true, cancel: true });
     expect(hostView.players.every((player) => player.itemCount === 5)).toBe(true);
@@ -169,7 +167,7 @@ describe("room-store", () => {
     expect(hostView.players.every((player) => player.money === undefined)).toBe(true);
     expect(hostView.players.every((player) => player.job === undefined)).toBe(true);
     expect(p2View.me?.hand).toHaveLength(5);
-    expect(p5View.me?.hand).toHaveLength(5);
+    expect(p4View.me?.hand).toHaveLength(5);
   });
 
   it("can start with the minimum three players", () => {
@@ -247,12 +245,36 @@ describe("room-store", () => {
     submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const afterBots = submitRoomAction(host.room.code, host.playerToken, {
+    // Host draws action card
+    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+    // Host acknowledges it
+    submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+
+    const afterHostTurn = submitRoomAction(host.room.code, host.playerToken, {
       type: "endTurn",
     });
 
-    expect(afterBots.currentTurnPlayerId).toBe(host.playerId);
-    expect(afterBots.logs.some((log) => log.includes("자동"))).toBe(true);
+    // Bot 1 drew a card and is waiting for Host acknowledgment.
+    expect(afterHostTurn.currentTurnPlayerId).not.toBe(host.playerId);
+    expect(afterHostTurn.currentActionCard).not.toBeNull();
+
+    // Host acknowledges Bot 1's action card
+    const afterAck1 = submitRoomAction(host.room.code, host.playerToken, {
+      type: "ackActionCard",
+    });
+
+    // Bot 1 performs trade with Bot 2, resolves it, and ends turn.
+    // Bot 2 draws a card and is waiting for Host acknowledgment.
+    expect(afterAck1.currentTurnPlayerId).not.toBe(host.playerId);
+    expect(afterAck1.currentTurnPlayerId).not.toBe(afterHostTurn.currentTurnPlayerId);
+
+    // Host acknowledges Bot 2's action card
+    const afterAck2 = submitRoomAction(host.room.code, host.playerToken, {
+      type: "ackActionCard",
+    });
+
+    // Bot 2 performs action, ends turn, and transitions back to Host.
+    expect(afterAck2.currentTurnPlayerId).toBe(host.playerId);
   });
 
   it("keeps real game rooms free of test bots", () => {
@@ -345,7 +367,7 @@ describe("room-store", () => {
       requesterId: requester.playerId,
       ownerId: owner.playerId,
       itemInstanceId: ownerItem.instanceId,
-      askingPrice: 120000,
+      askingPrice: 0,
     });
     expect(requested.pendingDeal).not.toHaveProperty("sellerId");
     expect(requested.pendingDeal).not.toHaveProperty("buyerId");
@@ -510,10 +532,10 @@ describe("room-store", () => {
 
     expect(requesterDealView.pendingDealItem).toMatchObject({
       instanceId: ownerItem!.instanceId,
-      id: ownerItem!.id,
-      name: ownerItem!.name,
-      category: ownerItem!.category,
-      marketPrice: ownerItem!.marketPrice,
+      id: "",
+      name: "뒤집힌 물건",
+      category: null,
+      marketPrice: 0,
       condition: null,
       isBrick: false,
       revealed: false,
@@ -547,9 +569,20 @@ describe("room-store", () => {
     expect(boughtItem).toMatchObject({
       category: ownerItem!.category,
       marketPrice: ownerItem!.marketPrice,
-      condition: null,
-      isBrick: false,
-      revealed: false,
+      condition: ownerItem!.condition,
+      isBrick: ownerItem!.isBrick,
+      revealed: true,
+    });
+
+    submitRoomAction(host.room.code, host.playerToken, {
+      type: "reviewTrade",
+      targetPlayerId: p2.playerId,
+      satisfied: true,
+    });
+    submitRoomAction(host.room.code, p2.playerToken, {
+      type: "reviewTrade",
+      targetPlayerId: host.playerId,
+      satisfied: true,
     });
 
     submitRoomAction(host.room.code, p2.playerToken, { type: "endTurn" });
@@ -583,11 +616,13 @@ describe("room-store", () => {
       itemInstanceId: item.instanceId,
       offerPrice: 120000,
     });
-    submitRoomAction(host.room.code, host.playerToken, {
-      type: "chooseDealCard",
-      choice: "cool",
+    // The owner/seller p2 proposes the price of 120,000, which also marks their choice as "cool"
+    submitRoomAction(host.room.code, p2.playerToken, {
+      type: "proposePrice",
+      price: 120000,
     });
-    const completed = submitRoomAction(host.room.code, p2.playerToken, {
+    // The host/buyer chooses "cool" to complete the deal
+    const completed = submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
@@ -607,8 +642,8 @@ describe("room-store", () => {
       (owned) => owned.instanceId === item.instanceId,
     );
     expect(boughtItem?.acquiredPrice).toBe(120000);
-    expect(requesterView.pendingReviews).toHaveLength(1);
-    expect(ownerView.pendingReviews).toHaveLength(1);
+    expect(requesterView.pendingReviews).toHaveLength(2);
+    expect(ownerView.pendingReviews).toHaveLength(2);
   });
 
   it("cancels a trade request when either side chooses cancel", () => {
@@ -749,7 +784,6 @@ describe("room-store", () => {
     const p2 = joinRoom(host.room.code, "유현");
     const p3 = joinRoom(host.room.code, "윤식");
     const p4 = joinRoom(host.room.code, "환희");
-    const p5 = joinRoom(host.room.code, "민지");
     submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
     const started = getRoomSnapshot(host.room.code, host.playerToken);
@@ -764,7 +798,6 @@ describe("room-store", () => {
       p2.playerToken,
       p3.playerToken,
       p4.playerToken,
-      p5.playerToken,
     ]) {
       submitRoomAction(host.room.code, token, {
         type: "reportSuspiciousPlayer",
@@ -775,6 +808,15 @@ describe("room-store", () => {
     const finished = getRoomSnapshot(host.room.code, host.playerToken);
     expect(finished.status).toBe("finished");
     expect(finished.result).toBeDefined();
-    expect(finished.result?.reports[target!.id]).toBe(5);
+    expect(finished.result?.reports[target!.id]).toBe(4);
+
+    // Host restarts the game
+    const restarted = submitRoomAction(host.room.code, host.playerToken, {
+      type: "restartGame",
+    });
+    expect(restarted.status).toBe("waiting");
+    expect(restarted.result).toBeNull();
+    expect(restarted.me?.role).toBeUndefined();
+    expect(restarted.me?.money).toBe(0);
   });
 });

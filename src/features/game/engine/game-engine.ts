@@ -1,4 +1,4 @@
-﻿import type { GameState, GameAction, Player, TradeState, GameLog } from "../types";
+import type { GameState, GameAction, Player, TradeState, GameLog } from "../types";
 import {
   PLAYER_COLORS,
   STARTING_MONEY,
@@ -659,9 +659,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return s;
       });
 
-      const winnerId = adjustedScores.reduce((a, b) =>
-        b.score > a.score ? b : a
-      ).id;
+      const citizenWinner = adjustedScores
+        .filter((s) => s.id !== villain.id)
+        .reduce((a, b) => (b.score > a.score ? b : a)).id;
+
+      const winnerId = villainCaught ? citizenWinner : villain.id;
 
       return {
         ...state,
