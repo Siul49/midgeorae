@@ -1493,16 +1493,11 @@ function TableHandCard({
           {item.name}
         </div>
         <div className="mt-1 text-xs font-black text-orange-700">
-          {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
+          {item.isBrick ? "0원" : (item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개")}
         </div>
         {item.category && (
           <div className="mt-2 text-[10px] font-black text-stone-500">
             {categoryLabel(item.category)} · {conditionLabel(item.condition)}
-          </div>
-        )}
-        {item.isBrick && (
-          <div className="mt-2 inline-flex rounded bg-red-700 px-2 py-0.5 text-[10px] font-black text-white">
-            벽돌
           </div>
         )}
       </div>
@@ -1725,13 +1720,8 @@ function MyDashboard({
                     {item.name}
                   </div>
                   <div className="text-xs font-bold text-orange-400 truncate w-full">
-                    {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
+                    {item.isBrick ? "0원" : (item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개")}
                   </div>
-                  {item.isBrick && (
-                    <span className="bg-red-700 text-white font-black rounded px-1 py-0.2 text-xs">
-                      벽돌
-                    </span>
-                  )}
                 </button>
               );
             })
