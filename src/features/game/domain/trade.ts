@@ -28,7 +28,6 @@ export function settleAcceptedDeal({
   const transferredItem: ServerItemCard = {
     ...item,
     acquiredPrice: deal.askingPrice,
-    hiddenInfoRevealTurn: deal.hiddenInfoRevealTurn,
     revealed: false,
     revealedToPlayerIds: deal.revealedBeforeDeal ? [requester.id] : [],
   };
@@ -45,11 +44,17 @@ export function settleAcceptedDeal({
         tradeId: deal.id,
         reviewerId: owner.id,
         targetPlayerId: requester.id,
+        itemPrice: deal.askingPrice,
+        itemMarketPrice: item.marketPrice,
+        sellerId: owner.id,
       },
       {
         tradeId: deal.id,
         reviewerId: requester.id,
         targetPlayerId: owner.id,
+        itemPrice: deal.askingPrice,
+        itemMarketPrice: item.marketPrice,
+        sellerId: owner.id,
       },
     ],
   };

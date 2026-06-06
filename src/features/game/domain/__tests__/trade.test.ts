@@ -78,11 +78,17 @@ describe("game trade domain", () => {
         tradeId: "deal-1",
         reviewerId: "owner",
         targetPlayerId: "requester",
+        itemPrice: 120_000,
+        itemMarketPrice: 80_000,
+        sellerId: "owner",
       },
       {
         tradeId: "deal-1",
         reviewerId: "requester",
         targetPlayerId: "owner",
+        itemPrice: 120_000,
+        itemMarketPrice: 80_000,
+        sellerId: "owner",
       },
     ]);
     expect(owner.money).toBe(300_000);

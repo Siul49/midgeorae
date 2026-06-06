@@ -41,6 +41,21 @@ export function VotePhase() {
           >
             투표하기
           </button>
+
+          <div className="mt-8 bg-gray-800/60 rounded-2xl p-4 border border-gray-700/50 max-w-md mx-auto text-left">
+            <h3 className="text-sm font-bold text-gray-300 mb-2.5">🗳️ 실시간 투표 현황</h3>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {state.players.map((p) => {
+                const voteCount = state.votingResults[p.id] || 0;
+                return (
+                  <div key={p.id} className="flex justify-between items-center bg-gray-900/40 p-2 rounded-xl border border-gray-750">
+                    <span className="text-gray-300 font-bold">{p.name}</span>
+                    <span className="text-amber-400 font-black text-sm">{voteCount}표</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -92,6 +107,21 @@ export function VotePhase() {
               <div className="text-gray-500 text-2xl">→</div>
             </button>
           ))}
+        </div>
+
+        <div className="mt-6 bg-gray-800/60 rounded-2xl p-4 border border-gray-700/50 text-left">
+          <h3 className="text-sm font-bold text-gray-300 mb-2.5">🗳️ 실시간 투표 현황</h3>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {state.players.map((p) => {
+              const voteCount = state.votingResults[p.id] || 0;
+              return (
+                <div key={p.id} className="flex justify-between items-center bg-gray-900/40 p-2 rounded-xl border border-gray-750">
+                  <span className="text-gray-300 font-bold">{p.name}</span>
+                  <span className="text-amber-400 font-black text-sm">{voteCount}표</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

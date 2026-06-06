@@ -814,4 +814,92 @@ describe("room-store", () => {
     expect(restarted.me?.role).toBeUndefined();
     expect(restarted.me?.money).toBe(0);
   });
+
+  it("makes bot review dissatisfied (dislike) when host sells at 80% or more of market price", async () => {
+    const host = await createRoom("경수", "botTest");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    // Turn 1: Host draws tradeRequest
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "endTurn" });
+
+    // Acknowledge Bot 1 turn card
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+    // Acknowledge Bot 2 turn card
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+
+    // Turn 2: Host draws saleRequest
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+
+    const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const item = hostView.me!.hand!.find((i) => !i.isBrick && i.marketPrice < 500000);
+    expect(item).toBeDefined();
+
+    const botPlayer = hostView.players.find((p) => p.isBot);
+    expect(botPlayer).toBeDefined();
+
+    // Sell at 100% of market price (which is >= 80%)
+    const sellPrice = item!.marketPrice;
+
+    // Host proposes sale to the bot (ownerId refers to the target player, which is the bot)
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "requestTrade",
+      ownerId: botPlayer!.id,
+      itemInstanceId: item!.instanceId,
+      offerPrice: sellPrice,
+    });
+
+    // Both accept (automatic for bot), and review finishes automatically.
+    // Let's get the final snapshot to verify dislikes
+    const afterTrade = await getRoomSnapshot(host.room.code, host.playerToken);
+    const hostPlayerInSnapshot = afterTrade.players.find((p) => p.id === host.playerId);
+    expect(hostPlayerInSnapshot!.dislikes).toBe(1);
+    expect(hostPlayerInSnapshot!.likes).toBe(0);
+  });
+
+  it("makes bot review satisfied (like) when host sells at less than 80% of market price", async () => {
+    const host = await createRoom("경수", "botTest");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    // Turn 1: Host draws tradeRequest
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "endTurn" });
+
+    // Acknowledge Bot 1 turn card
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+    // Acknowledge Bot 2 turn card
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+
+    // Turn 2: Host draws saleRequest
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+
+    const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const item = hostView.me!.hand!.find((i) => !i.isBrick && i.marketPrice < 500000);
+    expect(item).toBeDefined();
+
+    const botPlayer = hostView.players.find((p) => p.isBot);
+    expect(botPlayer).toBeDefined();
+
+    // Sell at 60% of market price (which is strictly < 80% even with rounding)
+    const sellPrice = Math.round((item!.marketPrice * 0.6) / 10000) * 10000;
+
+    // Host proposes sale to the bot (ownerId refers to the target player, which is the bot)
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "requestTrade",
+      ownerId: botPlayer!.id,
+      itemInstanceId: item!.instanceId,
+      offerPrice: sellPrice,
+    });
+
+    const afterTrade = await getRoomSnapshot(host.room.code, host.playerToken);
+    const hostPlayerInSnapshot = afterTrade.players.find((p) => p.id === host.playerId);
+    expect(hostPlayerInSnapshot!.dislikes).toBe(0);
+    expect(hostPlayerInSnapshot!.likes).toBe(1);
+  });
 });

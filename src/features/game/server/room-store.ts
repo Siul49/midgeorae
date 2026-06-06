@@ -320,18 +320,14 @@ function toItemSnapshot(
   room: Room,
   {
     allowPublicInfo = false,
-    allowTimedReveal = false,
     forceReveal = false,
-  }: { allowPublicInfo?: boolean; allowTimedReveal?: boolean; forceReveal?: boolean } = {},
+  }: { allowPublicInfo?: boolean; forceReveal?: boolean } = {},
 ): ItemCardSnapshot {
   const revealed =
     forceReveal ||
     item.revealed ||
     item.revealedToPlayerIds.includes(viewer.id) ||
-    viewer.hand.some((c) => c.instanceId === item.instanceId) ||
-    (allowTimedReveal &&
-      item.hiddenInfoRevealTurn !== undefined &&
-      room.turnCount >= item.hiddenInfoRevealTurn);
+    viewer.hand.some((c) => c.instanceId === item.instanceId);
 
   if (!revealed) {
     const snapshot = allowPublicInfo ? publicItemSnapshot(item) : hiddenItemSnapshot(item);
@@ -453,7 +449,6 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
           hand: viewer.hand.map((item) =>
             toItemSnapshot(item, viewer, room, {
               allowPublicInfo: true,
-              allowTimedReveal: true,
               forceReveal: true,
             }),
           ),
@@ -470,6 +465,7 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
     marketActionLimit: room.marketActionLimit,
     logs: room.logs.slice(-20),
     reportsCast: Object.keys(room.reports).length,
+    reports: room.reports || {},
     currentActionAcks: room.currentActionAcks || [],
     result: room.result,
     version: room.version,
@@ -679,7 +675,7 @@ function requestTrade(
   if (price < 0) throw new Error("가격이 올바르지 않습니다.");
   if (buyer.money < price) throw new Error("구매자의 금액이 부족합니다.");
 
-  const revealedBeforeDeal = actionCard.type === "directTrade" || isSale;
+  const revealedBeforeDeal = actionCard.type === "directTrade";
   if (revealedBeforeDeal) {
     item.revealedToPlayerIds = Array.from(
       new Set([...item.revealedToPlayerIds, seller.id, buyer.id]),
@@ -731,12 +727,7 @@ function resolveDeal(room: Room, deal: PendingDeal) {
 
   if (ownerChoice === "cool" && requesterChoice === "cool") {
     const settlement = settleAcceptedDeal({
-      deal: {
-        ...deal,
-        hiddenInfoRevealTurn: deal.revealedBeforeDeal
-          ? undefined
-          : room.turnCount + 2,
-      },
+      deal,
       owner,
       requester,
     });
@@ -1012,7 +1003,18 @@ function autoReviewBotTrades(room: Room) {
   for (const review of [...room.pendingReviews]) {
     const reviewer = room.players.find((player) => player.id === review.reviewerId);
     if (!reviewer?.isBot) continue;
-    reviewTrade(room, reviewer, review.targetPlayerId, true);
+
+    let satisfied = true;
+    if (
+      review.sellerId === review.targetPlayerId &&
+      review.itemPrice !== undefined &&
+      review.itemMarketPrice !== undefined &&
+      review.itemPrice >= review.itemMarketPrice * 0.8
+    ) {
+      satisfied = false;
+    }
+
+    reviewTrade(room, reviewer, review.targetPlayerId, satisfied);
     changed = true;
     if ((room.status as RoomStatus) === "finished") break;
   }

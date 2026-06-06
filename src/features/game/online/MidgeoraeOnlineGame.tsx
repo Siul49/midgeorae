@@ -1039,6 +1039,19 @@ export function MidgeoraeOnlineGame() {
         </div>
       )}
 
+      {/* Floating Turn Indicator - bottom right */}
+      {snapshot.status === "playing" && (
+        <div className="absolute bottom-3 right-3 z-30 select-none">
+          <div className={`px-4 py-2 rounded-xl text-sm font-black text-white shadow-lg border ${
+            isMyTurn 
+              ? "bg-orange-600 border-orange-500 animate-pulse shadow-orange-950/50" 
+              : "bg-stone-900 border-stone-850 shadow-black/50"
+          }`}>
+            {isMyTurn ? "🟢 내 턴" : "⏳ 대기 중"}
+          </div>
+        </div>
+      )}
+
       {/* Logs overlay box inside table */}
       <div className="logs-box-center border border-white/5">
         <div className="text-[11px] font-black text-amber-200/50 mb-1 border-b border-white/5 pb-0.5">게임 로그</div>
@@ -1154,7 +1167,7 @@ export function MidgeoraeOnlineGame() {
                 <ol className="list-decimal list-inside space-y-1">
                   <li><strong>행동 카드 뽑기</strong>: 자기 턴에 행동 카드를 뽑습니다. (거래 신청, 보호 등)</li>
                   <li><strong>거래 제안/액션</strong>: 뽑은 카드에 따라 거래를 하거나 기타 액션을 실행합니다.</li>
-                  <li><strong>거래 수락/취소</strong>: 거래 상대방과 서로 카드를 내어 쿨거래 시 거래 성공, 어느 한쪽이라도 취소 시 실패합니다. (벽돌 카드는 거래 후 1턴 뒤에 정체가 공개됩니다!)</li>
+                  <li><strong>거래 수락/취소</strong>: 거래 상대방과 서로 카드를 내어 쿨거래 시 거래 성공, 어느 한쪽이라도 취소 시 실패합니다.</li>
                   <li><strong>거래 후 평판 평가</strong>: 거래 완료 후 만족/불만족 리뷰를 남겨 평판 토큰을 뺏거나 깎습니다.</li>
                   <li><strong>시장 마감 &amp; 최종 신고</strong>: 액션 제한 횟수가 모두 소진되면 의심스러운 빌런을 지목해 최종 고발합니다.</li>
                 </ol>
@@ -1609,6 +1622,8 @@ function MyDashboard({
   likes: number;
   dislikes: number;
 }) {
+  const [showJob, setShowJob] = useState(false);
+
   if (!me) return null;
   const isVillain = me.role === "villain";
 
@@ -1622,7 +1637,7 @@ function MyDashboard({
           </div>
         )}
         <div
-          className={`side-player-card transition-all w-[180px] p-3 text-center ${
+          className={`side-player-card transition-all w-[180px] p-2.5 text-center ${
             isMyTurn ? "active-turn shadow-[0_0_15px_rgba(249,115,22,0.4)] border-orange-500/50" : ""
           }`}
         >
@@ -1630,57 +1645,63 @@ function MyDashboard({
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_25%,#f8d9a4,#b87332)] text-base font-black text-stone-950">
               {me.name.slice(0, 1)}
             </div>
-            <div className="truncate text-lg font-black max-w-[110px] text-white">
+            <div className="truncate text-base font-black max-w-[110px] text-white">
               {me.name} (나)
             </div>
           </div>
-          <div className="mt-2 flex justify-around text-sm font-black text-stone-300">
+          <div className="mt-1 flex justify-around text-xs font-black text-stone-300">
             <span>평판 {me.reputationTokens ?? 0}/5</span>
             <span>물건 {myHand.length}</span>
           </div>
-          <div className="mt-2 flex justify-center gap-3 border-t border-white/10 pt-2 text-xs text-stone-400">
+          <div className="mt-1 flex justify-center gap-3 border-t border-white/10 pt-1 text-xs text-stone-400">
             <span>👍 {likes}</span>
             <span>👎 {dislikes}</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowJob(!showJob)}
+            className="mt-1.5 w-full py-1 bg-stone-850 hover:bg-stone-750 text-white rounded text-[10px] font-black border border-stone-700 transition-colors cursor-pointer"
+          >
+            {showJob ? "직업/미션 닫기 🔒" : "내 직업 보기 👀"}
+          </button>
         </div>
       </div>
 
       {/* Right: Info, Mission & Cards */}
-      <div className="flex-1 flex flex-col justify-between h-full min-w-0 py-1">
-        {/* Top Info row (Role, Job, turn status) */}
-        <div className="flex items-center justify-between text-xs font-bold border-b border-white/5 pb-1 select-none">
-          <div className="flex items-center gap-3">
-            <span className={`px-2 py-0.5 rounded text-xs font-black text-white ${isMyTurn ? "bg-orange-600 animate-pulse" : "bg-stone-850"}`}>
-              {isMyTurn ? "내 턴" : "대기 중"}
-            </span>
-            {me.job && (
-              <span className="text-stone-300">
-                직업: <strong className="text-purple-400">{me.job.title}</strong>
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-widest ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`} title={roleDescription(me.role)}>
-              {roleLabel(me.role)}
+      <div className="flex-1 flex flex-col justify-center h-full min-w-0 py-1">
+        {/* Top Info row (Role, Job) */}
+        {showJob && (
+          <div className="flex items-center justify-between text-xs font-bold border-b border-white/5 pb-1 select-none">
+            <div className="flex items-center gap-3">
+              {me.job && (
+                <span className="text-stone-300">
+                  직업: <strong className="text-purple-400">{me.job.title}</strong>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-widest ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`} title={roleDescription(me.role)}>
+                {roleLabel(me.role)}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Mission Row */}
-        {isVillain && (
+        {showJob && isVillain && (
           <div className="mt-1 text-xs font-black leading-tight text-red-400 bg-red-950/50 p-1 rounded border border-red-900/50 select-text">
             🔥 빌런 미션: {me.mission ?? "대기 중..."}
           </div>
         )}
 
-        {!isVillain && me.job && (
+        {showJob && !isVillain && me.job && (
           <div className="mt-1 text-xs font-black leading-tight text-purple-400 bg-purple-950/45 p-1 rounded border border-purple-900/40 select-text">
             ✨ 시민 미션 ({me.job.title}): {me.job.description}
           </div>
         )}
 
         {/* Cards Row */}
-        <div className="flex-1 flex items-center gap-1.5 mt-1 overflow-x-auto min-h-0">
+        <div className={`flex items-center justify-center gap-2 overflow-x-auto min-h-0 px-4 py-2 ${showJob ? "flex-1 mt-1" : "h-full w-full"}`}>
           {myHand.length === 0 ? (
             <div className="text-xs text-stone-500 font-bold select-none">게임 시작 대기 중...</div>
           ) : (
@@ -2496,10 +2517,14 @@ function ReportPanel({
   otherPlayers: PublicPlayer[];
   onReport: (targetPlayerId: string) => void;
 }) {
+  const me = snapshot.me;
+  const reports = snapshot.reports || {};
+  const hasVoted = Boolean(me && reports[me.id]);
+
   return (
     <section className="motion-panel market-card-table p-5">
       <div className="relative">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-xl font-black text-[#ff7e36]">최종 신고</h2>
           <p className="mt-1.5 text-sm font-bold text-stone-700">
@@ -2508,17 +2533,64 @@ function ReportPanel({
         </div>
         <AlertTriangle className="text-[#ff7e36]" size={26} />
       </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        {otherPlayers.map((player) => (
-          <button
-            key={player.id}
-            onClick={() => onReport(player.id)}
-            className="motion-button flex items-center justify-between border border-stone-300 bg-white hover:bg-orange-50 hover:border-[#ff7e36] px-3.5 py-3 rounded-lg text-left font-black text-stone-900 shadow-sm cursor-pointer"
-          >
-            {player.name}
-            <AlertTriangle size={16} className="text-[#ff7e36]" />
-          </button>
-        ))}
+
+      {hasVoted ? (
+        <div className="bg-emerald-950/40 border border-emerald-900/40 p-4 rounded-xl text-center my-4">
+          <div className="text-emerald-400 font-black text-sm mb-1.5">✓ 신고 접수 완료</div>
+          <p className="text-stone-300 text-xs font-bold leading-normal">
+            신고가 안전하게 접수되었습니다.<br />
+            다른 플레이어들이 신고를 완료하기를 기다리고 있습니다.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          {otherPlayers.map((player) => (
+            <button
+              key={player.id}
+              onClick={() => onReport(player.id)}
+              className="motion-button flex items-center justify-between border border-stone-350 bg-stone-900 hover:bg-orange-950/40 hover:border-[#ff7e36] px-3.5 py-3 rounded-lg text-left font-black text-white shadow-sm cursor-pointer"
+            >
+              {player.name}
+              <AlertTriangle size={16} className="text-[#ff7e36]" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 실시간 투표 현황 */}
+      <div className="mt-6 border-t border-white/5 pt-4">
+        <h3 className="text-xs font-extrabold text-stone-300 mb-3 flex items-center gap-1.5 justify-center">
+          🗳️ 실시간 투표 현황
+        </h3>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {snapshot.players.map((player) => {
+            const playerVoted = Boolean(reports[player.id]);
+            const votesReceived = Object.values(reports).filter((tId) => tId === player.id).length;
+            return (
+              <div
+                key={player.id}
+                className="flex items-center justify-between p-2.5 rounded-lg border border-white/5 bg-stone-950/50"
+              >
+                <div>
+                  <div className="font-extrabold text-xs text-white flex items-center gap-1.5">
+                    {player.name}
+                    {player.id === me?.id && <span className="text-[9px] px-1 bg-stone-800 text-stone-400 rounded">나</span>}
+                  </div>
+                  <div className="text-[10px] font-bold mt-1">
+                    {playerVoted ? (
+                      <span className="text-emerald-400">투표 완료 👍</span>
+                    ) : (
+                      <span className="text-amber-400 animate-pulse font-extrabold">투표 중... 🗳️</span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-black text-[#ff7e36]">{votesReceived}표</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
       </div>
     </section>

@@ -35,7 +35,6 @@ export interface ItemCardSnapshot {
 
 export interface ServerItemCard extends ItemCardSnapshot {
   revealedToPlayerIds: string[];
-  hiddenInfoRevealTurn?: number;
 }
 
 export interface ActionCardSnapshot {
@@ -58,7 +57,6 @@ export interface PendingDeal {
   itemInstanceId: string;
   askingPrice: number;
   revealedBeforeDeal: boolean;
-  hiddenInfoRevealTurn?: number;
   choices: Partial<Record<string, DealCardChoice>>;
   resolved: boolean;
 }
@@ -67,6 +65,9 @@ export interface PendingReview {
   tradeId: string;
   reviewerId: string;
   targetPlayerId: string;
+  itemPrice?: number;
+  itemMarketPrice?: number;
+  sellerId?: string;
 }
 
 export interface ServerPlayer {
@@ -174,6 +175,7 @@ export interface RoomSnapshot {
   marketActionLimit: number;
   logs: string[];
   reportsCast: number;
+  reports?: Record<string, string>;
   currentActionAcks: string[];
   result: RoomResult | null;
   version: number;
