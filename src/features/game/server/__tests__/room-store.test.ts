@@ -8,90 +8,88 @@ import {
 } from "../room-store";
 
 describe("room-store", () => {
-  beforeEach(() => resetRoomsForTests());
+  beforeEach(async () => { await resetRoomsForTests(); });
 
-  function joinPlayers(code: string, names: string[]) {
-    return names.map((name) => joinRoom(code, name));
+  async function joinPlayers(code: string, names: string[]) {
+    return Promise.all(names.map(async (name) => await joinRoom(code, name)));
   }
 
-  function advanceTurnTo(
+  async function advanceTurnTo(
     code: string,
     sessions: ReturnType<typeof createRoom>[],
     playerId: string,
   ) {
     for (let index = 0; index < sessions.length; index += 1) {
-      const currentTurnPlayerId = getRoomSnapshot(
+      const currentTurnPlayerId = (await getRoomSnapshot(
         code,
         sessions[0]!.playerToken,
-      ).currentTurnPlayerId;
+      )).currentTurnPlayerId;
       if (currentTurnPlayerId === playerId) return;
       const currentSession = sessions.find(
         (session) => session.playerId === currentTurnPlayerId,
       );
       expect(currentSession).toBeDefined();
-      submitRoomAction(code, currentSession!.playerToken, { type: "endTurn" });
+      await submitRoomAction(code, currentSession!.playerToken, { type: "endTurn" });
     }
   }
 
-  function drawUntilActionType(
+  async function drawUntilActionType(
     code: string,
     sessions: ReturnType<typeof createRoom>[],
     actionType: "tradeRequest" | "freeGive" | "directTrade",
   ) {
     for (let index = 0; index < 12; index += 1) {
-      const currentTurnPlayerId = getRoomSnapshot(
+      const currentTurnPlayerId = (await getRoomSnapshot(
         code,
         sessions[0]!.playerToken,
-      ).currentTurnPlayerId;
+      )).currentTurnPlayerId;
       const currentSession = sessions.find(
         (session) => session.playerId === currentTurnPlayerId,
       );
       expect(currentSession).toBeDefined();
-      const drawn = submitRoomAction(code, currentSession!.playerToken, {
+      const drawn = await submitRoomAction(code, currentSession!.playerToken, {
         type: "drawActionCard",
       });
       if (drawn.currentActionCard?.type === actionType) {
         return { session: currentSession!, snapshot: drawn };
       }
-      submitRoomAction(code, currentSession!.playerToken, { type: "endTurn" });
+      await submitRoomAction(code, currentSession!.playerToken, { type: "endTurn" });
     }
 
     throw new Error(`Could not draw ${actionType}`);
   }
 
-  function currentTurnSession(
+  async function currentTurnSession(
     code: string,
     sessions: ReturnType<typeof createRoom>[],
   ) {
-    const currentTurnPlayerId = getRoomSnapshot(
+    const currentTurnPlayerId = (await getRoomSnapshot(
       code,
       sessions[0]!.playerToken,
-    ).currentTurnPlayerId;
+    )).currentTurnPlayerId;
     const session = sessions.find(
       (candidate) => candidate.playerId === currentTurnPlayerId,
     );
     expect(session).toBeDefined();
     return session!;
   }
-  it("creates a room and lets up to four players join", () => {
-    const host = createRoom("경수");
+  it("creates a room and lets up to four players join", async () => {
+    const host = await createRoom("경수");
 
     expect(host.room.code).toMatch(/^[A-Z0-9]{4}$/);
     expect(host.room.mode).toBe("real");
     expect(host.room.players).toHaveLength(1);
 
-    joinPlayers(host.room.code, ["유현", "윤식", "환희"]);
-    const fullRoom = getRoomSnapshot(host.room.code, host.playerToken);
+    await joinPlayers(host.room.code, ["유현", "윤식", "환희"]);
+    const fullRoom = await getRoomSnapshot(host.room.code, host.playerToken);
 
     expect(fullRoom.players).toHaveLength(4);
-    expect(() => joinRoom(host.room.code, "초과")).toThrow(
-      "방이 가득 찼습니다.",
-    );
+    await expect(joinRoom(host.room.code, "초과")).rejects.toThrow("방이 가득 찼습니다.");
   });
 
-  it("uses default player names when players skip the name field", () => {
-    const host = createRoom("");
-    const second = joinRoom(host.room.code, "   ");
+  it("uses default player names when players skip the name field", async () => {
+    const host = await createRoom("");
+    const second = await joinRoom(host.room.code, "   ");
 
     expect(host.room.players[0]?.name).toBe("호스트");
     expect(second.room.players.find((player) => player.id === second.playerId)?.name).toBe(
@@ -100,29 +98,29 @@ describe("room-store", () => {
   });
 
   it("keeps rooms available when the server module is reloaded", async () => {
-    const host = createRoom("경수");
+    const host = await createRoom("경수");
 
     vi.resetModules();
     const reloadedStore = await import("../room-store");
-    const snapshot = reloadedStore.getRoomSnapshot(
+    const snapshot = await reloadedStore.getRoomSnapshot(
       host.room.code,
       host.playerToken,
     );
 
     expect(snapshot.code).toBe(host.room.code);
-    reloadedStore.resetRoomsForTests();
+    await reloadedStore.resetRoomsForTests();
   });
 
-  it("filters villain role and mission to the owning player only", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+  it("filters villain role and mission to the owning player only", async () => {
+    const host = await createRoom("경수");
+    const p2 = await joinRoom(host.room.code, "유현");
+    await joinRoom(host.room.code, "윤식");
+    await joinRoom(host.room.code, "환희");
 
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const hostView = getRoomSnapshot(host.room.code, host.playerToken);
-    const p2View = getRoomSnapshot(host.room.code, p2.playerToken);
+    const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const p2View = await getRoomSnapshot(host.room.code, p2.playerToken);
 
     expect(hostView.me?.role).toMatch(/citizen|villain/);
     expect(p2View.me?.role).toMatch(/citizen|villain/);
@@ -134,20 +132,20 @@ describe("room-store", () => {
     );
   });
 
-  it("starts each player with a private job, variable money, five item cards, deal cards, and five reputation tokens", () => {
-    const host = createRoom("경수");
-    const [p2, p3, p4] = joinPlayers(host.room.code, [
+  it("starts each player with a private job, variable money, five item cards, deal cards, and five reputation tokens", async () => {
+    const host = await createRoom("경수");
+    const [p2, p3, p4] = await joinPlayers(host.room.code, [
       "유현",
       "윤식",
       "환희",
     ]);
 
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const hostView = getRoomSnapshot(host.room.code, host.playerToken);
-    const p2View = getRoomSnapshot(host.room.code, p2.playerToken);
-    const p3View = getRoomSnapshot(host.room.code, p3.playerToken);
-    const p4View = getRoomSnapshot(host.room.code, p4.playerToken);
+    const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const p2View = await getRoomSnapshot(host.room.code, p2.playerToken);
+    const p3View = await getRoomSnapshot(host.room.code, p3.playerToken);
+    const p4View = await getRoomSnapshot(host.room.code, p4.playerToken);
     const startingMoney = [
       hostView.me?.money,
       p2View.me?.money,
@@ -170,15 +168,15 @@ describe("room-store", () => {
     expect(p4View.me?.hand).toHaveLength(5);
   });
 
-  it("can start with the minimum three players", () => {
-    const host = createRoom("경수");
-    const [p2, p3] = joinPlayers(host.room.code, ["유현", "윤식"]);
+  it("can start with the minimum three players", async () => {
+    const host = await createRoom("경수");
+    const [p2, p3] = await joinPlayers(host.room.code, ["유현", "윤식"]);
 
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const hostView = getRoomSnapshot(host.room.code, host.playerToken);
-    const p2View = getRoomSnapshot(host.room.code, p2.playerToken);
-    const p3View = getRoomSnapshot(host.room.code, p3.playerToken);
+    const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const p2View = await getRoomSnapshot(host.room.code, p2.playerToken);
+    const p3View = await getRoomSnapshot(host.room.code, p3.playerToken);
 
     expect(hostView.status).toBe("playing");
     expect(hostView.players).toHaveLength(3);
@@ -187,13 +185,13 @@ describe("room-store", () => {
     expect(p3View.me?.hand).toHaveLength(5);
   });
 
-  it("sets the market action budget from the player count", () => {
-    const host = createRoom("경수");
-    joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+  it("sets the market action budget from the player count", async () => {
+    const host = await createRoom("경수");
+    await joinRoom(host.room.code, "유현");
+    await joinRoom(host.room.code, "윤식");
+    await joinRoom(host.room.code, "환희");
 
-    const started = submitRoomAction(host.room.code, host.playerToken, {
+    const started = await submitRoomAction(host.room.code, host.playerToken, {
       type: "startGame",
     });
 
@@ -201,14 +199,14 @@ describe("room-store", () => {
     expect(started.marketActionLimit).toBe(20);
   });
 
-  it("includes item category, condition, and empty acquired price in private hands", () => {
-    const host = createRoom("경수");
-    joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
+  it("includes item category, condition, and empty acquired price in private hands", async () => {
+    const host = await createRoom("경수");
+    await joinRoom(host.room.code, "유현");
+    await joinRoom(host.room.code, "윤식");
 
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const hostView = getRoomSnapshot(host.room.code, host.playerToken);
+    const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
     const firstItem = hostView.me!.hand!.find((item) => !item.isBrick);
 
     expect(firstItem).toBeDefined();
@@ -218,13 +216,13 @@ describe("room-store", () => {
     expect(hostView.players.every((player) => player.hand === undefined)).toBe(true);
   });
 
-  it("lets the host add automatic bot players for solo testing", () => {
-    const host = createRoom("경수", "botTest");
+  it("lets the host add automatic bot players for solo testing", async () => {
+    const host = await createRoom("경수", "botTest");
 
-    const withFirstBot = submitRoomAction(host.room.code, host.playerToken, {
+    const withFirstBot = await submitRoomAction(host.room.code, host.playerToken, {
       type: "addBot",
     });
-    const withSecondBot = submitRoomAction(host.room.code, host.playerToken, {
+    const withSecondBot = await submitRoomAction(host.room.code, host.playerToken, {
       type: "addBot",
     });
 
@@ -232,25 +230,25 @@ describe("room-store", () => {
     expect(withSecondBot.players).toHaveLength(3);
     expect(withSecondBot.players.filter((player) => player.isBot)).toHaveLength(2);
 
-    const started = submitRoomAction(host.room.code, host.playerToken, {
+    const started = await submitRoomAction(host.room.code, host.playerToken, {
       type: "startGame",
     });
     expect(started.status).toBe("playing");
     expect(started.players.every((player) => player.itemCount === 5)).toBe(true);
   });
 
-  it("automatically plays bot turns back to the human player", () => {
-    const host = createRoom("경수", "botTest");
-    submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+  it("automatically plays bot turns back to the human player", async () => {
+    const host = await createRoom("경수", "botTest");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
     // Host draws action card
-    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
     // Host acknowledges it
-    submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
 
-    const afterHostTurn = submitRoomAction(host.room.code, host.playerToken, {
+    const afterHostTurn = await submitRoomAction(host.room.code, host.playerToken, {
       type: "endTurn",
     });
 
@@ -259,7 +257,7 @@ describe("room-store", () => {
     expect(afterHostTurn.currentActionCard).not.toBeNull();
 
     // Host acknowledges Bot 1's action card
-    const afterAck1 = submitRoomAction(host.room.code, host.playerToken, {
+    const afterAck1 = await submitRoomAction(host.room.code, host.playerToken, {
       type: "ackActionCard",
     });
 
@@ -269,7 +267,7 @@ describe("room-store", () => {
     expect(afterAck1.currentTurnPlayerId).not.toBe(afterHostTurn.currentTurnPlayerId);
 
     // Host acknowledges Bot 2's action card
-    const afterAck2 = submitRoomAction(host.room.code, host.playerToken, {
+    const afterAck2 = await submitRoomAction(host.room.code, host.playerToken, {
       type: "ackActionCard",
     });
 
@@ -277,51 +275,49 @@ describe("room-store", () => {
     expect(afterAck2.currentTurnPlayerId).toBe(host.playerId);
   });
 
-  it("keeps real game rooms free of test bots", () => {
-    const host = createRoom("경수", "real");
+  it("keeps real game rooms free of test bots", async () => {
+    const host = await createRoom("경수", "real");
 
-    expect(() =>
-      submitRoomAction(host.room.code, host.playerToken, { type: "addBot" }),
-    ).toThrow("봇 테스트 방에서만 봇을 추가할 수 있습니다.");
+    await expect(submitRoomAction(host.room.code, host.playerToken, { type: "addBot" })).rejects.toThrow("봇 테스트 방에서만 봇을 추가할 수 있습니다.");
   });
 
-  it("counts market progress when a turn action is consumed, not when an action card is drawn", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    const p3 = joinRoom(host.room.code, "윤식");
+  it("counts market progress when a turn action is consumed, not when an action card is drawn", async () => {
+    const host = await createRoom("경수");
+    const p2 = await joinRoom(host.room.code, "유현");
+    const p3 = await joinRoom(host.room.code, "윤식");
     const sessions = [host, p2, p3];
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const drawn = submitRoomAction(host.room.code, host.playerToken, {
+    const drawn = await submitRoomAction(host.room.code, host.playerToken, {
       type: "drawActionCard",
     });
     expect(drawn.usedActionCount).toBe(0);
 
-    const skipped = submitRoomAction(host.room.code, host.playerToken, {
+    const skipped = await submitRoomAction(host.room.code, host.playerToken, {
       type: "endTurn",
     });
     expect(skipped.usedActionCount).toBe(1);
     expect(skipped.marketActionLimit).toBe(15);
     expect(skipped.currentTurnPlayerId).toBe(p2.playerId);
 
-    const nextSession = currentTurnSession(host.room.code, sessions);
-    const nextSkipped = submitRoomAction(host.room.code, nextSession.playerToken, {
+    const nextSession = await currentTurnSession(host.room.code, sessions);
+    const nextSkipped = await submitRoomAction(host.room.code, nextSession.playerToken, {
       type: "endTurn",
     });
     expect(nextSkipped.usedActionCount).toBe(2);
   });
 
-  it("moves to final reporting when the market action budget is exhausted", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    const p3 = joinRoom(host.room.code, "윤식");
+  it("moves to final reporting when the market action budget is exhausted", async () => {
+    const host = await createRoom("경수");
+    const p2 = await joinRoom(host.room.code, "유현");
+    const p3 = await joinRoom(host.room.code, "윤식");
     const sessions = [host, p2, p3];
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    let snapshot = getRoomSnapshot(host.room.code, host.playerToken);
+    let snapshot = await getRoomSnapshot(host.room.code, host.playerToken);
     while (snapshot.usedActionCount < snapshot.marketActionLimit) {
-      const session = currentTurnSession(host.room.code, sessions);
-      snapshot = submitRoomAction(host.room.code, session.playerToken, {
+      const session = await currentTurnSession(host.room.code, sessions);
+      snapshot = await submitRoomAction(host.room.code, session.playerToken, {
         type: "endTurn",
       });
     }
@@ -333,29 +329,27 @@ describe("room-store", () => {
     expect(snapshot.logs.some((log) => log.includes("시장 마감"))).toBe(true);
   });
 
-  it("rejects starting with fewer than three players", () => {
-    const host = createRoom("경수");
-    joinRoom(host.room.code, "유현");
+  it("rejects starting with fewer than three players", async () => {
+    const host = await createRoom("경수");
+    await joinRoom(host.room.code, "유현");
 
-    expect(() =>
-      submitRoomAction(host.room.code, host.playerToken, { type: "startGame" }),
-    ).toThrow("3명 이상 모여야 시작할 수 있습니다.");
+    await expect(submitRoomAction(host.room.code, host.playerToken, { type: "startGame" })).rejects.toThrow("3명 이상 모여야 시작할 수 있습니다.");
   });
 
-  it("starts a trade request from the current player for another player's item", () => {
-    const requester = createRoom("A");
-    const owner = joinRoom(requester.room.code, "B");
-    joinRoom(requester.room.code, "C");
-    joinRoom(requester.room.code, "D");
-    submitRoomAction(requester.room.code, requester.playerToken, { type: "startGame" });
-    submitRoomAction(requester.room.code, requester.playerToken, { type: "drawActionCard" });
+  it("starts a trade request from the current player for another player's item", async () => {
+    const requester = await createRoom("A");
+    const owner = await joinRoom(requester.room.code, "B");
+    await joinRoom(requester.room.code, "C");
+    await joinRoom(requester.room.code, "D");
+    await submitRoomAction(requester.room.code, requester.playerToken, { type: "startGame" });
+    await submitRoomAction(requester.room.code, requester.playerToken, { type: "drawActionCard" });
 
-    const ownerItem = getRoomSnapshot(
+    const ownerItem = (await getRoomSnapshot(
       requester.room.code,
       owner.playerToken,
-    ).me!.hand![0];
+    )).me!.hand![0];
 
-    const requested = submitRoomAction(requester.room.code, requester.playerToken, {
+    const requested = await submitRoomAction(requester.room.code, requester.playerToken, {
       type: "requestTrade",
       ownerId: owner.playerId,
       itemInstanceId: ownerItem.instanceId,
@@ -373,15 +367,15 @@ describe("room-store", () => {
     expect(requested.pendingDeal).not.toHaveProperty("buyerId");
   });
 
-  it("treats free give as a zero-price trade request", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    const p3 = joinRoom(host.room.code, "C");
-    const p4 = joinRoom(host.room.code, "D");
+  it("treats free give as a zero-price trade request", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    const p3 = await joinRoom(host.room.code, "C");
+    const p4 = await joinRoom(host.room.code, "D");
     const sessions = [host, p2, p3, p4];
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const { session: requesterSession } = drawUntilActionType(
+    const { session: requesterSession } = await drawUntilActionType(
       host.room.code,
       sessions,
       "freeGive",
@@ -390,12 +384,12 @@ describe("room-store", () => {
       (session) => session.playerId !== requesterSession.playerId,
     );
     expect(ownerSession).toBeDefined();
-    const ownerItem = getRoomSnapshot(
+    const ownerItem = (await getRoomSnapshot(
       host.room.code,
       ownerSession!.playerToken,
-    ).me!.hand![0];
+    )).me!.hand![0];
 
-    const requested = submitRoomAction(host.room.code, requesterSession.playerToken, {
+    const requested = await submitRoomAction(host.room.code, requesterSession.playerToken, {
       type: "requestTrade",
       ownerId: ownerSession!.playerId,
       itemInstanceId: ownerItem.instanceId,
@@ -411,15 +405,15 @@ describe("room-store", () => {
     });
   });
 
-  it("reveals the requested item for direct trade requests", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    const p3 = joinRoom(host.room.code, "C");
-    const p4 = joinRoom(host.room.code, "D");
+  it("reveals the requested item for direct trade requests", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    const p3 = await joinRoom(host.room.code, "C");
+    const p4 = await joinRoom(host.room.code, "D");
     const sessions = [host, p2, p3, p4];
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const { session: requesterSession } = drawUntilActionType(
+    const { session: requesterSession } = await drawUntilActionType(
       host.room.code,
       sessions,
       "directTrade",
@@ -428,12 +422,12 @@ describe("room-store", () => {
       (session) => session.playerId !== requesterSession.playerId,
     );
     expect(ownerSession).toBeDefined();
-    const ownerItem = getRoomSnapshot(
+    const ownerItem = (await getRoomSnapshot(
       host.room.code,
       ownerSession!.playerToken,
-    ).me!.hand![0];
+    )).me!.hand![0];
 
-    const requested = submitRoomAction(host.room.code, requesterSession.playerToken, {
+    const requested = await submitRoomAction(host.room.code, requesterSession.playerToken, {
       type: "requestTrade",
       ownerId: ownerSession!.playerId,
       itemInstanceId: ownerItem.instanceId,
@@ -451,48 +445,51 @@ describe("room-store", () => {
     });
   });
 
-  it("keeps a requested brick face down during a normal trade request", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    const p3 = joinRoom(host.room.code, "C");
-    const p4 = joinRoom(host.room.code, "D");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+  it("keeps a requested brick face down during a normal trade request", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    const p3 = await joinRoom(host.room.code, "C");
+    const p4 = await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     const sessions = [host, p2, p3, p4];
-    const ownerSession = sessions.find((session) =>
-      getRoomSnapshot(host.room.code, session.playerToken).me!.hand!.some(
-        (item) => item.isBrick,
-      ),
-    );
+    let ownerSession;
+    for (const session of sessions) {
+      const snap = await getRoomSnapshot(host.room.code, session.playerToken);
+      if (snap.me!.hand!.some((item) => item.isBrick)) {
+        ownerSession = session;
+        break;
+      }
+    }
     expect(ownerSession).toBeDefined();
     const requesterSession = sessions.find(
       (session) => session.playerId !== ownerSession!.playerId,
     );
     expect(requesterSession).toBeDefined();
-    advanceTurnTo(host.room.code, sessions, requesterSession!.playerId);
+    await advanceTurnTo(host.room.code, sessions, requesterSession!.playerId);
 
-    submitRoomAction(host.room.code, requesterSession!.playerToken, {
+    await submitRoomAction(host.room.code, requesterSession!.playerToken, {
       type: "drawActionCard",
     });
 
-    const ownerSnapshot = getRoomSnapshot(
+    const ownerSnapshot = await getRoomSnapshot(
       host.room.code,
       ownerSession!.playerToken,
     );
     const brick = ownerSnapshot.me!.hand!.find((item) => item.isBrick);
     expect(brick).toBeDefined();
 
-    submitRoomAction(host.room.code, requesterSession!.playerToken, {
+    await submitRoomAction(host.room.code, requesterSession!.playerToken, {
       type: "requestTrade",
       ownerId: ownerSession!.playerId,
       itemInstanceId: brick!.instanceId,
       offerPrice: 120000,
     });
 
-    const requesterView = getRoomSnapshot(
+    const requesterView = await getRoomSnapshot(
       host.room.code,
       requesterSession!.playerToken,
     );
-    const ownerView = getRoomSnapshot(host.room.code, ownerSession!.playerToken);
+    const ownerView = await getRoomSnapshot(host.room.code, ownerSession!.playerToken);
 
     expect(requesterView.pendingDealItem).toMatchObject({
       isBrick: false,
@@ -500,41 +497,41 @@ describe("room-store", () => {
       revealed: false,
     });
     expect(ownerView.pendingDealItem).toMatchObject({
-      isBrick: false,
+      isBrick: true,
       marketPrice: 0,
-      revealed: false,
+      revealed: true,
     });
   });
 
-  it("shows public item info during a normal trade and reveals hidden risk one turn later", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    const p3 = joinRoom(host.room.code, "C");
-    joinRoom(host.room.code, "D");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+  it("shows public item info during a normal trade and reveals hidden risk one turn later", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    const p3 = await joinRoom(host.room.code, "C");
+    await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const ownerItem = getRoomSnapshot(host.room.code, p2.playerToken).me!.hand!.find(
+    const ownerItem = (await getRoomSnapshot(host.room.code, p2.playerToken)).me!.hand!.find(
       (item) => !item.isBrick,
     );
     expect(ownerItem).toBeDefined();
 
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
       itemInstanceId: ownerItem!.instanceId,
       offerPrice: 120000,
     });
 
-    const requesterDealView = getRoomSnapshot(host.room.code, host.playerToken);
-    const ownerDealView = getRoomSnapshot(host.room.code, p2.playerToken);
-    const nonPartyDealView = getRoomSnapshot(host.room.code, p3.playerToken);
+    const requesterDealView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerDealView = await getRoomSnapshot(host.room.code, p2.playerToken);
+    const nonPartyDealView = await getRoomSnapshot(host.room.code, p3.playerToken);
 
     expect(requesterDealView.pendingDealItem).toMatchObject({
       instanceId: ownerItem!.instanceId,
       id: "",
       name: "뒤집힌 물건",
-      category: null,
+      category: ownerItem!.category,
       marketPrice: 0,
       condition: null,
       isBrick: false,
@@ -543,8 +540,8 @@ describe("room-store", () => {
     expect(ownerDealView.pendingDealItem).toMatchObject({
       instanceId: ownerItem!.instanceId,
       category: ownerItem!.category,
-      condition: null,
-      revealed: false,
+      condition: ownerItem!.condition,
+      revealed: true,
     });
     expect(nonPartyDealView.pendingDealItem).toMatchObject({
       category: null,
@@ -553,16 +550,16 @@ describe("room-store", () => {
       revealed: false,
     });
 
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
-    submitRoomAction(host.room.code, p2.playerToken, {
+    await submitRoomAction(host.room.code, p2.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
 
-    const requesterAfterDeal = getRoomSnapshot(host.room.code, host.playerToken);
+    const requesterAfterDeal = await getRoomSnapshot(host.room.code, host.playerToken);
     const boughtItem = requesterAfterDeal.me!.hand!.find(
       (item) => item.instanceId === ownerItem!.instanceId,
     );
@@ -574,20 +571,20 @@ describe("room-store", () => {
       revealed: true,
     });
 
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "reviewTrade",
       targetPlayerId: p2.playerId,
       satisfied: true,
     });
-    submitRoomAction(host.room.code, p2.playerToken, {
+    await submitRoomAction(host.room.code, p2.playerToken, {
       type: "reviewTrade",
       targetPlayerId: host.playerId,
       satisfied: true,
     });
 
-    submitRoomAction(host.room.code, p2.playerToken, { type: "endTurn" });
+    await submitRoomAction(host.room.code, p2.playerToken, { type: "endTurn" });
 
-    const requesterAfterDelivery = getRoomSnapshot(host.room.code, host.playerToken);
+    const requesterAfterDelivery = await getRoomSnapshot(host.room.code, host.playerToken);
     const deliveredItem = requesterAfterDelivery.me!.hand!.find(
       (item) => item.instanceId === ownerItem!.instanceId,
     );
@@ -598,37 +595,37 @@ describe("room-store", () => {
     });
   });
 
-  it("completes a trade request only when requester and owner both choose cool deal", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    joinRoom(host.room.code, "C");
-    joinRoom(host.room.code, "D");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+  it("completes a trade request only when requester and owner both choose cool deal", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    await joinRoom(host.room.code, "C");
+    await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const beforeRequester = getRoomSnapshot(host.room.code, host.playerToken);
-    const beforeOwner = getRoomSnapshot(host.room.code, p2.playerToken);
+    const beforeRequester = await getRoomSnapshot(host.room.code, host.playerToken);
+    const beforeOwner = await getRoomSnapshot(host.room.code, p2.playerToken);
     const item = beforeOwner.me!.hand!.find((owned) => owned.category !== null);
     if (!item) throw new Error("expected owner to have a non-brick item");
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
       offerPrice: 120000,
     });
     // The owner/seller p2 proposes the price of 120,000, which also marks their choice as "cool"
-    submitRoomAction(host.room.code, p2.playerToken, {
+    await submitRoomAction(host.room.code, p2.playerToken, {
       type: "proposePrice",
       price: 120000,
     });
     // The host/buyer chooses "cool" to complete the deal
-    const completed = submitRoomAction(host.room.code, host.playerToken, {
+    const completed = await submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
 
-    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
-    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = await getRoomSnapshot(host.room.code, p2.playerToken);
 
     expect(completed.pendingDeal).toBeNull();
     expect(requesterView.me?.money).toBe((beforeRequester.me?.money ?? 0) - 120000);
@@ -646,34 +643,34 @@ describe("room-store", () => {
     expect(ownerView.pendingReviews).toHaveLength(2);
   });
 
-  it("cancels a trade request when either side chooses cancel", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    joinRoom(host.room.code, "C");
-    joinRoom(host.room.code, "D");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+  it("cancels a trade request when either side chooses cancel", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    await joinRoom(host.room.code, "C");
+    await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const beforeRequester = getRoomSnapshot(host.room.code, host.playerToken);
-    const beforeOwner = getRoomSnapshot(host.room.code, p2.playerToken);
+    const beforeRequester = await getRoomSnapshot(host.room.code, host.playerToken);
+    const beforeOwner = await getRoomSnapshot(host.room.code, p2.playerToken);
     const item = beforeOwner.me!.hand![0];
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
       offerPrice: 120000,
     });
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
-    submitRoomAction(host.room.code, p2.playerToken, {
+    await submitRoomAction(host.room.code, p2.playerToken, {
       type: "chooseDealCard",
       choice: "cancel",
     });
 
-    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
-    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = await getRoomSnapshot(host.room.code, p2.playerToken);
 
     expect(requesterView.me?.money).toBe(beforeRequester.me?.money);
     expect(requesterView.me?.hand).toHaveLength(5);
@@ -682,28 +679,28 @@ describe("room-store", () => {
     expect(requesterView.pendingDeal).toBeNull();
   });
 
-  it("hides deal card choices from the other trading player", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    joinRoom(host.room.code, "C");
-    joinRoom(host.room.code, "D");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+  it("hides deal card choices from the other trading player", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    await joinRoom(host.room.code, "C");
+    await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const item = getRoomSnapshot(host.room.code, p2.playerToken).me!.hand![0];
-    submitRoomAction(host.room.code, host.playerToken, {
+    const item = (await getRoomSnapshot(host.room.code, p2.playerToken)).me!.hand![0];
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
       offerPrice: 120000,
     });
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
 
-    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
-    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = await getRoomSnapshot(host.room.code, p2.playerToken);
 
     expect(requesterView.pendingDeal?.choices).toEqual({
       [host.playerId]: "cool",
@@ -711,85 +708,83 @@ describe("room-store", () => {
     expect(ownerView.pendingDeal?.choices).toEqual({});
   });
 
-  it("moves or destroys reputation tokens through post-trade reviews", () => {
-    const host = createRoom("A");
-    const p2 = joinRoom(host.room.code, "B");
-    joinRoom(host.room.code, "C");
-    joinRoom(host.room.code, "D");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
-    submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+  it("moves or destroys reputation tokens through post-trade reviews", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    await joinRoom(host.room.code, "C");
+    await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
-    const item = getRoomSnapshot(host.room.code, p2.playerToken).me!.hand![0];
-    submitRoomAction(host.room.code, host.playerToken, {
+    const item = (await getRoomSnapshot(host.room.code, p2.playerToken)).me!.hand![0];
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "requestTrade",
       ownerId: p2.playerId,
       itemInstanceId: item.instanceId,
       offerPrice: 120000,
     });
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
-    submitRoomAction(host.room.code, p2.playerToken, {
+    await submitRoomAction(host.room.code, p2.playerToken, {
       type: "chooseDealCard",
       choice: "cool",
     });
 
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "reviewTrade",
       targetPlayerId: p2.playerId,
       satisfied: true,
     });
-    submitRoomAction(host.room.code, p2.playerToken, {
+    await submitRoomAction(host.room.code, p2.playerToken, {
       type: "reviewTrade",
       targetPlayerId: host.playerId,
       satisfied: false,
     });
 
-    const requesterView = getRoomSnapshot(host.room.code, host.playerToken);
-    const ownerView = getRoomSnapshot(host.room.code, p2.playerToken);
+    const requesterView = await getRoomSnapshot(host.room.code, host.playerToken);
+    const ownerView = await getRoomSnapshot(host.room.code, p2.playerToken);
 
     expect(requesterView.me?.reputationTokens).toBe(3);
     expect(ownerView.me?.reputationTokens).toBe(6);
     expect(requesterView.pendingReviews).toHaveLength(0);
     expect(ownerView.pendingReviews).toHaveLength(0);
   });
-  it("returns the host role in the start game response", () => {
-    const host = createRoom("경수");
-    joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
+  it("returns the host role in the start game response", async () => {
+    const host = await createRoom("경수");
+    await joinRoom(host.room.code, "유현");
+    await joinRoom(host.room.code, "윤식");
+    await joinRoom(host.room.code, "환희");
 
-    const started = submitRoomAction(host.room.code, host.playerToken, {
+    const started = await submitRoomAction(host.room.code, host.playerToken, {
       type: "startGame",
     });
 
     expect(started.me?.role).toMatch(/citizen|villain/);
   });
 
-  it("rejects actions from players who are not allowed to act", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    joinRoom(host.room.code, "윤식");
-    joinRoom(host.room.code, "환희");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+  it("rejects actions from players who are not allowed to act", async () => {
+    const host = await createRoom("경수");
+    const p2 = await joinRoom(host.room.code, "유현");
+    await joinRoom(host.room.code, "윤식");
+    await joinRoom(host.room.code, "환희");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    expect(() =>
-      submitRoomAction(host.room.code, p2.playerToken, { type: "rollDice" }),
-    ).toThrow("현재 턴 플레이어만 할 수 있습니다.");
+    await expect(submitRoomAction(host.room.code, p2.playerToken, { type: "rollDice" })).rejects.toThrow("현재 턴 플레이어만 할 수 있습니다.");
   });
 
-  it("finishes the game after every player reports a suspicious trader", () => {
-    const host = createRoom("경수");
-    const p2 = joinRoom(host.room.code, "유현");
-    const p3 = joinRoom(host.room.code, "윤식");
-    const p4 = joinRoom(host.room.code, "환희");
-    submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+  it("finishes the game after every player reports a suspicious trader", async () => {
+    const host = await createRoom("경수");
+    const p2 = await joinRoom(host.room.code, "유현");
+    const p3 = await joinRoom(host.room.code, "윤식");
+    const p4 = await joinRoom(host.room.code, "환희");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
 
-    const started = getRoomSnapshot(host.room.code, host.playerToken);
+    const started = await getRoomSnapshot(host.room.code, host.playerToken);
     const target = started.players.find((player) => player.id !== host.playerId);
     expect(target).toBeDefined();
-    submitRoomAction(host.room.code, host.playerToken, {
+    await submitRoomAction(host.room.code, host.playerToken, {
       type: "startReporting",
     });
 
@@ -799,19 +794,19 @@ describe("room-store", () => {
       p3.playerToken,
       p4.playerToken,
     ]) {
-      submitRoomAction(host.room.code, token, {
+      await submitRoomAction(host.room.code, token, {
         type: "reportSuspiciousPlayer",
         targetPlayerId: target!.id,
       });
     }
 
-    const finished = getRoomSnapshot(host.room.code, host.playerToken);
+    const finished = await getRoomSnapshot(host.room.code, host.playerToken);
     expect(finished.status).toBe("finished");
     expect(finished.result).toBeDefined();
     expect(finished.result?.reports[target!.id]).toBe(4);
 
     // Host restarts the game
-    const restarted = submitRoomAction(host.room.code, host.playerToken, {
+    const restarted = await submitRoomAction(host.room.code, host.playerToken, {
       type: "restartGame",
     });
     expect(restarted.status).toBe("waiting");

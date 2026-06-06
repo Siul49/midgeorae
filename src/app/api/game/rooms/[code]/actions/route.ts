@@ -18,7 +18,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     if (!body.action) throw new Error("액션이 없습니다.");
 
-    return jsonOk(submitRoomAction(code, body.token ?? "", body.action));
+    return jsonOk(await submitRoomAction(code, body.token ?? "", body.action));
   } catch (error) {
     return jsonError(error);
   }

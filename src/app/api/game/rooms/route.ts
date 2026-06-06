@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { name?: string; mode?: RoomMode };
     const mode: RoomMode = body.mode === "botTest" ? "botTest" : "real";
-    return jsonOk(createRoom(body.name ?? "", mode));
+    return jsonOk(await createRoom(body.name ?? "", mode));
   } catch (error) {
     return jsonError(error);
   }

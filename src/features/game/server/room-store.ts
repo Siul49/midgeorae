@@ -82,10 +82,135 @@ function createPlayer(
   };
 }
 
-function findRoom(code: string): Room {
-  const room = rooms.get(normalizeCode(code));
-  if (!room) throw new Error("방을 찾을 수 없습니다.");
-  return room;
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+// Simple Supabase client for Serverless function usage, fallback to local Map if missing config
+const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
+
+async function findRoom(code: string): Promise<Room> {
+  const normalized = normalizeCode(code);
+  if (!supabase) {
+    const room = rooms.get(normalized);
+    if (!room) throw new Error("방을 찾을 수 없습니다.");
+    return room;
+  }
+  const { data, error } = await supabase
+    .from("game_rooms")
+    .select("room_data")
+    .eq("code", normalized)
+    .single();
+
+  if (error || !data) {
+    throw new Error("방을 찾을 수 없습니다.");
+  }
+  return data.room_data as Room;
+}
+
+async function saveRoom(room: Room) {
+  if (!supabase) {
+    rooms.set(room.code, room);
+    return;
+  }
+  const { error } = await supabase
+    .from("game_rooms")
+    .upsert({
+      code: room.code,
+      room_data: room,
+      updated_at: new Date().toISOString(),
+    });
+  if (error) {
+    console.error("Failed to save room to Supabase:", error);
+    throw new Error("방 정보를 저장하는 중 오류가 발생했습니다.");
+  }
+}
+
+async function mutateRoomWithRetry<T>(
+  code: string,
+  mutateFn: (room: Room) => T | Promise<T>
+): Promise<{ room: Room; result: T }> {
+  if (!supabase) {
+    const room = rooms.get(normalizeCode(code));
+    if (!room) throw new Error("방을 찾을 수 없습니다.");
+    const beforeStr = JSON.stringify(room);
+    const result = await mutateFn(room);
+    const afterStr = JSON.stringify(room);
+    if (beforeStr !== afterStr) {
+      room.version += 1;
+      room.updatedAt = now();
+      rooms.set(room.code, room);
+    }
+    return { room, result };
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const normalized = normalizeCode(code);
+    const { data, error } = await supabase
+      .from("game_rooms")
+      .select("room_data")
+      .eq("code", normalized)
+      .single();
+
+    if (error || !data) {
+      throw new Error("방을 찾을 수 없습니다.");
+    }
+    const room = data.room_data as Room;
+    const currentVersion = room.version;
+
+    const beforeStr = JSON.stringify(room);
+    const result = await mutateFn(room);
+    const afterStr = JSON.stringify(room);
+
+    if (beforeStr === afterStr) {
+      return { room, result };
+    }
+
+    room.version = currentVersion + 1;
+    room.updatedAt = now();
+
+    const { data: updatedData, error: updateError } = await supabase
+      .from("game_rooms")
+      .update({
+        room_data: room,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("code", room.code)
+      .eq("room_data->>version", currentVersion.toString())
+      .select();
+
+    if (!updateError && updatedData && updatedData.length > 0) {
+      return { room, result };
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 50 + Math.random() * 100));
+  }
+
+  throw new Error("서버 혼잡으로 인해 요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+}
+
+async function generateUniqueRoomCode(): Promise<string> {
+  const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    let code = "";
+    for (let index = 0; index < 4; index += 1) {
+      code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+    }
+    if (!supabase) {
+      if (!rooms.has(code)) return code;
+      continue;
+    }
+    const { data } = await supabase
+      .from("game_rooms")
+      .select("code")
+      .eq("code", code)
+      .maybeSingle();
+    if (!data) {
+      return code;
+    }
+  }
+  throw new Error("사용 가능한 방 코드를 만들 수 없습니다.");
 }
 
 function findPlayer(room: Room, token: string): ServerPlayer {
@@ -147,6 +272,16 @@ function toPublicPlayer(
   };
 }
 
+function getBrickFakeCategory(instanceId: string): "electronics" | "fashion" | "hobby" | "living" {
+  let hash = 0;
+  for (let i = 0; i < instanceId.length; i++) {
+    hash = instanceId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const categories = ["electronics", "fashion", "hobby", "living"] as const;
+  const index = Math.abs(hash) % categories.length;
+  return categories[index];
+}
+
 function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
   return {
     instanceId: item.instanceId,
@@ -193,6 +328,7 @@ function toItemSnapshot(
     forceReveal ||
     item.revealed ||
     item.revealedToPlayerIds.includes(viewer.id) ||
+    viewer.hand.some((c) => c.instanceId === item.instanceId) ||
     (allowTimedReveal &&
       item.hiddenInfoRevealTurn !== undefined &&
       room.turnCount >= item.hiddenInfoRevealTurn);
@@ -206,11 +342,15 @@ function toItemSnapshot(
         viewer &&
           viewer.id === room.currentTurnPlayerId &&
           room.currentActionCard &&
-          ["directTrade"].includes(room.currentActionCard.type)
+          ["directTrade", "tradeRequest", "freeGive", "saleRequest"].includes(room.currentActionCard.type)
       );
+    const category = item.isBrick
+      ? getBrickFakeCategory(item.instanceId)
+      : item.category;
+
     return {
       ...snapshot,
-      category: showCategory ? item.category : null,
+      category: showCategory ? category : null,
     };
   }
 
@@ -218,7 +358,7 @@ function toItemSnapshot(
     instanceId: item.instanceId,
     id: revealed ? item.id : "",
     name: revealed ? item.name : "뒤집힌 물건",
-    category: item.category,
+    category: item.isBrick ? null : item.category,
     condition: revealed ? item.condition : null,
     marketPrice: revealed ? item.marketPrice : 0,
     acquiredPrice: revealed ? item.acquiredPrice : null,
@@ -275,18 +415,18 @@ function visiblePendingDealItem(
     return hiddenItemSnapshot(item);
   }
 
+  // If the owner (seller) is viewing it, return their own fully revealed item
+  if (viewer.id === deal.ownerId) {
+    return toItemSnapshot(item, viewer, room, { forceReveal: true });
+  }
+
   if (item.isBrick && !deal.revealedBeforeDeal) {
-    return { ...hiddenItemSnapshot(item), category: null };
+    return { ...hiddenItemSnapshot(item), category: getBrickFakeCategory(item.instanceId) };
   }
 
-  // If the requester (buyer) is viewing a normal trade request, hide exact info before purchase
+  // If the requester (buyer) is viewing a normal trade request, hide exact info but show category before purchase
   if (viewer.id === deal.requesterId && !deal.revealedBeforeDeal) {
-    return { ...hiddenItemSnapshot(item), category: null };
-  }
-
-  // If the owner (seller) is viewing it, return public snapshot
-  if (viewer.id === deal.ownerId && !deal.revealedBeforeDeal) {
-    return publicItemSnapshot(item);
+    return { ...hiddenItemSnapshot(item), category: item.category };
   }
 
   return toItemSnapshot(item, viewer, room);
@@ -838,7 +978,7 @@ function autoResolveBotDeal(room: Room) {
 
   let changed = false;
 
-  if (deal.askingPrice === 0 && deal.ownerId) {
+  if (deal.askingPrice === 0 && deal.actionType !== "freeGive" && deal.ownerId) {
     const owner = room.players.find((p) => p.id === deal.ownerId);
     if (owner?.isBot) {
       const item = owner.hand.find((owned) => owned.instanceId === deal.itemInstanceId);
@@ -1056,9 +1196,9 @@ function autoPlayBots(room: Room) {
   return changed;
 }
 
-export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionResult {
+export async function createRoom(name: string, mode: RoomMode = "real"): Promise<RoomSessionResult> {
   const player = createPlayer(name, true, "호스트");
-  const code = makeRoomCode(new Set(rooms.keys()));
+  const code = await generateUniqueRoomCode();
   const room: Room = {
     code,
     mode,
@@ -1087,7 +1227,7 @@ export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionRe
     updatedAt: now(),
   };
 
-  rooms.set(code, room);
+  await saveRoom(room);
 
   return {
     room: toSnapshot(room, player),
@@ -1096,16 +1236,20 @@ export function createRoom(name: string, mode: RoomMode = "real"): RoomSessionRe
   };
 }
 
-export function joinRoom(code: string, name: string): RoomSessionResult {
-  const room = findRoom(code);
-  if (room.status !== "waiting") throw new Error("이미 시작된 방입니다.");
-  if (room.players.length >= MAX_PLAYERS) throw new Error("방이 가득 찼습니다.");
+export async function joinRoom(code: string, name: string): Promise<RoomSessionResult> {
+  let playerInfo: { id: string; token: string } | null = null;
+  const { room } = await mutateRoomWithRetry(code, (room) => {
+    if (room.status !== "waiting") throw new Error("이미 시작된 방입니다.");
+    if (room.players.length >= MAX_PLAYERS) throw new Error("방이 가득 찼습니다.");
 
-  const player = createPlayer(name, false, `플레이어 ${room.players.length + 1}`);
-  room.players.push(player);
-  room.logs.push(`${player.name}님이 입장했습니다.`);
-  touch(room);
+    const player = createPlayer(name, false, `플레이어 ${room.players.length + 1}`);
+    room.players.push(player);
+    room.logs.push(`${player.name}님이 입장했습니다.`);
+    touch(room);
+    playerInfo = { id: player.id, token: player.token };
+  });
 
+  const player = room.players.find((p) => p.id === playerInfo!.id)!;
   return {
     room: toSnapshot(room, player),
     playerId: player.id,
@@ -1113,96 +1257,111 @@ export function joinRoom(code: string, name: string): RoomSessionResult {
   };
 }
 
-export function getRoomSnapshot(code: string, token: string): RoomSnapshot {
-  const room = findRoom(code);
-  const viewer = findPlayer(room, token);
-  if (autoPlayBots(room)) touch(room);
+export async function getRoomSnapshot(code: string, token: string): Promise<RoomSnapshot> {
+  let viewerId: string = "";
+  const { room } = await mutateRoomWithRetry(code, (room) => {
+    const viewer = findPlayer(room, token);
+    viewerId = viewer.id;
+    if (autoPlayBots(room)) {
+      touch(room);
+    }
+  });
+  const viewer = room.players.find((p) => p.id === viewerId) || null;
   return toSnapshot(room, viewer);
 }
 
-export function submitRoomAction(
+export async function submitRoomAction(
   code: string,
   token: string,
   action: RoomAction,
-): RoomSnapshot {
-  const room = findRoom(code);
-  const actor = findPlayer(room, token);
+): Promise<RoomSnapshot> {
+  let viewerId: string = "";
+  const { room } = await mutateRoomWithRetry(code, (room) => {
+    const actor = findPlayer(room, token);
+    viewerId = actor.id;
 
-  switch (action.type) {
-    case "addBot":
-      addBot(room, actor);
-      break;
-    case "startGame":
-      startGame(room, actor);
-      break;
-    case "drawActionCard":
-      drawActionCard(room, actor);
-      break;
-    case "requestTrade":
-      requestTrade(
-        room,
-        actor,
-        action.ownerId,
-        action.itemInstanceId,
-        action.offerPrice,
-      );
-      break;
-    case "chooseDealCard":
-      chooseDealCard(room, actor, action.choice);
-      break;
-    case "proposePrice":
-      proposePrice(room, actor, action.price);
-      break;
-    case "reviewTrade":
-      reviewTrade(room, actor, action.targetPlayerId, action.satisfied);
-      break;
-    case "terrorReview":
-      terrorReview(room, actor, action.targetPlayerId);
-      break;
-    case "recycleBrick":
-      recycleBrick(room, actor, action.itemInstanceId);
-      break;
-    case "swapRandomItem":
-      swapRandomItem(room, actor, action.targetPlayerId);
-      break;
-    case "rollDice":
-      assertPlaying(room);
-      assertCurrentTurn(room, actor);
-      throw new Error("이 버전에서는 주사위 대신 행동카드를 뽑습니다.");
-    case "buyItem":
-      throw new Error("이 버전에서는 시장 구매 대신 물건 카드 거래를 사용합니다.");
-    case "sellItem":
-      throw new Error("이 버전에서는 행동카드 거래를 사용합니다.");
-    case "ratePlayer":
-      throw new Error("거래 후 후기에서만 평판 토큰을 조정할 수 있습니다.");
-    case "endTurn":
-      assertPlaying(room);
-      assertCurrentTurn(room, actor);
-      room.currentActionCard = null;
-      room.pendingDeal = null;
-      nextTurn(room);
-      break;
-    case "startReporting":
-      if (!actor.isHost) throw new Error("호스트만 최종 신고를 시작할 수 있습니다.");
-      if (room.status !== "playing") throw new Error("최종 신고를 시작할 수 없는 상태입니다.");
-      enterReporting(room, "호스트가 최종 신고를 시작했습니다.");
-      break;
-    case "reportSuspiciousPlayer":
-      reportSuspiciousPlayer(room, actor, action.targetPlayerId);
-      break;
-    case "restartGame":
-      restartGame(room, actor);
-      break;
-    case "ackActionCard":
-      ackActionCard(room, actor);
-      break;
-  }
+    switch (action.type) {
+      case "addBot":
+        addBot(room, actor);
+        break;
+      case "startGame":
+        startGame(room, actor);
+        break;
+      case "drawActionCard":
+        drawActionCard(room, actor);
+        break;
+      case "requestTrade":
+        requestTrade(
+          room,
+          actor,
+          action.ownerId,
+          action.itemInstanceId,
+          action.offerPrice,
+        );
+        break;
+      case "chooseDealCard":
+        chooseDealCard(room, actor, action.choice);
+        break;
+      case "proposePrice":
+        proposePrice(room, actor, action.price);
+        break;
+      case "reviewTrade":
+        reviewTrade(room, actor, action.targetPlayerId, action.satisfied);
+        break;
+      case "terrorReview":
+        terrorReview(room, actor, action.targetPlayerId);
+        break;
+      case "recycleBrick":
+        recycleBrick(room, actor, action.itemInstanceId);
+        break;
+      case "swapRandomItem":
+        swapRandomItem(room, actor, action.targetPlayerId);
+        break;
+      case "rollDice":
+        assertPlaying(room);
+        assertCurrentTurn(room, actor);
+        throw new Error("이 버전에서는 주사위 대신 행동카드를 뽑습니다.");
+      case "buyItem":
+        throw new Error("이 버전에서는 시장 구매 대신 물건 카드 거래를 사용합니다.");
+      case "sellItem":
+        throw new Error("이 버전에서는 행동카드 거래를 사용합니다.");
+      case "ratePlayer":
+        throw new Error("거래 후 후기에서만 평판 토큰을 조정할 수 있습니다.");
+      case "endTurn":
+        assertPlaying(room);
+        assertCurrentTurn(room, actor);
+        room.currentActionCard = null;
+        room.pendingDeal = null;
+        nextTurn(room);
+        break;
+      case "startReporting":
+        if (!actor.isHost) throw new Error("호스트만 최종 신고를 시작할 수 있습니다.");
+        if (room.status !== "playing") throw new Error("최종 신고를 시작할 수 없는 상태입니다.");
+        enterReporting(room, "호스트가 최종 신고를 시작했습니다.");
+        break;
+      case "reportSuspiciousPlayer":
+        reportSuspiciousPlayer(room, actor, action.targetPlayerId);
+        break;
+      case "restartGame":
+        restartGame(room, actor);
+        break;
+      case "ackActionCard":
+        ackActionCard(room, actor);
+        break;
+    }
 
-  touch(room);
-  if (autoPlayBots(room)) touch(room);
-  return toSnapshot(room, actor);
+    touch(room);
+    if (autoPlayBots(room)) touch(room);
+  });
+
+  const viewer = room.players.find((p) => p.id === viewerId) || null;
+  return toSnapshot(room, viewer);
 }
 
-export function resetRoomsForTests() {
-  rooms.clear();
+export async function resetRoomsForTests() {
+  if (supabase) {
+    await supabase.from("game_rooms").delete().neq("code", "");
+  } else {
+    rooms.clear();
+  }
 }

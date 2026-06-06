@@ -277,6 +277,10 @@ export function MidgeoraeOnlineGame() {
     return pendingReviews.filter((r) => r.reviewerId === me?.id);
   }, [pendingReviews, me?.id]);
 
+  const isReviewParty = useMemo(() => {
+    return Boolean(me && pendingReviews.some((r) => r.reviewerId === me.id || r.targetPlayerId === me.id));
+  }, [pendingReviews, me]);
+
   const getPlayerReviewChoice = useCallback((playerId: string) => {
     if (!snapshot) return null;
     const reviewLog = [...(snapshot.logs || [])].reverse().find(
@@ -705,6 +709,7 @@ export function MidgeoraeOnlineGame() {
               selectedItemId={selectedItemId}
               dealTargetId={dealTargetId}
               activeActionType={snapshot.currentActionCard?.type}
+              isHorizontal
             />
           )}
         </div>
@@ -896,27 +901,43 @@ export function MidgeoraeOnlineGame() {
                 {myPendingReviews.length === 0 && pendingReviews.length > 0 && (
                   <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm z-20 flex items-center justify-center p-2 rounded-xl">
                     <div className="w-full max-w-md bg-stone-900 border border-stone-800 p-5 rounded-xl shadow-2xl text-center space-y-4 mx-auto relative z-25 text-white">
-                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">거래 완료</span>
+                      <span className="text-xs font-black text-amber-500 uppercase tracking-widest leading-none">거래 완료</span>
                       <div className="bg-stone-950/20 py-2 px-3 rounded-lg border border-emerald-800/40 text-emerald-400 text-sm font-black animate-pulse">
-                        🎉 거래가 성사되었습니다!
+                        🎉 거래가 완료되었습니다!
                       </div>
-                      <h3 className="text-xs font-bold text-stone-300">두 플레이어가 거래 후기를 작성 중입니다...</h3>
-                      <div className="bg-stone-950/50 p-3 rounded-lg border border-white/5 space-y-2">
-                        {pendingReviews[0] && (
-                          <div className="flex justify-between items-center text-xs font-bold px-2 py-1">
-                            <span className="text-stone-300">{playerName(snapshot, pendingReviews[0].reviewerId)}</span>
-                            <span className="text-amber-400 font-black animate-pulse">작성 중... ✍️</span>
+                      {isReviewParty ? (
+                        <h3 className="text-xs font-bold text-stone-300">상대방의 거래 후기 작성을 기다리는 중입니다...</h3>
+                      ) : (
+                        <>
+                          <h3 className="text-xs font-bold text-stone-300">두 플레이어가 거래 후기를 작성 중입니다...</h3>
+                          <div className="bg-stone-950/50 p-3 rounded-lg border border-white/5 space-y-2">
+                            {(() => {
+                              const reviewer1Id = pendingReviews[0]?.reviewerId;
+                              const reviewer2Id = pendingReviews[0]?.targetPlayerId;
+                              return (
+                                <>
+                                  {reviewer1Id && (
+                                    <div className="flex justify-between items-center text-xs font-bold px-2 py-1">
+                                      <span className="text-stone-300">{playerName(snapshot, reviewer1Id)}</span>
+                                      <span className={pendingReviews.some(r => r.reviewerId === reviewer1Id) ? "text-amber-400 font-black animate-pulse" : "text-emerald-400 font-black"}>
+                                        {pendingReviews.some(r => r.reviewerId === reviewer1Id) ? "작성 중... ✍️" : "완료 👍"}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {reviewer2Id && (
+                                    <div className="flex justify-between items-center text-xs font-bold px-2 py-1 border-t border-white/5">
+                                      <span className="text-stone-300">{playerName(snapshot, reviewer2Id)}</span>
+                                      <span className={pendingReviews.some(r => r.reviewerId === reviewer2Id) ? "text-amber-400 font-black animate-pulse" : "text-emerald-400 font-black"}>
+                                        {pendingReviews.some(r => r.reviewerId === reviewer2Id) ? "작성 중... ✍️" : "완료 👍"}
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
-                        )}
-                        {pendingReviews[0] && (
-                          <div className="flex justify-between items-center text-xs font-bold px-2 py-1 border-t border-white/5">
-                            <span className="text-stone-300">{playerName(snapshot, pendingReviews[0].targetPlayerId)}</span>
-                            <span className={pendingReviews.some(r => r.reviewerId === pendingReviews[0].targetPlayerId) ? "text-amber-400 font-black animate-pulse" : "text-emerald-400 font-black"}>
-                              {pendingReviews.some(r => r.reviewerId === pendingReviews[0].targetPlayerId) ? "작성 중... ✍️" : (getPlayerReviewChoice(pendingReviews[0].targetPlayerId) || "완료 👍")}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1596,7 +1617,7 @@ function MyDashboard({
       {/* Left: Profile Card (exactly like other players' seats) */}
       <div className="relative shrink-0 select-none">
         {me.assetRank !== undefined && (
-          <div className="absolute -top-3 left-4 z-20 px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-black text-[10px] shadow border border-amber-400">
+          <div className="absolute -top-3 left-4 z-20 px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-black text-xs shadow border border-amber-400">
             👑 {me.assetRank}위
           </div>
         )}
@@ -1629,7 +1650,7 @@ function MyDashboard({
         {/* Top Info row (Role, Job, turn status) */}
         <div className="flex items-center justify-between text-xs font-bold border-b border-white/5 pb-1 select-none">
           <div className="flex items-center gap-3">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-black text-white ${isMyTurn ? "bg-orange-600 animate-pulse" : "bg-stone-850"}`}>
+            <span className={`px-2 py-0.5 rounded text-xs font-black text-white ${isMyTurn ? "bg-orange-600 animate-pulse" : "bg-stone-850"}`}>
               {isMyTurn ? "내 턴" : "대기 중"}
             </span>
             {me.job && (
@@ -1639,7 +1660,7 @@ function MyDashboard({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <div className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`} title={roleDescription(me.role)}>
+            <div className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-widest ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`} title={roleDescription(me.role)}>
               {roleLabel(me.role)}
             </div>
           </div>
@@ -1647,13 +1668,13 @@ function MyDashboard({
 
         {/* Mission Row */}
         {isVillain && (
-          <div className="mt-1 text-[10px] font-black leading-tight text-red-400 bg-red-950/50 p-1 rounded border border-red-900/50 select-text">
+          <div className="mt-1 text-xs font-black leading-tight text-red-400 bg-red-950/50 p-1 rounded border border-red-900/50 select-text">
             🔥 빌런 미션: {me.mission ?? "대기 중..."}
           </div>
         )}
 
         {!isVillain && me.job && (
-          <div className="mt-1 text-[10px] font-black leading-tight text-purple-400 bg-purple-950/45 p-1 rounded border border-purple-900/40 select-text">
+          <div className="mt-1 text-xs font-black leading-tight text-purple-400 bg-purple-950/45 p-1 rounded border border-purple-900/40 select-text">
             ✨ 시민 미션 ({me.job.title}): {me.job.description}
           </div>
         )}
@@ -1670,23 +1691,23 @@ function MyDashboard({
                   key={item.instanceId}
                   type="button"
                   onClick={() => setSelectedItemId(item.instanceId)}
-                  className={`motion-button flex flex-col items-center justify-between bg-stone-900 hover:bg-stone-850 border rounded p-1 text-center cursor-pointer transition-all w-[76px] h-[76px] shrink-0 select-none ${
+                  className={`motion-button flex flex-col items-center justify-between bg-stone-900 hover:bg-stone-850 border rounded p-1 text-center cursor-pointer transition-all w-[84px] h-[84px] shrink-0 select-none ${
                     selected
                       ? "border-orange-500 ring-2 ring-orange-500/50 scale-105 shadow-[0_0_12px_rgba(249,115,22,0.4)]"
                       : "border-stone-700"
                   }`}
                 >
-                  <div className="text-[18px] leading-none text-stone-300 flex-1 flex items-center justify-center">
+                  <div className="text-[20px] leading-none text-stone-300 flex-1 flex items-center justify-center">
                     {productIcon(item, 22)}
                   </div>
-                  <div className="text-[9px] font-black text-white truncate w-full leading-tight">
+                  <div className="text-xs font-black text-white truncate w-full leading-tight">
                     {item.name}
                   </div>
-                  <div className="text-[8px] font-bold text-orange-400 truncate w-full">
+                  <div className="text-xs font-bold text-orange-400 truncate w-full">
                     {item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}
                   </div>
                   {item.isBrick && (
-                    <span className="bg-red-700 text-white font-black rounded px-1 py-0.2 text-[7px] transform scale-90">
+                    <span className="bg-red-700 text-white font-black rounded px-1 py-0.2 text-xs">
                       벽돌
                     </span>
                   )}
@@ -1711,6 +1732,7 @@ function SidePlayerSeat({
   selectedItemId,
   dealTargetId,
   activeActionType,
+  isHorizontal = false,
 }: {
   player: PublicPlayer;
   isTurn: boolean;
@@ -1721,13 +1743,14 @@ function SidePlayerSeat({
   selectedItemId?: string;
   dealTargetId?: string;
   activeActionType?: string;
+  isHorizontal?: boolean;
 }) {
   const isPlayerSelected = dealTargetId === player.id;
 
   return (
-    <div className="flex flex-col items-center gap-2 relative">
+    <div className={`flex ${isHorizontal ? "flex-row items-center gap-4" : "flex-col items-center gap-2"} relative`}>
       {player.assetRank !== undefined && (
-        <div className="absolute -top-3 left-4 z-20 px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-black text-[10px] shadow border border-amber-400">
+        <div className="absolute -top-3 left-4 z-20 px-2 py-0.5 rounded bg-amber-500 text-stone-950 font-black text-xs shadow border border-amber-400">
           👑 {player.assetRank}위
         </div>
       )}
@@ -1768,7 +1791,7 @@ function SidePlayerSeat({
         )}
       </button>
 
-      <div className="flex flex-wrap gap-1.5 justify-center mt-1.5 max-w-[200px]">
+      <div className={`flex flex-wrap gap-1.5 ${isHorizontal ? "justify-start max-w-[300px]" : "justify-center mt-1.5 max-w-[200px]"}`}>
         {player.publicItems && player.publicItems.map((item: ItemCardSnapshot) => {
           const isSelected = selectedItemId === item.instanceId && dealTargetId === player.id;
           const showFaceUp = item.revealed;
@@ -1786,7 +1809,7 @@ function SidePlayerSeat({
               type="button"
               disabled={!isCardInteractive}
               onClick={() => onSelectCard && onSelectCard(player.id, item.instanceId)}
-              className={`w-[44px] h-[64px] border rounded transition-all flex flex-col items-center justify-between p-1 select-none relative ${
+              className={`w-[56px] h-[76px] border rounded transition-all flex flex-col items-center justify-between p-1 select-none relative ${
                 isCardInteractive ? "card-glowing-interactive pulse-active" : ""
               } ${
                 isSelected
@@ -1800,13 +1823,13 @@ function SidePlayerSeat({
                   <div className="text-base text-stone-300 mt-0.5">
                     {productIcon(item, 16)}
                   </div>
-                  <div className="text-[10px] font-black text-white truncate max-w-full leading-none">{item.name}</div>
+                  <div className="text-xs font-black text-white truncate max-w-full leading-none">{item.name}</div>
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center p-0.5">
                   <span className="text-xl font-black text-stone-600">?</span>
                   {isSelected && showCategory && item.category && (
-                    <span className="text-[9px] font-black text-amber-400 truncate w-full mt-1 animate-pulse">
+                    <span className="text-xs font-black text-amber-400 truncate w-full mt-1 animate-pulse">
                       {categoryLabel(item.category)}
                     </span>
                   )}
@@ -1859,28 +1882,28 @@ function PlayerList({
                     {player.name}
                   </span>
                   {player.id === myPlayerId && (
-                    <span className="rounded bg-green-700 px-2 py-0.5 text-[10px] font-black text-white">
+                    <span className="rounded bg-green-700 px-2 py-0.5 text-xs font-black text-white">
                       나
                     </span>
                   )}
                   {player.isBot && (
-                    <span className="rounded bg-stone-800 px-2 py-0.5 text-[10px] font-black text-white">
+                    <span className="rounded bg-stone-800 px-2 py-0.5 text-xs font-black text-white">
                       BOT
                     </span>
                   )}
                   {player.id === currentTurnPlayerId && (
-                    <span className="rounded bg-orange-600 px-2 py-0.5 text-[10px] font-black text-white">
+                    <span className="rounded bg-orange-600 px-2 py-0.5 text-xs font-black text-white">
                       차례
                     </span>
                   )}
                 </div>
-                <div className="mt-1 flex flex-wrap gap-1 text-[11px] font-black text-stone-600">
+                <div className="mt-1 flex flex-wrap gap-1 text-xs font-black text-stone-600">
                   <span>평판 {player.reputationTokens}/5</span>
                   <span>물건 {player.itemCount}</span>
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex gap-2 border-t border-stone-700/10 pt-1 text-[11px] font-semibold text-stone-500">
+            <div className="mt-2 flex gap-2 border-t border-stone-700/10 pt-1 text-xs font-semibold text-stone-500">
               <span>좋아요 {player.likes}</span>
               <span>악평 {player.dislikes}</span>
             </div>
@@ -2256,18 +2279,18 @@ function ActionPanel({
             {action && <span className="text-amber-400">{actionIcon(action.type)}</span>}
             {panelTitle}
           </h3>
-          <p className="text-[9px] font-bold text-stone-400 mt-0.5 leading-none">
+          <p className="text-xs font-bold text-stone-400 mt-0.5 leading-none">
             {panelBody}
           </p>
         </div>
       </div>
 
       {!isMyTurn ? (
-        <p className="text-[11px] font-bold text-stone-400">
+        <p className="text-xs font-bold text-stone-400">
           지금은 {currentPlayerName || "다른 플레이어"}님의 턴입니다.
         </p>
       ) : pendingDealActive ? (
-        <p className="text-[11px] font-bold text-stone-400">
+        <p className="text-xs font-bold text-stone-400">
           진행 중인 거래가 끝나면 다음 턴으로 넘어갑니다.
         </p>
       ) : !action ? (
@@ -2287,13 +2310,13 @@ function ActionPanel({
           <div>
             {(!dealTargetId || !selectedItemId) ? (
               <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
-                <span className="text-[9px] font-black text-red-400 block">⚠️ 대상 미선택</span>
-                <span className="text-[9px] font-bold text-stone-400 mt-0.5 block">
+                <span className="text-xs font-black text-red-400 block">⚠️ 대상 미선택</span>
+                <span className="text-xs font-bold text-stone-400 mt-0.5 block">
                   테이블 상단/좌/우에서 상대방과 카드를 직접 클릭하세요!
                 </span>
               </div>
             ) : (
-              <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[11px] font-bold">
+              <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-xs font-bold">
                 <div>
                   상대: <span className="text-amber-400 font-black">{otherPlayers.find(p => p.id === dealTargetId)?.name ?? "알 수 없음"}</span>
                 </div>
@@ -2312,7 +2335,7 @@ function ActionPanel({
           {/* Price & Actions Row */}
           <div className="flex flex-wrap items-center justify-center gap-2.5">
             {isSale && (
-              <div className="flex items-center gap-1 text-[11px] font-bold">
+              <div className="flex items-center gap-1 text-xs font-bold">
                 <span className="text-stone-400 shrink-0">제시 가격:</span>
                 <input
                   type="number"
@@ -2370,13 +2393,13 @@ function ActionPanel({
           <div>
             {!recycleItemId ? (
               <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
-                <span className="text-[9px] font-black text-red-400 block">⚠️ 벽돌 미선택</span>
-                <span className="text-[9px] font-bold text-stone-400 mt-0.5 block">
+                <span className="text-xs font-black text-red-400 block">⚠️ 벽돌 미선택</span>
+                <span className="text-xs font-bold text-stone-400 mt-0.5 block">
                   하단 내 손패에서 분리수거할 벽돌 카드를 직접 클릭하세요!
                 </span>
               </div>
             ) : (
-              <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex justify-between items-center text-[11px] font-bold">
+              <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex justify-between items-center text-xs font-bold">
                 <span className="text-stone-400">선택된 벽돌</span>
                 <span className="text-teal-400 font-black">
                   {myHand.find(item => item.instanceId === recycleItemId)?.name ?? "벽돌"}
@@ -2431,13 +2454,13 @@ function TargetAction({
       <div>
         {!targetId ? (
           <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
-            <span className="text-[9px] font-black text-red-400 block">⚠️ 대상 미지목</span>
-            <span className="text-[9px] font-bold text-stone-400 mt-0.5 block">
+            <span className="text-xs font-black text-red-400 block">⚠️ 대상 미지목</span>
+            <span className="text-xs font-bold text-stone-400 mt-0.5 block">
               테이블 상에서 액션을 적용할 대상 플레이어를 직접 클릭하세요!
             </span>
           </div>
         ) : (
-          <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex justify-between items-center text-[11px] font-bold">
+          <div className="p-1.5 bg-stone-950/50 border border-stone-850 rounded flex justify-between items-center text-xs font-bold">
             <span className="text-stone-400">지목된 대상</span>
             <span className="text-amber-400 font-black">{selectedPlayer?.name ?? "알 수 없음"}</span>
           </div>

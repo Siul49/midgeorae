@@ -11,7 +11,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const { code } = await context.params;
     const body = (await request.json()) as { name?: string };
-    return jsonOk(joinRoom(code, body.name ?? ""));
+    return jsonOk(await joinRoom(code, body.name ?? ""));
   } catch (error) {
     return jsonError(error);
   }

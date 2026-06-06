@@ -12,7 +12,7 @@ export async function GET(request: Request, context: RouteContext) {
     const { code } = await context.params;
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token") ?? "";
-    return jsonOk(getRoomSnapshot(code, token));
+    return jsonOk(await getRoomSnapshot(code, token));
   } catch (error) {
     return jsonError(error, 404);
   }
