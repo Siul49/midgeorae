@@ -1833,7 +1833,7 @@ function MyDashboard({
                   <div className="text-[20px] leading-none text-stone-300 flex-1 flex items-center justify-center">
                     {productIcon(item, 22)}
                   </div>
-                  <div className="text-xs font-black text-white truncate w-full leading-tight">
+                  <div className="text-[10px] font-black text-white whitespace-normal break-all leading-tight w-full">
                     {item.name}
                   </div>
                   <div className="text-xs font-bold text-orange-400 truncate w-full">
@@ -1956,7 +1956,7 @@ function SidePlayerSeat({
                   <div className="text-base text-stone-300 mt-0.5">
                     {productIcon(item, 16)}
                   </div>
-                  <div className="text-xs font-black text-white truncate max-w-full leading-none">{item.name}</div>
+                  <div className="text-[9px] font-black text-white whitespace-normal break-all leading-[1.1] w-full text-center">{item.name}</div>
                 </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center p-0.5">

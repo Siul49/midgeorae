@@ -143,7 +143,12 @@ async function mutateRoomWithRetry<T>(
     if (beforeStr !== afterStr) {
       room.version += 1;
       room.updatedAt = now();
-      rooms.set(room.code, room);
+      const humanPlayers = room.players.filter((p) => !p.isBot);
+      if (humanPlayers.length === 0) {
+        rooms.delete(room.code);
+      } else {
+        rooms.set(room.code, room);
+      }
     }
     return { room, result };
   }
@@ -173,18 +178,30 @@ async function mutateRoomWithRetry<T>(
     room.version = currentVersion + 1;
     room.updatedAt = now();
 
-    const { data: updatedData, error: updateError } = await supabase
-      .from("game_rooms")
-      .update({
-        room_data: room,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("code", room.code)
-      .eq("room_data->>version", currentVersion.toString())
-      .select();
+    const humanPlayers = room.players.filter((p) => !p.isBot);
+    if (humanPlayers.length === 0) {
+      const { error: deleteError } = await supabase
+        .from("game_rooms")
+        .delete()
+        .eq("code", room.code);
+      if (!deleteError) {
+        rooms.delete(room.code);
+        return { room, result };
+      }
+    } else {
+      const { data: updatedData, error: updateError } = await supabase
+        .from("game_rooms")
+        .update({
+          room_data: room,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("code", room.code)
+        .eq("room_data->>version", currentVersion.toString())
+        .select();
 
-    if (!updateError && updatedData && updatedData.length > 0) {
-      return { room, result };
+      if (!updateError && updatedData && updatedData.length > 0) {
+        return { room, result };
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 50 + Math.random() * 100));
