@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ALL_ITEMS } from "../data/items";
 import {
   JOB_CARDS,
   LOBBY_MONEY,
@@ -13,6 +14,7 @@ import {
   calculateAsset,
   calculateReportResult,
   calculateReputationEliminationResult,
+  getItemAssetValue,
 } from "../domain/results";
 import { calculateTradeReviewOutcome } from "../domain/reputation";
 import { settleAcceptedDeal } from "../domain/trade";
@@ -283,6 +285,42 @@ function getBrickFakeCategory(instanceId: string): "electronics" | "fashion" | "
   return categories[index];
 }
 
+function getFakeItemForBrick(instanceId: string) {
+  let hash = 0;
+  for (let i = 0; i < instanceId.length; i++) {
+    hash = instanceId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % ALL_ITEMS.length;
+  const item = ALL_ITEMS[index];
+
+  const ITEM_IMAGE_BY_ID: Record<string, string> = {
+    iphone: "/game-cards/cards/item-01-iphone.svg",
+    airpods: "/game-cards/cards/item-02-airpods.svg",
+    switch: "/game-cards/cards/item-03-switch.svg",
+    bicycle: "/game-cards/cards/item-04-bicycle.svg",
+    books: "/game-cards/cards/item-05-books.svg",
+    sneakers: "/game-cards/cards/item-06-sneakers.svg",
+    laptop: "/game-cards/cards/item-07-laptop.svg",
+    camera: "/game-cards/cards/item-08-camera.svg",
+    tablet: "/game-cards/cards/item-09-tablet.svg",
+    keyboard: "/game-cards/cards/item-10-keyboard.svg",
+    guitar: "/game-cards/cards/item-11-guitar.svg",
+    bag: "/game-cards/cards/item-12-bag.svg",
+    watch: "/game-cards/cards/item-13-watch.svg",
+    figure: "/game-cards/cards/item-14-figure.svg",
+    jacket: "/game-cards/cards/item-15-jacket.svg",
+    speaker: "/game-cards/cards/item-16-speaker.svg",
+  };
+
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    marketPrice: item.marketPrice,
+    imagePath: ITEM_IMAGE_BY_ID[item.id] ?? "/game-cards/backs/item-back.svg",
+  };
+}
+
 function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
   return {
     instanceId: item.instanceId,
@@ -299,7 +337,21 @@ function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
 }
 
 function publicItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
-  if (item.isBrick) return hiddenItemSnapshot(item);
+  if (item.isBrick) {
+    const fake = getFakeItemForBrick(item.instanceId);
+    return {
+      instanceId: item.instanceId,
+      id: fake.id,
+      name: fake.name,
+      category: fake.category,
+      condition: null,
+      marketPrice: fake.marketPrice,
+      acquiredPrice: null,
+      isBrick: false,
+      imagePath: fake.imagePath,
+      revealed: false,
+    };
+  }
 
   return {
     instanceId: item.instanceId,
@@ -324,6 +376,8 @@ function toItemSnapshot(
     forceReveal = false,
   }: { allowPublicInfo?: boolean; forceReveal?: boolean } = {},
 ): ItemCardSnapshot {
+  const actualAllowPublicInfo = allowPublicInfo || Boolean(room.revealAllItems);
+
   const revealed =
     forceReveal ||
     item.revealed ||
@@ -331,9 +385,9 @@ function toItemSnapshot(
     viewer.hand.some((c) => c.instanceId === item.instanceId);
 
   if (!revealed) {
-    const snapshot = allowPublicInfo ? publicItemSnapshot(item) : hiddenItemSnapshot(item);
+    const snapshot = actualAllowPublicInfo ? publicItemSnapshot(item) : hiddenItemSnapshot(item);
     const showCategory =
-      allowPublicInfo ||
+      actualAllowPublicInfo ||
       forceReveal ||
       Boolean(
         viewer &&
@@ -341,8 +395,9 @@ function toItemSnapshot(
           room.currentActionCard &&
           ["directTrade", "tradeRequest", "freeGive", "saleRequest"].includes(room.currentActionCard.type)
       );
+    const fake = getFakeItemForBrick(item.instanceId);
     const category = item.isBrick
-      ? getBrickFakeCategory(item.instanceId)
+      ? fake.category
       : item.category;
 
     return {
@@ -351,16 +406,19 @@ function toItemSnapshot(
     };
   }
 
+  const fake = getFakeItemForBrick(item.instanceId);
+  const showDisguise = item.isBrick && Boolean(room.showBrickDisguise);
+
   return {
     instanceId: item.instanceId,
-    id: revealed ? item.id : "",
-    name: revealed ? item.name : "알수 없음",
-    category: item.isBrick ? null : item.category,
-    condition: revealed ? item.condition : null,
-    marketPrice: revealed ? item.marketPrice : 0,
+    id: revealed ? (showDisguise ? fake.id : item.id) : "",
+    name: revealed ? (showDisguise ? `[벽돌] ${fake.name}` : item.name) : "알수 없음",
+    category: item.isBrick ? (showDisguise ? fake.category : null) : item.category,
+    condition: revealed ? (showDisguise ? "mint" : item.condition) : null,
+    marketPrice: revealed ? (showDisguise ? fake.marketPrice : item.marketPrice) : 0,
     acquiredPrice: revealed ? item.acquiredPrice : null,
     isBrick: revealed ? item.isBrick : false,
-    imagePath: revealed ? item.imagePath : "/game-cards/backs/item-back.svg",
+    imagePath: revealed ? (showDisguise ? fake.imagePath : item.imagePath) : "/game-cards/backs/item-back.svg",
     revealed,
   };
 }
@@ -418,12 +476,15 @@ function visiblePendingDealItem(
   }
 
   if (item.isBrick && !deal.revealedBeforeDeal) {
-    return { ...hiddenItemSnapshot(item), category: getBrickFakeCategory(item.instanceId) };
+    const fake = getFakeItemForBrick(item.instanceId);
+    return { ...hiddenItemSnapshot(item), category: fake.category };
   }
 
   // If the requester (buyer) is viewing a normal trade request, hide exact info but show category before purchase
   if (viewer.id === deal.requesterId && !deal.revealedBeforeDeal) {
-    return { ...hiddenItemSnapshot(item), category: item.category };
+    const fake = getFakeItemForBrick(item.instanceId);
+    const category = item.isBrick ? fake.category : item.category;
+    return { ...hiddenItemSnapshot(item), category };
   }
 
   return toItemSnapshot(item, viewer, room);
@@ -470,6 +531,10 @@ function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapshot {
     currentActionAcks: room.currentActionAcks || [],
     result: room.result,
     version: room.version,
+    revealAllItems: room.revealAllItems,
+    villainScamCount: room.villainScamCount,
+    showBrickDisguise: room.showBrickDisguise,
+    startingPlayerId: room.startingPlayerId,
   };
 }
 
@@ -585,7 +650,10 @@ function startGame(room: Room, actor: ServerPlayer) {
     player.dealCards = { cool: true, cancel: true };
   });
   room.status = "playing";
-  room.currentTurnPlayerId = room.players[0]?.id ?? null;
+  const startingIndex = Math.floor(Math.random() * room.players.length);
+  room.currentTurnPlayerId = room.players[startingIndex]?.id ?? null;
+  room.startingPlayerId = room.currentTurnPlayerId;
+  room.villainScamCount = 0;
   room.usedActionCount = 0;
   room.marketActionLimit = getMarketActionLimit(room.players.length);
   room.actionDeck = makeActionDeck();
@@ -740,6 +808,17 @@ function resolveDeal(room: Room, deal: PendingDeal) {
   if (!ownerChoice || !requesterChoice) return;
 
   if (ownerChoice === "cool" && requesterChoice === "cool") {
+    const item = owner.hand.find((h) => h.instanceId === deal.itemInstanceId);
+    if (item && owner.role === "villain") {
+      const assetVal = getItemAssetValue(item);
+      if (deal.askingPrice > assetVal) {
+        room.villainScamCount = (room.villainScamCount || 0) + 1;
+        room.logs.push(
+          `[사기 성공] 빌런이 가치(${formatWon(assetVal)})보다 비싼 가격(${formatWon(deal.askingPrice)})에 물건을 판매했습니다! (현재 빌런 사기 성공 횟수: ${room.villainScamCount}/2회)`
+        );
+      }
+    }
+
     const settlement = settleAcceptedDeal({
       deal,
       owner,
@@ -940,7 +1019,7 @@ function reportSuspiciousPlayer(
   if (Object.keys(room.reports).length === room.players.length) {
     const villain = room.players.find((player) => player.role === "villain");
     if (!villain) throw new Error("빌런 정보가 없습니다.");
-    room.result = calculateReportResult(room.players, room.reports, villain.id);
+    room.result = calculateReportResult(room.players, room.reports, villain.id, room.villainScamCount || 0);
     room.status = "finished";
     room.logs.push("최종 신고가 접수되었습니다. 분쟁 심사 결과를 공개합니다.");
   }
@@ -1168,6 +1247,8 @@ function restartGame(room: Room, actor: ServerPlayer) {
   room.currentActionAcks = [];
   delete room.hostDrawCount;
   delete room.botDrawCount;
+  delete room.villainScamCount;
+  delete room.startingPlayerId;
 
   room.players.forEach((p) => {
     p.role = undefined;
@@ -1177,6 +1258,9 @@ function restartGame(room: Room, actor: ServerPlayer) {
     p.reputationTokens = STARTING_REPUTATION;
     p.hand = [];
     p.dealCards = { cool: true, cancel: true };
+    p.likes = 0;
+    p.dislikes = 0;
+    p.manner = STARTING_MANNER;
   });
 
   room.logs = [`방장이 게임을 재시작했습니다.`];
@@ -1286,6 +1370,54 @@ export async function getRoomSnapshot(code: string, token: string): Promise<Room
   return toSnapshot(room, viewer);
 }
 
+function leaveRoom(room: Room, actor: ServerPlayer) {
+  room.players = room.players.filter((p) => p.id !== actor.id);
+  room.logs.push(`${actor.name}님이 방을 나갔습니다.`);
+
+  if (room.hostPlayerId === actor.id || actor.isHost) {
+    const nextHost = room.players.find((p) => !p.isBot);
+    const fallbackHost = room.players[0];
+    const newHost = nextHost || fallbackHost;
+    if (newHost) {
+      newHost.isHost = true;
+      room.hostPlayerId = newHost.id;
+      room.logs.push(`${newHost.name}님이 새로운 방장이 되었습니다.`);
+    } else {
+      room.hostPlayerId = "";
+    }
+  }
+
+  if (room.pendingDeal && (room.pendingDeal.ownerId === actor.id || room.pendingDeal.requesterId === actor.id)) {
+    room.logs.push(`거래 당사자인 ${actor.name}님이 퇴장하여 거래가 취소되었습니다.`);
+    if (room.currentActionCard) room.discardPile.push(room.currentActionCard);
+    room.pendingDeal = null;
+    room.currentActionCard = null;
+  }
+
+  room.pendingReviews = room.pendingReviews.filter((r) => r.reviewerId !== actor.id && r.targetPlayerId !== actor.id);
+  room.currentActionAcks = room.currentActionAcks.filter((id) => id !== actor.id);
+
+  if (room.status === "playing" && room.currentTurnPlayerId === actor.id) {
+    room.currentActionCard = null;
+    room.pendingDeal = null;
+    if (room.players.length > 0) {
+      room.currentTurnPlayerId = null;
+      nextTurn(room);
+    } else {
+      room.currentTurnPlayerId = null;
+    }
+  }
+
+  if ((room.status === "playing" || room.status === "reporting") && room.players.length < 3) {
+    room.status = "waiting";
+    room.currentTurnPlayerId = null;
+    room.currentActionCard = null;
+    room.pendingDeal = null;
+    room.pendingReviews = [];
+    room.logs.push(`인원이 부족하여 게임이 대기실 상태로 초기화되었습니다.`);
+  }
+}
+
 export async function submitRoomAction(
   code: string,
   token: string,
@@ -1327,6 +1459,12 @@ export async function submitRoomAction(
       case "terrorReview":
         terrorReview(room, actor, action.targetPlayerId);
         break;
+      case "toggleShowBrickDisguise":
+        if (!actor.isHost) throw new Error("호스트만 설정을 변경할 수 있습니다.");
+        if (room.status !== "waiting") throw new Error("게임 시작 전에만 설정을 변경할 수 있습니다.");
+        room.showBrickDisguise = !room.showBrickDisguise;
+        room.logs.push(`방장이 내 벽돌 위장 보기 설정을 ${room.showBrickDisguise ? "켬" : "끔"}으로 변경했습니다.`);
+        break;
       case "recycleBrick":
         recycleBrick(room, actor, action.itemInstanceId);
         break;
@@ -1363,6 +1501,15 @@ export async function submitRoomAction(
         break;
       case "ackActionCard":
         ackActionCard(room, actor);
+        break;
+      case "leaveRoom":
+        leaveRoom(room, actor);
+        break;
+      case "toggleRevealAllItems":
+        if (!actor.isHost) throw new Error("호스트만 설정을 변경할 수 있습니다.");
+        if (room.status !== "waiting") throw new Error("게임 시작 전에만 설정을 변경할 수 있습니다.");
+        room.revealAllItems = !room.revealAllItems;
+        room.logs.push(`방장이 물건 공개 설정을 ${room.revealAllItems ? "켬" : "끔"}으로 변경했습니다.`);
         break;
     }
 

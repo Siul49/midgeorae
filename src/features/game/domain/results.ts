@@ -80,6 +80,7 @@ export function calculateReportResult(
   players: ServerPlayer[],
   reports: Record<string, string>,
   villainId: string,
+  villainScamCount = 0,
 ): RoomResult {
   const countedReports = countReports(reports);
   const mostReportedId =
@@ -89,13 +90,16 @@ export function calculateReportResult(
   const citizens = players.filter((p) => p.id !== villainId);
   const citizenWinnerId = calculateCitizenWinner(citizens);
 
-  const winnerId = villainCaught ? citizenWinnerId : villainId;
+  // 빌런 승리 조건: 검거되지 않았고, 동시에 성공적으로 2회 이상 사기를 쳤어야 함 (총자산 가치보다 비싸게 판매)
+  const villainWins = !villainCaught && villainScamCount >= 2;
+
+  const winnerId = villainWins ? villainId : citizenWinnerId;
 
   return {
     villainId,
     villainCaught,
     winnerId,
-    winningSide: villainCaught ? "citizens" : "villain",
+    winningSide: villainWins ? "villain" : "citizens",
     reports: countedReports,
   };
 }

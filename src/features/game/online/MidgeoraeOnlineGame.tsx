@@ -266,6 +266,44 @@ export function MidgeoraeOnlineGame() {
     () => snapshot?.players.filter((player) => player.id !== me?.id) ?? [],
     [me?.id, snapshot?.players],
   );
+
+  const leftPlayer = useMemo(() => {
+    if (!snapshot || !me) return null;
+    const n = snapshot.players.length;
+    const myIndex = snapshot.players.findIndex(p => p.id === me.id);
+    if (myIndex === -1) return null;
+    if (n === 3 || n === 4) {
+      const targetIndex = (myIndex + 1) % n;
+      return snapshot.players[targetIndex];
+    }
+    return null;
+  }, [snapshot, me]);
+
+  const topPlayer = useMemo(() => {
+    if (!snapshot || !me) return null;
+    const n = snapshot.players.length;
+    const myIndex = snapshot.players.findIndex(p => p.id === me.id);
+    if (myIndex === -1) return null;
+    if (n === 2) {
+      return snapshot.players[(myIndex + 1) % n];
+    } else if (n === 4) {
+      return snapshot.players[(myIndex + 2) % n];
+    }
+    return null;
+  }, [snapshot, me]);
+
+  const rightPlayer = useMemo(() => {
+    if (!snapshot || !me) return null;
+    const n = snapshot.players.length;
+    const myIndex = snapshot.players.findIndex(p => p.id === me.id);
+    if (myIndex === -1) return null;
+    if (n === 3) {
+      return snapshot.players[(myIndex + 2) % n];
+    } else if (n === 4) {
+      return snapshot.players[(myIndex + 3) % n];
+    }
+    return null;
+  }, [snapshot, me]);
   const selectedOwner = useMemo(
     () => otherPlayers.find((player) => player.id === dealTargetId),
     [dealTargetId, otherPlayers],
@@ -719,10 +757,10 @@ export function MidgeoraeOnlineGame() {
 
       <div className="table-wood-frame">
         <div className="seat-top">
-          {otherPlayers[0] && (
+          {topPlayer && (
             <SidePlayerSeat
-              player={otherPlayers[0]}
-              isTurn={otherPlayers[0].id === snapshot.currentTurnPlayerId}
+              player={topPlayer}
+              isTurn={topPlayer.id === snapshot.currentTurnPlayerId}
               isInteractive={isPlayerInteractive}
               isCardInteractive={isCardInteractive}
               onSelectPlayer={onSelectPlayer}
@@ -736,10 +774,10 @@ export function MidgeoraeOnlineGame() {
         </div>
         
         <div className="seat-left seat-left-rotated">
-          {otherPlayers[1] && (
+          {leftPlayer && (
             <SidePlayerSeat
-              player={otherPlayers[1]}
-              isTurn={otherPlayers[1].id === snapshot.currentTurnPlayerId}
+              player={leftPlayer}
+              isTurn={leftPlayer.id === snapshot.currentTurnPlayerId}
               isInteractive={isPlayerInteractive}
               isCardInteractive={isCardInteractive}
               onSelectPlayer={onSelectPlayer}
@@ -757,9 +795,13 @@ export function MidgeoraeOnlineGame() {
               <WaitingRoom
                 mode={snapshot.mode}
                 isHost={Boolean(me?.isHost)}
-                playerCount={snapshot.players.length}
+                players={snapshot.players}
                 loading={loading}
                 onAddBot={() => submitAction({ type: "addBot" })}
+                revealAllItems={snapshot.revealAllItems ?? false}
+                onToggleRevealAllItems={() => submitAction({ type: "toggleRevealAllItems" })}
+                showBrickDisguise={snapshot.showBrickDisguise ?? false}
+                onToggleShowBrickDisguise={() => submitAction({ type: "toggleShowBrickDisguise" })}
               />
             )}
 
@@ -987,10 +1029,10 @@ export function MidgeoraeOnlineGame() {
         </div>
 
         <div className="seat-right seat-right-rotated">
-          {otherPlayers[2] && (
+          {rightPlayer && (
             <SidePlayerSeat
-              player={otherPlayers[2]}
-              isTurn={otherPlayers[2].id === snapshot.currentTurnPlayerId}
+              player={rightPlayer}
+              isTurn={rightPlayer.id === snapshot.currentTurnPlayerId}
               isInteractive={isPlayerInteractive}
               isCardInteractive={isCardInteractive}
               onSelectPlayer={onSelectPlayer}
@@ -999,21 +1041,6 @@ export function MidgeoraeOnlineGame() {
               dealTargetId={dealTargetId}
               activeActionType={snapshot.currentActionCard?.type}
             />
-          )}
-          {otherPlayers[3] && (
-            <div className="mt-4">
-              <SidePlayerSeat
-                player={otherPlayers[3]}
-                isTurn={otherPlayers[3].id === snapshot.currentTurnPlayerId}
-                isInteractive={isPlayerInteractive}
-                isCardInteractive={isCardInteractive}
-                onSelectPlayer={onSelectPlayer}
-                onSelectCard={handleSelectOpponentCard}
-                selectedItemId={selectedItemId}
-                dealTargetId={dealTargetId}
-                activeActionType={snapshot.currentActionCard?.type}
-              />
-            </div>
           )}
         </div>
 
@@ -1992,51 +2019,131 @@ function PlayerList({
 function WaitingRoom({
   mode,
   isHost,
-  playerCount,
+  players,
   loading,
   onAddBot,
+  revealAllItems,
+  onToggleRevealAllItems,
+  showBrickDisguise,
+  onToggleShowBrickDisguise,
 }: {
   mode: RoomMode;
   isHost: boolean;
-  playerCount: number;
+  players: PublicPlayer[];
   loading: boolean;
   onAddBot: () => void;
+  revealAllItems: boolean;
+  onToggleRevealAllItems: () => void;
+  showBrickDisguise: boolean;
+  onToggleShowBrickDisguise: () => void;
 }) {
+  const playerCount = players.length;
   return (
-    <div className="w-full max-w-md bg-stone-900/90 backdrop-blur border-2 border-orange-700 p-8 rounded-2xl shadow-2xl text-center space-y-6 mx-auto animate-fade-in mt-20">
+    <div className="w-full max-w-sm max-h-full overflow-y-auto bg-stone-900/90 backdrop-blur border-2 border-orange-700 p-4 rounded-xl shadow-2xl text-center space-y-3 mx-auto animate-fade-in scrollbar-thin">
       <div className="flex justify-center">
-        <span className="bg-orange-950 text-orange-400 border border-orange-700/50 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest shadow-inner">
+        <span className="bg-orange-950 text-orange-400 border border-orange-700/50 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-inner">
           {mode === "botTest" ? "봇 테스트 모드" : "멀티플레이 모드"}
         </span>
       </div>
       
-      <div className="space-y-2">
-        <h2 className="text-3xl font-black text-white tracking-tight">테이블 세팅 중...</h2>
-        <p className="text-sm font-bold text-stone-400">
+      <div className="space-y-1">
+        <h2 className="text-xl font-black text-white tracking-tight">테이블 세팅 중...</h2>
+        <p className="text-xs font-bold text-stone-400">
           {mode === "botTest"
             ? "봇을 추가해서 혼자 흐름을 테스트할 수 있습니다."
             : "다른 플레이어들이 접속하기를 기다리고 있습니다."}
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <div className="bg-stone-800/80 border border-stone-700 px-4 py-2 rounded-lg text-sm font-black text-stone-300">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <div className="bg-stone-800/80 border border-stone-700 px-3 py-1 rounded-lg text-xs font-black text-stone-300">
           참가 인원 <span className="text-orange-400 ml-1">{playerCount}/4</span>
         </div>
         {isHost && (
-          <div className="bg-stone-800/80 border border-stone-700 px-4 py-2 rounded-lg text-sm font-black text-stone-300">
+          <div className="bg-stone-800/80 border border-stone-700 px-3 py-1 rounded-lg text-xs font-black text-stone-300">
             {loading ? "준비 중..." : "우측 하단 버튼으로 시작"}
           </div>
         )}
       </div>
 
+      {/* 대기 중인 플레이어 목록 */}
+      <div className="space-y-1 max-h-24 overflow-y-auto bg-stone-950/45 p-2 rounded-xl border border-stone-850 text-left scrollbar-thin">
+        <div className="text-[8px] font-black text-stone-550 uppercase tracking-widest mb-1">대기 중인 플레이어</div>
+        <div className="space-y-1">
+          {players.map((player) => (
+            <div key={player.id} className="flex items-center justify-between bg-stone-900/60 px-2 py-1 rounded-lg border border-stone-800/80">
+              <div className="flex items-center gap-1.5">
+                <div className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_25%,#f8d9a4,#b87332)] text-[8px] font-black text-stone-950">
+                  {player.name.slice(0, 1)}
+                </div>
+                <span className="text-[10px] font-black text-white">{player.name}</span>
+                {player.isHost && <Crown size={9} className="text-orange-500 shrink-0 ml-0.5" />}
+                {player.isBot && <span className="text-[7px] bg-stone-850 text-stone-400 px-1 rounded font-bold shrink-0 ml-0.5">BOT</span>}
+              </div>
+              <span className="text-[8px] text-emerald-400 font-bold shrink-0">준비 완료</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 룸 설정 토글 */}
+      <div className="pt-2 border-t border-stone-800 grid grid-cols-2 gap-2">
+        <div className="flex flex-col justify-between bg-stone-800/40 p-2 rounded-xl border border-stone-750">
+          <div className="text-left space-y-0.5 mb-1.5">
+            <div className="text-[10.5px] font-black text-stone-200 leading-tight">모든 물건 공개</div>
+            <div className="text-[8.5px] font-bold text-stone-400 leading-tight">거래 시 물건 정보 표시</div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onToggleRevealAllItems}
+              disabled={loading || !isHost}
+              className={`motion-button relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                revealAllItems ? "bg-orange-600" : "bg-stone-700"
+              } ${(!isHost || loading) ? "opacity-50 cursor-not-allowed" : ""}`}
+              aria-label="Toggle all items reveal"
+            >
+              <span
+                className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  revealAllItems ? "translate-x-3.5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-between bg-stone-800/40 p-2 rounded-xl border border-stone-750">
+          <div className="text-left space-y-0.5 mb-1.5">
+            <div className="text-[10.5px] font-black text-stone-200 leading-tight">벽돌 위장 표시</div>
+            <div className="text-[8.5px] font-bold text-stone-400 leading-tight">내 벽돌 위장 모습 노출</div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onToggleShowBrickDisguise}
+              disabled={loading || !isHost}
+              className={`motion-button relative inline-flex h-4 w-7.5 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                showBrickDisguise ? "bg-orange-600" : "bg-stone-700"
+              } ${(!isHost || loading) ? "opacity-50 cursor-not-allowed" : ""}`}
+              aria-label="Toggle brick disguise preview"
+            >
+              <span
+                className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  showBrickDisguise ? "translate-x-3.5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {isHost && mode === "botTest" && (
-        <div className="pt-4 border-t border-stone-800">
+        <div className="pt-2 border-t border-stone-800">
           <button
             type="button"
             onClick={onAddBot}
             disabled={loading || playerCount >= 4}
-            className="motion-button w-full flex items-center justify-center gap-2 bg-stone-800 border border-stone-600 px-5 py-3.5 rounded-xl text-base font-black text-white hover:bg-stone-700 hover:border-stone-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="motion-button w-full flex items-center justify-center gap-1.5 bg-stone-800 border border-stone-600 px-4 py-2 rounded-xl text-xs font-black text-white hover:bg-stone-700 hover:border-stone-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
             <span className="text-stone-400">🤖</span>
             자동 봇 추가하기

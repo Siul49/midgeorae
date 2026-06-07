@@ -143,6 +143,10 @@ export interface Room {
   botDrawCount?: number;
   createdAt: number;
   updatedAt: number;
+  revealAllItems?: boolean;
+  villainScamCount?: number;
+  showBrickDisguise?: boolean;
+  startingPlayerId?: string | null;
 }
 
 export interface PlayerSnapshot {
@@ -179,6 +183,10 @@ export interface RoomSnapshot {
   currentActionAcks: string[];
   result: RoomResult | null;
   version: number;
+  revealAllItems?: boolean;
+  villainScamCount?: number;
+  showBrickDisguise?: boolean;
+  startingPlayerId?: string | null;
 }
 
 export type RoomAction =
@@ -209,7 +217,10 @@ export type RoomAction =
   | { type: "endTurn" }
   | { type: "startReporting" }
   | { type: "reportSuspiciousPlayer"; targetPlayerId: string }
-  | { type: "ackActionCard" };
+  | { type: "ackActionCard" }
+  | { type: "leaveRoom" }
+  | { type: "toggleRevealAllItems" }
+  | { type: "toggleShowBrickDisguise" };
 
 export interface RoomSessionResult {
   room: RoomSnapshot;
