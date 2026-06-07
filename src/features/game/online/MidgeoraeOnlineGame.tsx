@@ -120,10 +120,10 @@ const CATEGORY_LABELS = {
 } as const;
 
 const CONDITION_LABELS = {
-  mint: "민트급",
+  mint: "미개봉",
   used: "사용감 있음",
   defective: "하자 있음",
-  broken: "파손",
+  broken: "하자 있음",
 } as const;
 
 function categoryLabel(category: ItemCardSnapshot["category"]) {
@@ -131,7 +131,7 @@ function categoryLabel(category: ItemCardSnapshot["category"]) {
 }
 
 function conditionLabel(condition: ItemCardSnapshot["condition"]) {
-  return condition ? CONDITION_LABELS[condition] : "상태 미확인";
+  return condition ? CONDITION_LABELS[condition] : "알수 없음";
 }
 
 function marketProgressLabel(snapshot: RoomSnapshot) {
@@ -202,7 +202,6 @@ function productIcon(item: ItemCardSnapshot, size = 72) {
 function isTradeRequestAction(card: ActionCardSnapshot | null) {
   return (
     card?.type === "tradeRequest" ||
-    card?.type === "freeGive" ||
     card?.type === "directTrade"
   );
 }
@@ -221,6 +220,7 @@ export function MidgeoraeOnlineGame() {
   const [askingPrice, setAskingPrice] = useState(100000);
   const [actionTargetId, setActionTargetId] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLogExpanded, setIsLogExpanded] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isPriceListOpen, setIsPriceListOpen] = useState(false);
   const [isMissionListOpen, setIsMissionListOpen] = useState(false);
@@ -242,7 +242,21 @@ export function MidgeoraeOnlineGame() {
   const myHand = useMemo(() => me?.hand ?? [], [me?.hand]);
   const totalAssets = useMemo(() => {
     if (!me) return 0;
-    return (me.money ?? 0) + myHand.reduce((sum, item) => sum + (item.marketPrice ?? 0), 0);
+    return (
+      (me.money ?? 0) +
+      myHand.reduce((sum, item) => {
+        if (item.isBrick) return sum;
+        let multiplier = 1.0;
+        if (item.condition === "mint") {
+          multiplier = 0.8;
+        } else if (item.condition === "used") {
+          multiplier = 0.6;
+        } else if (item.condition === "broken" || item.condition === "defective") {
+          multiplier = 0.4;
+        }
+        return sum + (item.marketPrice ?? 0) * multiplier;
+      }, 0)
+    );
   }, [me, myHand]);
   const currentPlayer = snapshot?.players.find(
     (player) => player.id === snapshot.currentTurnPlayerId,
@@ -328,7 +342,6 @@ export function MidgeoraeOnlineGame() {
     onSelectPlayer(playerId);
     if (
       activeActionType === "tradeRequest" ||
-      activeActionType === "freeGive" ||
       activeActionType === "directTrade"
     ) {
       setSelectedItemId(itemId);
@@ -686,11 +699,19 @@ export function MidgeoraeOnlineGame() {
 
   return (
     <main className="fullscreen-game-container text-stone-950">
+      {/* Remaining turns display - top right, to the left of Settings */}
+      {snapshot.status === "playing" && (
+        <div className="absolute top-3 right-16 z-50 bg-stone-900/80 border border-stone-700 text-white font-black px-3.5 h-10 rounded-full flex items-center justify-center text-xs shadow-md select-none gap-1.5">
+          <span className="text-stone-300">남은 턴:</span>
+          <span className="text-orange-400 font-extrabold">{snapshot.marketActionLimit - snapshot.usedActionCount}회</span>
+        </div>
+      )}
+
       {/* Settings Gear Icon - top right */}
       <button
         type="button"
         onClick={() => setIsMenuOpen(true)}
-        className="absolute top-3 right-3 z-50 motion-button bg-stone-900/80 hover:bg-stone-800 border border-stone-700 text-white rounded-full w-10 h-10 flex items-center justify-center cursor-pointer"
+        className="absolute top-3 right-3 z-50 motion-button bg-stone-900/80 hover:bg-stone-850 border border-stone-700 text-white rounded-full w-10 h-10 flex items-center justify-center cursor-pointer"
         title="설정 메뉴"
       >
         <Settings size={18} />
@@ -1053,14 +1074,51 @@ export function MidgeoraeOnlineGame() {
       )}
 
       {/* Logs overlay box inside table */}
-      <div className="logs-box-center border border-white/5">
-        <div className="text-[11px] font-black text-amber-200/50 mb-1 border-b border-white/5 pb-0.5">게임 로그</div>
-        <div className="space-y-0.5 max-h-[75px] overflow-y-auto">
-          {snapshot.logs.slice().reverse().slice(0, 5).map((log, index) => (
-            <div key={index} className="truncate text-[10px] opacity-75">{log}</div>
+      <div 
+        className="logs-box-center border border-white/5 cursor-pointer hover:bg-black/75 hover:scale-[1.01] active:scale-[0.99] transition-all"
+        onClick={() => setIsLogExpanded(true)}
+        title="클릭하여 전체 로그 보기"
+      >
+        <div className="text-[16px] font-black text-amber-200/50 mb-1 border-b border-white/5 pb-0.5 flex justify-between items-center select-none">
+          <span>게임 로그</span>
+          <span className="text-[10px] text-stone-400 font-bold bg-stone-800 px-1.5 py-0.5 rounded border border-white/5">🔍 클릭해서 확대</span>
+        </div>
+        <div className="space-y-0.5 max-h-[140px] overflow-y-auto">
+          {snapshot.logs.slice().reverse().slice(0, 7).map((log, index) => (
+            <div key={index} className="truncate text-[15px] opacity-75">{log}</div>
           ))}
         </div>
       </div>
+
+      {/* Expanded Logs Modal overlay */}
+      {isLogExpanded && (
+        <div className="settings-menu-overlay" onClick={() => setIsLogExpanded(false)}>
+          <div className="settings-menu-content max-w-xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/10">
+              <h3 className="text-xl font-black text-amber-400 flex items-center gap-2">
+                📜 전체 게임 로그
+              </h3>
+              <button
+                onClick={() => setIsLogExpanded(false)}
+                className="text-stone-400 hover:text-white font-black text-sm cursor-pointer bg-stone-800 hover:bg-stone-700 px-3 py-1 rounded border border-white/10"
+              >
+                닫기
+              </button>
+            </div>
+            <div className="bg-stone-950 p-4 rounded-lg border border-white/10 max-h-[450px] overflow-y-auto space-y-2 font-mono text-sm leading-relaxed">
+              {snapshot.logs.slice().reverse().map((log, index) => (
+                <div key={index} className="border-b border-white/5 pb-1.5 opacity-90 text-stone-200 last:border-0">
+                  <span className="text-amber-500/60 mr-2">[{snapshot.logs.length - index}]</span>
+                  {log}
+                </div>
+              ))}
+              {snapshot.logs.length === 0 && (
+                <div className="text-center text-stone-500 py-12">기록된 로그가 없습니다.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings menu Modal overlay */}
       {isMenuOpen && (
@@ -1199,6 +1257,16 @@ export function MidgeoraeOnlineGame() {
                 닫기
               </button>
             </div>
+
+            <div className="bg-stone-900 border border-purple-500/20 p-3 rounded-lg mb-3 text-[11px] leading-relaxed text-stone-300 mx-1 flex-shrink-0">
+              <p className="font-black text-purple-300 mb-1 text-xs">💡 물건 상태 &amp; 자산 가치 시스템</p>
+              <p>모든 물건 카드의 상태는 게임 시작 시 무작위로 부여됩니다. 각 상태에 따라 총 자산에 반영되는 가치가 다릅니다:</p>
+              <ul className="list-disc list-inside space-y-0.5 mt-1 font-bold text-[10px]">
+                <li>🟢 <span className="text-emerald-400">미개봉 (Mint)</span>: 시세의 <span className="text-purple-300">80%</span> 가치로 총자산 반영</li>
+                <li>🟡 <span className="text-amber-400">사용감 있음 (Used)</span>: 시세의 <span className="text-purple-300">60%</span> 가치로 총자산 반영</li>
+                <li>🔴 <span className="text-red-400">하자 있음 (Broken)</span>: 시세의 <span className="text-purple-300">40%</span> 가치로 총자산 반영</li>
+              </ul>
+            </div>
             
             <div className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs select-text" style={{ maxHeight: "65vh" }}>
               {(["electronics", "fashion", "hobby", "living", "golden"] as const).map((cat) => {
@@ -1236,15 +1304,6 @@ export function MidgeoraeOnlineGame() {
                             <div>
                               <div className="font-bold leading-tight">
                                 {item.name}
-                              </div>
-                              <div className="text-[9px] text-stone-500 mt-0.5 uppercase tracking-wide">
-                                {item.condition === "mint"
-                                  ? "신품급"
-                                  : item.condition === "used"
-                                  ? "중고"
-                                  : item.condition === "defective"
-                                  ? "하자있음"
-                                  : "고장"}
                               </div>
                             </div>
                           </div>
@@ -1495,9 +1554,14 @@ function TableHandCard({
         <div className="mt-1 text-xs font-black text-orange-700">
           {item.isBrick ? "0원" : (item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개")}
         </div>
+        {!item.isBrick && item.condition && (
+          <div className="mt-0.5 text-xs font-bold text-stone-600">
+            상태: {conditionLabel(item.condition)}
+          </div>
+        )}
         {item.category && (
           <div className="mt-2 text-[10px] font-black text-stone-500">
-            {categoryLabel(item.category)} · {conditionLabel(item.condition)}
+            {categoryLabel(item.category)}
           </div>
         )}
       </div>
@@ -1623,7 +1687,7 @@ function MyDashboard({
   const isVillain = me.role === "villain";
 
   return (
-    <div className="w-full flex items-center gap-4 h-full min-w-0 px-4 text-stone-100">
+    <div className="w-full flex items-center gap-3 h-full min-w-0 px-4 text-stone-100">
       {/* Left: Profile Card (exactly like other players' seats) */}
       <div className="relative shrink-0 select-none">
         {me.assetRank !== undefined && (
@@ -1662,41 +1726,35 @@ function MyDashboard({
         </div>
       </div>
 
-      {/* Right: Info, Mission & Cards */}
-      <div className="flex-1 flex flex-col justify-center h-full min-w-0 py-1">
-        {/* Top Info row (Role, Job) */}
-        {showJob && (
-          <div className="flex items-center justify-between text-xs font-bold border-b border-white/5 pb-1 select-none">
-            <div className="flex items-center gap-3">
-              {me.job && (
-                <span className="text-stone-300">
-                  직업: <strong className="text-purple-400">{me.job.title}</strong>
-                </span>
-              )}
+      {/* Right: Job/Mission Info box (renders on the right of the profile card when showJob is true) */}
+      {showJob && (
+        <div className="shrink-0 w-[290px] flex flex-col gap-1.5 p-2.5 bg-stone-900/90 border border-stone-800 rounded-lg select-text max-h-[110px] overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-white/5 pb-1">
+            <span className="text-[11px] text-stone-300 font-bold">
+              직업: <strong className="text-purple-400">{me.job?.title ?? "없음"}</strong>
+            </span>
+            <div className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`}>
+              {roleLabel(me.role)}
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-widest ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`} title={roleDescription(me.role)}>
-                {roleLabel(me.role)}
+          </div>
+          {isVillain ? (
+            <div className="text-[11px] leading-tight space-y-1">
+              <div className="text-red-400 font-black">🔥 빌런 미션: {me.mission ?? "대기 중..."}</div>
+              {me.job && <div className="text-[10px] text-stone-300 font-bold border-t border-red-900/20 pt-0.5">행동강령: {me.job.description}</div>}
+            </div>
+          ) : (
+            me.job && (
+              <div className="text-[11px] font-black leading-tight text-purple-400">
+                ✨ 시민 미션: {me.job.description}
               </div>
-            </div>
-          </div>
-        )}
+            )
+          )}
+        </div>
+      )}
 
-        {/* Mission Row */}
-        {showJob && isVillain && (
-          <div className="mt-1 text-xs font-black leading-tight text-red-400 bg-red-950/50 p-1 rounded border border-red-900/50 select-text">
-            🔥 빌런 미션: {me.mission ?? "대기 중..."}
-          </div>
-        )}
-
-        {showJob && !isVillain && me.job && (
-          <div className="mt-1 text-xs font-black leading-tight text-purple-400 bg-purple-950/45 p-1 rounded border border-purple-900/40 select-text">
-            ✨ 시민 미션 ({me.job.title}): {me.job.description}
-          </div>
-        )}
-
-        {/* Cards Row */}
-        <div className={`flex items-center justify-center gap-2 overflow-x-auto min-h-0 px-4 py-2 ${showJob ? "flex-1 mt-1" : "h-full w-full"}`}>
+      {/* Right: Cards Row */}
+      <div className="flex-1 flex flex-col justify-center h-full min-w-0 py-1">
+        <div className="flex items-center justify-center gap-2 overflow-x-auto min-h-0 px-4 py-2 h-full w-full">
           {myHand.length === 0 ? (
             <div className="text-xs text-stone-500 font-bold select-none">게임 시작 대기 중...</div>
           ) : (
@@ -1707,7 +1765,7 @@ function MyDashboard({
                   key={item.instanceId}
                   type="button"
                   onClick={() => setSelectedItemId(item.instanceId)}
-                  className={`motion-button flex flex-col items-center justify-between bg-stone-900 hover:bg-stone-850 border rounded p-1 text-center cursor-pointer transition-all w-[84px] h-[84px] shrink-0 select-none ${
+                  className={`motion-button flex flex-col items-center justify-between bg-stone-900 hover:bg-stone-850 border rounded p-1 text-center cursor-pointer transition-all w-[84px] h-[100px] shrink-0 select-none ${
                     selected
                       ? "border-orange-500 ring-2 ring-orange-500/50 scale-105 shadow-[0_0_12px_rgba(249,115,22,0.4)]"
                       : "border-stone-700"
@@ -1722,6 +1780,11 @@ function MyDashboard({
                   <div className="text-xs font-bold text-orange-400 truncate w-full">
                     {item.isBrick ? "0원" : (item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개")}
                   </div>
+                  {!item.isBrick && item.condition && (
+                    <div className="text-[10px] font-bold text-stone-400 truncate w-full leading-none mt-0.5">
+                      {conditionLabel(item.condition)}
+                    </div>
+                  )}
                 </button>
               );
             })
@@ -1812,7 +1875,7 @@ function SidePlayerSeat({
             ? item.name
             : isSelected && showCategory && item.category
             ? `${categoryLabel(item.category)} 물건`
-            : "뒤집힌 물건";
+            : "알수 없음";
 
           return (
             <button
@@ -2049,7 +2112,7 @@ function PendingDealPanel({
         {item ? (
           <>
             <span>
-              물건: <span className="text-amber-300 font-black">{item.name ?? "뒤집힌 물건"}</span>
+              물건: <span className="text-amber-300 font-black">{item.name ?? "알수 없음"}</span>
             </span>
             <span>
               시세: <span className="text-stone-400 font-semibold">{item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "시세 미공개"}</span>

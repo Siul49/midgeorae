@@ -80,7 +80,17 @@ function isNewRound(state: GameState): boolean {
 }
 
 function calculateScore(player: Player): number {
-  const itemsValue = player.items.reduce((sum, o) => sum + o.item.marketPrice, 0);
+  const itemsValue = player.items.reduce((sum, o) => {
+    let multiplier = 1.0;
+    if (o.item.condition === "mint") {
+      multiplier = 0.8;
+    } else if (o.item.condition === "used") {
+      multiplier = 0.6;
+    } else if (o.item.condition === "broken") {
+      multiplier = 0.4;
+    }
+    return sum + o.item.marketPrice * multiplier;
+  }, 0);
   const totalAssets = player.money + itemsValue;
   const dislikePenalty = player.dislikes * DISLIKE_SCORE_PENALTY;
   let mannerBonus = 0;

@@ -32,7 +32,7 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
   {
     type: "freeGive",
     title: "무료나눔",
-    description: "다른 플레이어의 물건 카드 1장에 0원 거래 신청을 보냅니다.",
+    description: "자신의 물건 카드 1장을 다른 플레이어에게 0원(무료나눔)에 건네줍니다.",
     imagePath: "/game-cards/actions/free-give.svg",
   },
   {
@@ -87,12 +87,13 @@ export function makeActionDeck() {
 }
 
 export function makeItemDeck() {
+  const conditions = ["mint", "used", "broken"] as const;
   const normalCards = ALL_ITEMS.map((item) => ({
     id: item.id,
     name: item.name,
     marketPrice: item.marketPrice,
     category: item.category,
-    condition: item.condition,
+    condition: conditions[Math.floor(Math.random() * conditions.length)],
     acquiredPrice: null,
     isBrick: false,
     imagePath: ITEM_IMAGE_BY_ID[item.id] ?? "/game-cards/backs/item-back.svg",

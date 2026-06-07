@@ -835,7 +835,9 @@ describe("room-store", () => {
     await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
     const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
-    const item = hostView.me!.hand!.find((i) => !i.isBrick && i.marketPrice < 500000);
+    const item = hostView.me!.hand!
+      .filter((i) => !i.isBrick)
+      .sort((a, b) => a.marketPrice - b.marketPrice)[0];
     expect(item).toBeDefined();
 
     const botPlayer = hostView.players.find((p) => p.isBot);
@@ -880,7 +882,9 @@ describe("room-store", () => {
     await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
     const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
-    const item = hostView.me!.hand!.find((i) => !i.isBrick && i.marketPrice < 500000);
+    const item = hostView.me!.hand!
+      .filter((i) => !i.isBrick)
+      .sort((a, b) => a.marketPrice - b.marketPrice)[0];
     expect(item).toBeDefined();
 
     const botPlayer = hostView.players.find((p) => p.isBot);

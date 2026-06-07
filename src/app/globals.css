@@ -46,6 +46,43 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Core Design Colors Overrides */
+  --color-orange-50: oklch(0.97 0.02 45);
+  --color-orange-100: oklch(0.93 0.05 45);
+  --color-orange-200: oklch(0.87 0.1 45);
+  --color-orange-300: oklch(0.8 0.14 45);
+  --color-orange-400: oklch(0.72 0.18 45);
+  --color-orange-500: oklch(0.65 0.2 45);
+  --color-orange-600: oklch(0.58 0.21 45);
+  --color-orange-700: oklch(0.49 0.2 45);
+  --color-orange-800: oklch(0.41 0.18 45);
+  --color-orange-900: oklch(0.35 0.15 45);
+  --color-orange-950: oklch(0.22 0.09 45);
+
+  --color-amber-50: oklch(0.98 0.01 45);
+  --color-amber-100: oklch(0.96 0.03 45);
+  --color-amber-200: oklch(0.93 0.06 45);
+  --color-amber-300: oklch(0.89 0.1 45);
+  --color-amber-400: oklch(0.85 0.15 45);
+  --color-amber-500: oklch(0.85 0.15 45);
+  --color-amber-600: oklch(0.77 0.17 45);
+  --color-amber-700: oklch(0.66 0.18 45);
+  --color-amber-800: oklch(0.56 0.17 45);
+  --color-amber-900: oklch(0.47 0.15 45);
+  --color-amber-950: oklch(0.28 0.09 45);
+
+  --color-red-50: oklch(0.97 0.01 25);
+  --color-red-100: oklch(0.93 0.03 25);
+  --color-red-200: oklch(0.87 0.07 25);
+  --color-red-300: oklch(0.79 0.11 25);
+  --color-red-400: oklch(0.7 0.16 25);
+  --color-red-500: oklch(0.6 0.2 25);
+  --color-red-600: oklch(0.52 0.21 25);
+  --color-red-700: oklch(0.44 0.19 25);
+  --color-red-800: oklch(0.36 0.16 25);
+  --color-red-900: oklch(0.29 0.13 25);
+  --color-red-950: oklch(0.18 0.09 25);
 }
 
 :root {
@@ -55,7 +92,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.65 0.2 45);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -63,7 +100,7 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: oklch(0.6 0.2 25);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -90,7 +127,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --primary: oklch(0.65 0.2 45);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -98,7 +135,7 @@
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: oklch(0.6 0.2 25);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -364,7 +401,7 @@
         transparent 1px,
         transparent 5px
       ),
-      linear-gradient(90deg, rgba(249, 115, 22, 0.08) 1px, transparent 1px);
+      linear-gradient(90deg, oklch(0.65 0.2 45 / 8%) 1px, transparent 1px);
     background-size: auto, auto, 24px 24px;
     box-shadow:
       0 10px 0 rgba(0, 0, 0, 0.24),
@@ -635,10 +672,10 @@
   }
 
   .table-card-accent-orange {
-    border-color: rgba(234, 88, 12, 0.84);
+    border-color: oklch(0.58 0.21 45 / 84%);
     box-shadow:
       inset 0 0 0 1px rgba(255, 255, 255, 0.76),
-      0 7px 0 rgba(234, 88, 12, 0.28);
+      0 7px 0 oklch(0.58 0.21 45 / 28%);
   }
 
   .table-card-accent-green {
@@ -1271,10 +1308,10 @@
 /* User Asset Banner */
 .asset-banner {
   background: rgba(24, 24, 27, 0.85);
-  border: 1px solid rgba(249, 115, 22, 0.4);
+  border: 1px solid oklch(0.65 0.2 45 / 40%);
   padding: 4px 16px;
   border-radius: 9999px;
-  color: #fb923c;
+  color: oklch(0.72 0.18 45);
   font-weight: 800;
   font-size: 13px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -1298,8 +1335,8 @@
 }
 
 .side-player-card.active-turn {
-  border-color: #f97316;
-  box-shadow: 0 0 12px #f9731680;
+  border-color: oklch(0.65 0.2 45);
+  box-shadow: 0 0 12px oklch(0.65 0.2 45 / 50%);
 }
 
 /* Rotation wrapper for left/right players to align tiles beautifully */
@@ -1315,13 +1352,13 @@
   position: absolute;
   top: 10px;
   left: 10px;
-  width: 240px;
-  max-height: 100px;
+  width: 280px;
+  max-height: 195px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 6px;
   padding: 6px;
   overflow-y: auto;
-  font-size: 12px;
+  font-size: 18px;
   color: rgba(255, 255, 255, 0.65);
   z-index: 10;
 }
@@ -1335,8 +1372,8 @@
 
 .card-glowing-interactive:hover {
   transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 0 15px rgba(249, 115, 22, 0.8);
-  border-color: rgba(249, 115, 22, 0.9);
+  box-shadow: 0 0 15px oklch(0.65 0.2 45 / 80%);
+  border-color: oklch(0.65 0.2 45 / 90%);
 }
 
 .card-glowing-interactive.pulse-active {
@@ -1345,12 +1382,12 @@
 
 @keyframes selection-pulse {
   0% {
-    box-shadow: 0 0 5px rgba(249, 115, 22, 0.4);
-    border-color: rgba(249, 115, 22, 0.5);
+    box-shadow: 0 0 5px oklch(0.65 0.2 45 / 40%);
+    border-color: oklch(0.65 0.2 45 / 50%);
   }
   100% {
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.9);
-    border-color: rgba(249, 115, 22, 1);
+    box-shadow: 0 0 20px oklch(0.65 0.2 45 / 90%);
+    border-color: oklch(0.65 0.2 45);
   }
 }
 
@@ -1378,21 +1415,21 @@
 
 .action-deck-stack.pulse-draw {
   animation: deck-pulse 1.2s infinite ease-in-out;
-  border-color: #f97316;
+  border-color: oklch(0.65 0.2 45);
 }
 
 @keyframes deck-pulse {
   0% {
     transform: translateY(0) scale(1);
-    box-shadow: 0 12px 20px rgba(0,0,0,0.5), 0 0 0px rgba(249, 115, 22, 0);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.5), 0 0 0px oklch(0.65 0.2 45 / 0%);
   }
   50% {
     transform: translateY(-6px) scale(1.03);
-    box-shadow: 0 18px 26px rgba(0,0,0,0.6), 0 0 15px rgba(249, 115, 22, 0.8);
+    box-shadow: 0 18px 26px rgba(0,0,0,0.6), 0 0 15px oklch(0.65 0.2 45 / 80%);
   }
   100% {
     transform: translateY(0) scale(1);
-    box-shadow: 0 12px 20px rgba(0,0,0,0.5), 0 0 0px rgba(249, 115, 22, 0);
+    box-shadow: 0 12px 20px rgba(0,0,0,0.5), 0 0 0px oklch(0.65 0.2 45 / 0%);
   }
 }
 

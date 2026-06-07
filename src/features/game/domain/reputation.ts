@@ -20,18 +20,14 @@ export function calculateTradeReviewOutcome(
   input: TradeReviewOutcomeInput,
 ): TradeReviewOutcome {
   if (input.satisfied) {
-    if (input.reviewerReputationTokens <= 0) {
-      throw new Error("선물할 좋아요 토큰이 없습니다.");
-    }
-
-    const reviewerReputationTokens = input.reviewerReputationTokens - 1;
+    const targetReputationTokens = Math.min(5, input.targetReputationTokens + 1);
     return {
-      reviewerReputationTokens,
-      targetReputationTokens: input.targetReputationTokens + 1,
+      reviewerReputationTokens: input.reviewerReputationTokens,
+      targetReputationTokens,
       targetLikes: input.targetLikes + 1,
       targetDislikes: input.targetDislikes,
       targetManner: Math.min(42, Number((input.targetManner + 0.5).toFixed(1))),
-      eliminatedPlayer: reviewerReputationTokens === 0 ? "reviewer" : null,
+      eliminatedPlayer: null,
     };
   }
 

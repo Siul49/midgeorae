@@ -3,7 +3,7 @@ import type { JobCardSnapshot } from "../server/types";
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 4;
 export const LOBBY_MONEY = 0;
-export const STARTING_REPUTATION = 5;
+export const STARTING_REPUTATION = 3;
 export const STARTING_MANNER = 36.5;
 export const MARKET_ACTIONS_PER_PLAYER = 5;
 

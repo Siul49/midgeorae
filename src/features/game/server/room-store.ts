@@ -10,6 +10,7 @@ import {
   VILLAIN_MISSIONS,
 } from "../rules/game-rules";
 import {
+  calculateAsset,
   calculateReportResult,
   calculateReputationEliminationResult,
 } from "../domain/results";
@@ -232,7 +233,7 @@ function touch(room: Room) {
 
 function getPlayerRanks(room: Room): Record<string, number> {
   const assets = room.players.map((p) => {
-    const totalVal = p.money + p.hand.reduce((sum, item) => sum + item.marketPrice, 0);
+    const totalVal = calculateAsset(p);
     return { id: p.id, totalVal };
   });
   assets.sort((a, b) => b.totalVal - a.totalVal);
@@ -286,7 +287,7 @@ function hiddenItemSnapshot(item: ServerItemCard): ItemCardSnapshot {
   return {
     instanceId: item.instanceId,
     id: "",
-    name: "뒤집힌 물건",
+    name: "알수 없음",
     category: null,
     condition: null,
     marketPrice: 0,
@@ -353,7 +354,7 @@ function toItemSnapshot(
   return {
     instanceId: item.instanceId,
     id: revealed ? item.id : "",
-    name: revealed ? item.name : "뒤집힌 물건",
+    name: revealed ? item.name : "알수 없음",
     category: item.isBrick ? null : item.category,
     condition: revealed ? item.condition : null,
     marketPrice: revealed ? item.marketPrice : 0,
@@ -559,12 +560,25 @@ function startGame(room: Room, actor: ServerPlayer) {
   const mission =
     VILLAIN_MISSIONS[Math.floor(Math.random() * VILLAIN_MISSIONS.length)];
   const hands = dealItemHands(room.players.map((player) => player.id));
-  const jobs = dealJobs(room.players.map((player) => player.id));
+  
+  // Deal normal jobs only to citizens
+  const citizenPlayerIds = room.players
+    .filter((_, index) => index !== villainIndex)
+    .map((player) => player.id);
+  const citizenJobs = dealJobs(citizenPlayerIds);
 
   room.players.forEach((player, index) => {
-    player.role = index === villainIndex ? "villain" : "citizen";
-    player.mission = index === villainIndex ? mission : undefined;
-    player.job = jobs[player.id];
+    const isVillain = index === villainIndex;
+    player.role = isVillain ? "villain" : "citizen";
+    player.mission = isVillain ? mission : undefined;
+    player.job = isVillain
+      ? {
+          id: "villain",
+          title: "빌런",
+          description: "시민들의 물물교환 및 거래를 방해하고, 사기를 쳐서 이득을 취해야 합니다. 시민들이 직업 미션을 완료하지 못하도록 방해하세요.",
+          startingMoney: 1000000,
+        }
+      : citizenJobs[player.id];
     player.money = player.job?.startingMoney ?? 1000000;
     player.reputationTokens = STARTING_REPUTATION;
     player.hand = hands[player.id] ?? [];
@@ -665,7 +679,7 @@ function requestTrade(
     throw new Error("자기 자신에게 거래를 신청할 수 없습니다.");
   }
 
-  const isSale = actionCard.type === "saleRequest";
+  const isSale = actionCard.type === "saleRequest" || actionCard.type === "freeGive";
   const seller = isSale ? actor : target;
   const buyer = isSale ? target : actor;
 
@@ -828,11 +842,11 @@ function reviewTrade(
   target.manner = outcome.targetManner;
 
   if (satisfied) {
-    room.logs.push(`${actor.name}님이 ${target.name}님에게 좋아요 토큰을 선물했습니다.`);
+    room.logs.push(`${actor.name}님이 ${target.name}님을 평가했습니다. (평판 +1)`);
     if (outcome.eliminatedPlayer === "reviewer") finishByReputation(room, actor);
   } else {
     if (outcome.eliminatedPlayer === "target") finishByReputation(room, target);
-    room.logs.push(`${actor.name}님이 ${target.name}님의 좋아요 토큰을 소멸시켰습니다.`);
+    room.logs.push(`${actor.name}님이 ${target.name}님을 평가했습니다. (평판 -1)`);
   }
 
   room.pendingReviews = room.pendingReviews.filter(
@@ -1055,7 +1069,7 @@ function autoRunCurrentBotTurn(room: Room) {
 
   const card = room.currentActionCard;
   if (isTradeAction(card)) {
-    const isSale = card.type === "saleRequest";
+    const isSale = card.type === "saleRequest" || card.type === "freeGive";
     const tradeOption = room.players
       .filter((player) => player.id !== actor.id && (isSale || player.hand.length > 0))
       .sort((a, b) => {

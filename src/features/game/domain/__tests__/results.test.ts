@@ -62,10 +62,17 @@ describe("game result domain", () => {
     });
   });
 
-  it("calculates player assets from money and item market prices", () => {
-    const player = makePlayer("alice", 100_000, [20_000, 30_000]);
+  it("calculates player assets from money and item market prices with condition multipliers", () => {
+    const playerUsed = makePlayer("alice", 100_000, [20_000, 30_000]); // condition: used (60%) -> 100k + 12k + 18k = 130k
+    expect(calculateAsset(playerUsed)).toBe(130_000);
 
-    expect(calculateAsset(player)).toBe(150_000);
+    const playerMint = makePlayer("bob", 100_000, [50_000]);
+    playerMint.hand[0].condition = "mint"; // condition: mint (80%) -> 100k + 40k = 140k
+    expect(calculateAsset(playerMint)).toBe(140_000);
+
+    const playerBroken = makePlayer("charlie", 100_000, [50_000]);
+    playerBroken.hand[0].condition = "broken"; // condition: broken (40%) -> 100k + 20k = 120k
+    expect(calculateAsset(playerBroken)).toBe(120_000);
   });
 
   it("returns citizen victory when the villain gets the most final reports", () => {

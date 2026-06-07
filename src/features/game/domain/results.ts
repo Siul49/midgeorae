@@ -9,10 +9,23 @@ export function countReports(
   }, {});
 }
 
+export function getItemAssetValue(item: { isBrick?: boolean; marketPrice: number; condition: string | null }): number {
+  if (item.isBrick) return 0;
+  let multiplier = 1.0;
+  if (item.condition === "mint") {
+    multiplier = 0.8;
+  } else if (item.condition === "used") {
+    multiplier = 0.6;
+  } else if (item.condition === "broken" || item.condition === "defective") {
+    multiplier = 0.4;
+  }
+  return item.marketPrice * multiplier;
+}
+
 export function calculateAsset(player: ServerPlayer) {
   return (
     player.money +
-    player.hand.reduce((sum, item) => sum + item.marketPrice, 0)
+    player.hand.reduce((sum, item) => sum + getItemAssetValue(item), 0)
   );
 }
 
