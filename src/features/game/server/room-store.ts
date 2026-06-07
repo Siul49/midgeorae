@@ -476,12 +476,18 @@ function visiblePendingDealItem(
   }
 
   if (item.isBrick && !deal.revealedBeforeDeal) {
+    if (room.revealAllItems) {
+      return publicItemSnapshot(item);
+    }
     const fake = getFakeItemForBrick(item.instanceId);
     return { ...hiddenItemSnapshot(item), category: fake.category };
   }
 
   // If the requester (buyer) is viewing a normal trade request, hide exact info but show category before purchase
   if (viewer.id === deal.requesterId && !deal.revealedBeforeDeal) {
+    if (room.revealAllItems) {
+      return publicItemSnapshot(item);
+    }
     const fake = getFakeItemForBrick(item.instanceId);
     const category = item.isBrick ? fake.category : item.category;
     return { ...hiddenItemSnapshot(item), category };
