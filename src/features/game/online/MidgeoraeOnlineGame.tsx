@@ -106,6 +106,20 @@ function moneyLabel(value: number) {
   return `${value.toLocaleString("ko-KR")}원`;
 }
 
+function getScamThreshold(item: ItemCardSnapshot | null): number {
+  if (!item) return 0;
+  if (item.isBrick) return 1;
+  let multiplier = 1.0;
+  if (item.condition === "mint") {
+    multiplier = 0.8;
+  } else if (item.condition === "used") {
+    multiplier = 0.6;
+  } else if (item.condition === "broken" || item.condition === "defective") {
+    multiplier = 0.4;
+  }
+  return Math.floor((item.marketPrice ?? 0) * multiplier) + 1;
+}
+
 function playerName(snapshot: RoomSnapshot, playerId: string) {
   return (
     snapshot.players.find((player) => player.id === playerId)?.name ?? "플레이어"
@@ -2245,32 +2259,39 @@ function PendingDealPanel({
         {isDealParty ? (
           isPriceNeeded ? (
             isOwner ? (
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <div className="flex items-center gap-1 text-[11px] font-bold">
-                  <span className="text-stone-400 shrink-0">제시할 가격:</span>
-                  <input
-                    type="number"
-                    value={proposalPrice}
-                    onChange={(e) => setProposalPrice(Number(e.target.value))}
-                    min={10000}
-                    step={10000}
-                    className="w-24 border border-stone-750 bg-stone-950 text-white px-1.5 py-0.5 text-xs font-black rounded"
-                  />
+              <div className="flex flex-col items-center justify-center gap-1.5 w-full">
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <div className="flex items-center gap-1 text-[11px] font-bold">
+                    <span className="text-stone-400 shrink-0">제시할 가격:</span>
+                    <input
+                      type="number"
+                      value={proposalPrice}
+                      onChange={(e) => setProposalPrice(Number(e.target.value))}
+                      min={10000}
+                      step={10000}
+                      className="w-24 border border-stone-750 bg-stone-950 text-white px-1.5 py-0.5 text-xs font-black rounded"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onPropose(proposalPrice)}
+                      className="motion-button flex items-center gap-1 bg-amber-600 hover:bg-amber-500 text-xs font-black px-3.5 py-1.5 rounded text-stone-950 shadow-md cursor-pointer"
+                    >
+                      가격 제시 및 수락
+                    </button>
+                    <button
+                      onClick={() => onChoose("cancel")}
+                      className="motion-button flex items-center gap-1 border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-950/50 text-xs font-black px-3.5 py-1.5 rounded shadow-md cursor-pointer"
+                    >
+                      거래취소
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onPropose(proposalPrice)}
-                    className="motion-button flex items-center gap-1 bg-amber-600 hover:bg-amber-500 text-xs font-black px-3.5 py-1.5 rounded text-stone-950 shadow-md cursor-pointer"
-                  >
-                    가격 제시 및 수락
-                  </button>
-                  <button
-                    onClick={() => onChoose("cancel")}
-                    className="motion-button flex items-center gap-1 border border-red-500/30 bg-red-950/20 text-red-400 hover:bg-red-950/50 text-xs font-black px-3.5 py-1.5 rounded shadow-md cursor-pointer"
-                  >
-                    거래취소
-                  </button>
-                </div>
+                {item && (
+                  <div className="text-[10px] font-bold text-red-400 select-none">
+                    ⚠️ 주의하세요. {getScamThreshold(item).toLocaleString("ko-KR")}원 부터 사기 거래가 됩니다.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-1.5 items-center">
@@ -2514,38 +2535,45 @@ function ActionPanel({
           </div>
 
           {/* Price & Actions Row */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5">
-            {isSale && (
-              <div className="flex items-center gap-1 text-xs font-bold">
-                <span className="text-stone-400 shrink-0">제시 가격:</span>
-                <input
-                  type="number"
-                  value={action.type === "freeGive" ? 0 : askingPrice}
-                  onChange={(event) => setAskingPrice(Number(event.target.value))}
-                  disabled={action.type === "freeGive"}
-                  min={0}
-                  step={10000}
-                  className="w-24 border border-stone-750 bg-stone-950 text-white px-1.5 py-0.5 text-xs font-black rounded disabled:bg-stone-800 disabled:text-stone-500"
-                />
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              {isSale && (
+                <div className="flex items-center gap-1 text-xs font-bold">
+                  <span className="text-stone-400 shrink-0">제시 가격:</span>
+                  <input
+                    type="number"
+                    value={action.type === "freeGive" ? 0 : askingPrice}
+                    onChange={(event) => setAskingPrice(Number(event.target.value))}
+                    disabled={action.type === "freeGive"}
+                    min={0}
+                    step={10000}
+                    className="w-24 border border-stone-750 bg-stone-950 text-white px-1.5 py-0.5 text-xs font-black rounded disabled:bg-stone-800 disabled:text-stone-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-1.5">
+                <button
+                  onClick={onRequestTrade}
+                  disabled={!selectedItemId || !dealTargetId}
+                  className="motion-button flex items-center gap-1 bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-xs font-black text-white disabled:bg-stone-800 disabled:text-stone-500 disabled:opacity-50 cursor-pointer"
+                >
+                  <Handshake size={12} />
+                  거래 신청
+                </button>
+                <button
+                  onClick={onSkip}
+                  className="motion-button border border-stone-700 bg-stone-800 hover:bg-stone-755 px-3 py-1 rounded text-xs font-black text-stone-350 cursor-pointer"
+                >
+                  넘기기
+                </button>
+              </div>
+            </div>
+            {isSale && selectedItem && (
+              <div className="text-[10px] font-bold text-red-400 select-none">
+                ⚠️ 주의하세요. {getScamThreshold(selectedItem).toLocaleString("ko-KR")}원 부터 사기 거래가 됩니다.
               </div>
             )}
-
-            <div className="flex gap-1.5">
-              <button
-                onClick={onRequestTrade}
-                disabled={!selectedItemId || !dealTargetId}
-                className="motion-button flex items-center gap-1 bg-orange-600 hover:bg-orange-500 px-3 py-1 rounded text-xs font-black text-white disabled:bg-stone-800 disabled:text-stone-500 disabled:opacity-50 cursor-pointer"
-              >
-                <Handshake size={12} />
-                거래 신청
-              </button>
-              <button
-                onClick={onSkip}
-                className="motion-button border border-stone-700 bg-stone-800 hover:bg-stone-755 px-3 py-1 rounded text-xs font-black text-stone-350 cursor-pointer"
-              >
-                넘기기
-              </button>
-            </div>
           </div>
         </div>
       ) : action.type === "badReview" ? (
