@@ -1385,6 +1385,20 @@ export function MidgeoraeOnlineGame() {
                 시민 승리 시 아래 비밀 미션을 단독으로 달성한 플레이어가 최종 우승자가 됩니다. (동점/미달성 시 자산 순)
               </p>
               <div className="space-y-2">
+                <div className="p-3 rounded-xl border border-red-500/20 bg-red-950/15 flex items-start gap-3 hover:bg-white/5 transition-colors">
+                  <span className="text-2xl pt-0.5" role="img" aria-label="빌런">
+                    😈
+                  </span>
+                  <div className="space-y-0.5">
+                    <div className="font-extrabold text-red-400 text-sm">
+                      빌런 (Villain)
+                    </div>
+                    <div className="font-bold text-stone-300 leading-normal">
+                      최종 승리 조건: 발각되지 않고 다른 플레이어에게 가치보다 비싼 가격으로 사기 판매 2회 성공
+                    </div>
+                  </div>
+                </div>
+
                 {JOB_CARDS.map((job) => {
                   const emoji = {
                     developer: "💻",
