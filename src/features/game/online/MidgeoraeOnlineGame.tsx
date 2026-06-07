@@ -2532,7 +2532,7 @@ function ActionPanel({
               <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
                 <span className="text-xs font-black text-red-400 block">⚠️ 대상 미선택</span>
                 <span className="text-xs font-bold text-stone-400 mt-0.5 block">
-                  테이블 상단/좌/우에서 상대방과 카드를 직접 클릭하세요!
+                  상대 프로필을 클릭하여 선택하세요. (테이블 상단/좌/우의 상대방 프로필과 물건 카드를 각각 클릭)
                 </span>
               </div>
             ) : (
@@ -2683,7 +2683,7 @@ function TargetAction({
           <div className="p-1.5 bg-red-950/20 border border-red-900/40 rounded text-center">
             <span className="text-xs font-black text-red-400 block">⚠️ 대상 미지목</span>
             <span className="text-xs font-bold text-stone-400 mt-0.5 block">
-              테이블 상에서 액션을 적용할 대상 플레이어를 직접 클릭하세요!
+              상대 프로필을 클릭하여 선택하세요. (테이블 상에서 액션을 적용할 대상 플레이어를 직접 클릭)
             </span>
           </div>
         ) : (
