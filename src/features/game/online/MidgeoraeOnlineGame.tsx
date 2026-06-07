@@ -1077,6 +1077,7 @@ export function MidgeoraeOnlineGame() {
                 setSelectedItemId={setSelectedItemId}
                 likes={snapshot.players.find((p) => p.id === me.id)?.likes ?? 0}
                 dislikes={snapshot.players.find((p) => p.id === me.id)?.dislikes ?? 0}
+                villainScamCount={snapshot.villainScamCount ?? 0}
               />
             )}
           </div>
@@ -1727,6 +1728,7 @@ function MyDashboard({
   setSelectedItemId,
   likes,
   dislikes,
+  villainScamCount = 0,
 }: {
   me: RoomSnapshot["me"];
   myHand: ItemCardSnapshot[];
@@ -1735,6 +1737,7 @@ function MyDashboard({
   setSelectedItemId: (value: string) => void;
   likes: number;
   dislikes: number;
+  villainScamCount?: number;
 }) {
   const [showJob, setShowJob] = useState(false);
 
@@ -1795,6 +1798,7 @@ function MyDashboard({
           {isVillain ? (
             <div className="text-[11px] leading-tight space-y-1">
               <div className="text-red-400 font-black">🔥 빌런 미션: {me.mission ?? "대기 중..."}</div>
+              <div className="text-orange-400 font-extrabold">🎯 사기 판매 성공 횟수: {villainScamCount} / 2회</div>
               {me.job && <div className="text-[10px] text-stone-300 font-bold border-t border-red-900/20 pt-0.5">행동강령: {me.job.description}</div>}
             </div>
           ) : (
