@@ -91,6 +91,14 @@ export function checkJobMission(player: ServerPlayer, roomStatus: string = "fini
 export function calculateCitizenWinner(citizens: ServerPlayer[], roomStatus: string = "finished"): string {
   if (citizens.length === 0) return "";
 
+  // 1. 벽돌 수집가 특별 승리 조건: 벽돌 2개를 모두 수집했으면 다른 조건 불문 즉시 승리
+  const brickCollectorWinner = citizens.find(
+    (p) => p.job?.id === "brick-collector" && (p.hand ?? []).filter((item) => item.isBrick).length >= 2
+  );
+  if (brickCollectorWinner) {
+    return brickCollectorWinner.id;
+  }
+
   const completedCitizens = citizens.filter((p) => checkJobMission(p, roomStatus));
 
   if (completedCitizens.length === 1) {
@@ -121,19 +129,25 @@ export function calculateReportResult(
     Object.entries(countedReports).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
   const villainCaught = mostReportedId === villainId;
 
+  // 벽돌 수집가 특별 승리 조건: 벽돌 2개를 모두 수집했으면 빌런 승리 조건을 무시하고 즉시 최종 승리
+  const brickCollector = players.find(
+    (p) => p.job?.id === "brick-collector" && (p.hand ?? []).filter((item) => item.isBrick).length >= 2
+  );
+
   const citizens = players.filter((p) => p.id !== villainId);
   const citizenWinnerId = calculateCitizenWinner(citizens);
 
-  // 빌런 승리 조건: 검거되지 않았고, 동시에 성공적으로 2회 이상 사기를 쳤어야 함 (총자산 가치보다 비싸게 판매)
-  const villainWins = !villainCaught && villainScamCount >= VILLAIN_SCAM_VICTORY_LIMIT;
+  const villainWins = !brickCollector && !villainCaught && villainScamCount >= VILLAIN_SCAM_VICTORY_LIMIT;
 
-  const winnerId = villainWins ? villainId : citizenWinnerId;
+  const winnerId = brickCollector
+    ? brickCollector.id
+    : (villainWins ? villainId : citizenWinnerId);
 
   return {
     villainId,
     villainCaught,
     winnerId,
-    winningSide: villainWins ? "villain" : "citizens",
+    winningSide: brickCollector ? "citizens" : (villainWins ? "villain" : "citizens"),
     reports: countedReports,
   };
 }
@@ -145,14 +159,23 @@ export function calculateReputationEliminationResult(
   const villain = players.find((player) => player.role === "villain");
   const villainCaught = eliminatedPlayer.id === villain?.id;
   
+  // 벽돌 수집가 특별 승리 조건: 벽돌 2개를 모두 수집했으면 빌런 승리 조건을 무시하고 즉시 최종 승리
+  const brickCollector = players.find(
+    (p) => p.job?.id === "brick-collector" && (p.hand ?? []).filter((item) => item.isBrick).length >= 2
+  );
+
   const citizens = players.filter((player) => player.role === "citizen");
   const citizenWinnerId = calculateCitizenWinner(citizens);
+
+  const winnerId = brickCollector
+    ? brickCollector.id
+    : (villainCaught ? citizenWinnerId : (villain?.id ?? eliminatedPlayer.id));
 
   return {
     villainId: villain?.id,
     villainCaught,
-    winnerId: villainCaught ? citizenWinnerId : (villain?.id ?? eliminatedPlayer.id),
-    winningSide: villainCaught ? "citizens" : "villain",
+    winnerId,
+    winningSide: brickCollector ? "citizens" : (villainCaught ? "citizens" : "villain"),
     eliminatedPlayerId: eliminatedPlayer.id,
     reports: {},
   };

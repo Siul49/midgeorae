@@ -229,5 +229,47 @@ describe("game result domain", () => {
 
       expect(result.winnerId).toBe("citizen-a");
     });
+
+    it("prioritizes brick-collector victory over other completed citizens with higher assets", () => {
+      // citizen-a: brick-collector with 2 bricks (asset: 100k)
+      const citizenA = makePlayer("citizen-a", 100_000, [0, 0], "citizen", "brick-collector", ["electronics", "electronics"], [true, true]);
+      // citizen-b: developer with electronics (asset: 600k)
+      const citizenB = makePlayer("citizen-b", 500_000, [100_000], "citizen", "developer", ["electronics"]);
+      const villain = makePlayer("villain", 100_000, [], "villain");
+
+      const result = calculateReportResult(
+        [citizenA, citizenB, villain],
+        {
+          "citizen-a": "villain",
+          "citizen-b": "villain",
+          villain: "citizen-a",
+        },
+        "villain",
+      );
+
+      // Even though citizenB has 600k assets and citizenA has only 100k, brick-collector must win
+      expect(result.winnerId).toBe("citizen-a");
+    });
+
+    it("makes brick-collector win the entire game, overriding villain's victory condition", () => {
+      // citizen-a: brick-collector with 2 bricks
+      const citizenA = makePlayer("citizen-a", 100_000, [0, 0], "citizen", "brick-collector", ["electronics", "electronics"], [true, true]);
+      const villain = makePlayer("villain", 100_000, [], "villain");
+
+      // villain was not caught (reports not targeting villain) and scammed 2 times (limit)
+      const result = calculateReportResult(
+        [citizenA, villain],
+        {
+          "citizen-a": "citizen-a",
+          villain: "citizen-a",
+        },
+        "villain",
+        2, // villainScamCount
+      );
+
+      // Brick-collector overrides villain victory
+      expect(result.winnerId).toBe("citizen-a");
+      expect(result.winningSide).toBe("citizens");
+    });
   });
 });
