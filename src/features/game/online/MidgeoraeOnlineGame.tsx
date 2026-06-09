@@ -575,6 +575,12 @@ export function MidgeoraeOnlineGame() {
 
   function requestSelectedItem() {
     const price = currentAction?.type === "freeGive" ? 0 : askingPrice;
+    console.log("requestSelectedItem triggered", {
+      dealTargetId,
+      selectedItemId,
+      price,
+      currentActionType: currentAction?.type,
+    });
     void submitAction({
       type: "requestTrade",
       ownerId: dealTargetId,
@@ -618,6 +624,19 @@ export function MidgeoraeOnlineGame() {
   // --- 3. RENDER GAME BOARD & PHASE ---
   return (
     <main className="fullscreen-game-container text-stone-950">
+      {/* Global Error Banner */}
+      {error && (
+        <div className="absolute top-[80px] left-1/2 -translate-x-1/2 z-50 bg-red-950/95 border border-red-500/50 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce max-w-md select-text">
+          <span className="text-red-400 font-extrabold text-xs">❌ {error}</span>
+          <button 
+            type="button" 
+            onClick={() => setError("")} 
+            className="text-stone-400 hover:text-white font-black text-xs cursor-pointer ml-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Top Left Turn Order Info */}
       {snapshot.status === "playing" && (
         <div className="absolute top-7 left-7 z-50 flex flex-col gap-1.5 select-none">
@@ -894,6 +913,8 @@ export function MidgeoraeOnlineGame() {
                       }
                       onSkip={() => submitAction({ type: "endTurn" })}
                       compact
+                      error={error}
+                      clearError={() => setError("")}
                     />
                   </div>
                 )

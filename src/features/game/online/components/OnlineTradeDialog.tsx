@@ -563,6 +563,8 @@ interface ActionPanelProps {
   onSwap: () => void;
   onSkip: () => void;
   compact?: boolean;
+  error?: string;
+  clearError?: () => void;
 }
 
 export function ActionPanel({
@@ -589,6 +591,8 @@ export function ActionPanel({
   onSwap,
   onSkip,
   compact = false,
+  error = "",
+  clearError,
 }: ActionPanelProps) {
   const isRequestingOthersItem = isTradeRequestAction(action);
   const isDealAction = Boolean(
@@ -813,16 +817,17 @@ export function ActionPanel({
         <>
           <button
             onClick={onRequestTrade}
-            disabled={!selectedItemId || !dealTargetId}
+            disabled={!selectedItemId || !dealTargetId || loading}
             className={`btn-flat-orange cursor-pointer ${
-              selectedItemId && dealTargetId ? "btn-golden-glow" : ""
+              selectedItemId && dealTargetId && !loading ? "btn-golden-glow" : ""
             }`}
           >
             <Handshake size={14} className="inline mr-1" />
-            무료나눔 확정
+            {loading ? "처리 중..." : "무료나눔 확정"}
           </button>
           <button
             onClick={onSkip}
+            disabled={loading}
             className="btn-flat-cancel cursor-pointer"
           >
             넘기기
@@ -881,14 +886,15 @@ export function ActionPanel({
         <>
           <button
             onClick={onRequestTrade}
-            disabled={!selectedItemId || !dealTargetId}
+            disabled={!selectedItemId || !dealTargetId || loading}
             className="btn-flat-orange cursor-pointer"
           >
             <Handshake size={14} className="inline mr-1" />
-            거래 신청
+            {loading ? "처리 중..." : "거래 신청"}
           </button>
           <button
             onClick={onSkip}
+            disabled={loading}
             className="btn-flat-cancel cursor-pointer"
           >
             넘기기
@@ -942,15 +948,16 @@ export function ActionPanel({
       <>
         <button
           onClick={isTerror ? onTerror : onSwap}
-          disabled={!actionTargetId}
+          disabled={!actionTargetId || loading}
           className="btn-flat-orange cursor-pointer"
           style={isTerror ? { backgroundColor: "#ef4444", color: "#1c1917" } : undefined}
         >
           {isTerror ? <MessageCircleWarning size={14} className="inline mr-1" /> : <Repeat2 size={14} className="inline mr-1" />}
-          {isTerror ? "악플테러" : "물물교환"}
+          {loading ? "처리 중..." : (isTerror ? "악플테러" : "물물교환")}
         </button>
         <button
           onClick={onSkip}
+          disabled={loading}
           className="btn-flat-cancel cursor-pointer"
         >
           넘기기
@@ -983,15 +990,16 @@ export function ActionPanel({
       <>
         <button
           onClick={() => onRecycle(recycleItemId)}
-          disabled={!recycleItemId}
+          disabled={!recycleItemId || loading}
           className="btn-flat-orange cursor-pointer"
           style={{ backgroundColor: "#10b981", color: "#1c1917" }} // emerald/teal accent
         >
           <Recycle size={14} className="inline mr-1.5" />
-          분리수거
+          {loading ? "처리 중..." : "분리수거"}
         </button>
         <button
           onClick={onSkip}
+          disabled={loading}
           className="btn-flat-cancel cursor-pointer"
         >
           넘기기
@@ -1007,6 +1015,20 @@ export function ActionPanel({
       description={panelBody}
       actions={modalActions}
     >
+      {error && (
+        <div className="p-3 bg-red-950/40 border border-red-900/40 rounded text-center text-xs font-black text-red-400 mb-3 flex items-center justify-between animate-fade-in select-text">
+          <span>⚠️ {error}</span>
+          {clearError && (
+            <button
+              type="button"
+              onClick={clearError}
+              className="text-red-300 hover:text-white cursor-pointer font-black ml-2"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
       {modalContent}
     </ThemedBoardModal>
   );

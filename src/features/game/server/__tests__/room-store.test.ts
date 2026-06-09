@@ -1422,4 +1422,52 @@ describe("room-store", () => {
       expect(log).not.toContain("350,000"); // the price of the transaction should be hidden
     });
   });
+
+  it("allows players to recycle bricks or items and logs them correctly using disguised name for citizens", async () => {
+    const host = await createRoom("호스트");
+    const room = rooms.get(host.room.code)!;
+    room.status = "playing";
+    room.currentTurnPlayerId = host.playerId;
+
+    // Set the action card to recycle
+    room.currentActionCard = {
+      type: "recycle",
+      title: "분리수거 ♻️",
+      description: "내 손패에 필요 없는 벽돌이나 잡동사니 카드 1장을 폐기해 정리합니다.",
+      imagePath: "/game-cards/actions/recycle.svg",
+    };
+
+    // Add a brick card to the host's hand
+    const brickInstanceId = "recycle-test-brick";
+    const brickItem = {
+      id: "brick-1",
+      name: "벽돌",
+      marketPrice: 0,
+      category: null,
+      condition: null,
+      acquiredPrice: null,
+      isBrick: true,
+      imagePath: "/game-cards/actions/brick.svg",
+      instanceId: brickInstanceId,
+      revealed: false,
+      revealedToPlayerIds: [host.playerId],
+    };
+    const hostPlayer = room.players.find((p) => p.id === host.playerId)!;
+    hostPlayer.hand.push(brickItem);
+
+    // Call submitRoomAction with recycleBrick action
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "recycleBrick",
+      itemInstanceId: brickInstanceId,
+    });
+
+    // Check that card was removed from hand
+    expect(hostPlayer.hand.find((item) => item.instanceId === brickInstanceId)).toBeUndefined();
+    // Check that round ended / action card is null
+    expect(room.currentActionCard).toBeNull();
+    // Check that the log is disguised
+    const recycleLog = room.logs.find((log) => log.includes("분리수거함에 버렸습니다. ♻️"));
+    expect(recycleLog).toBeDefined();
+    expect(recycleLog).not.toContain("벽돌");
+  });
 });
