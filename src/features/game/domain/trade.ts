@@ -1,4 +1,5 @@
 import type { PendingDeal, PendingReview, ServerItemCard, ServerPlayer } from "../server/types";
+import { getFakeItemForBrick } from "./results";
 
 export interface AcceptedDealSettlement {
   ownerMoney: number;
@@ -32,6 +33,14 @@ export function settleAcceptedDeal({
     revealedToPlayerIds: deal.revealedBeforeDeal ? [requester.id] : [],
   };
 
+  const itemMarketPrice = item.isBrick
+    ? getFakeItemForBrick(item.instanceId).marketPrice
+    : item.marketPrice;
+
+  const isSaleOrGive = deal.actionType === "saleRequest" || deal.actionType === "freeGive";
+  const proposerId = isSaleOrGive ? owner.id : requester.id;
+  const targetId = isSaleOrGive ? requester.id : owner.id;
+
   return {
     ownerMoney: owner.money + deal.askingPrice,
     requesterMoney: requester.money - deal.askingPrice,
@@ -45,7 +54,7 @@ export function settleAcceptedDeal({
         reviewerId: owner.id,
         targetPlayerId: requester.id,
         itemPrice: deal.askingPrice,
-        itemMarketPrice: item.marketPrice,
+        itemMarketPrice: itemMarketPrice,
         sellerId: owner.id,
       },
       {
@@ -53,9 +62,10 @@ export function settleAcceptedDeal({
         reviewerId: requester.id,
         targetPlayerId: owner.id,
         itemPrice: deal.askingPrice,
-        itemMarketPrice: item.marketPrice,
+        itemMarketPrice: itemMarketPrice,
         sellerId: owner.id,
       },
     ],
   };
 }
+

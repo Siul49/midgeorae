@@ -13,7 +13,7 @@ describe("server item cards", () => {
   });
 
   it("deals five players without repeating normal item ids in the first deal", () => {
-    const hands = dealItemHands(["p1", "p2", "p3", "p4", "p5"]);
+    const hands = dealItemHands(["p1", "p2", "p3", "p4", "p5"], "p1");
     const cards = Object.values(hands).flat();
     const normalCards = cards.filter((card) => !card.isBrick);
 
@@ -22,5 +22,7 @@ describe("server item cards", () => {
     expect(new Set(normalCards.map((card) => card.id)).size).toBe(
       normalCards.length,
     );
+    expect(hands["p1"].filter(c => c.isBrick)).toHaveLength(2);
+    expect(hands["p2"].filter(c => c.isBrick)).toHaveLength(0);
   });
 });

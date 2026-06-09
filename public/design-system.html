@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>믿거래 디자인 시스템 | Midgeorae Design System</title>
+  <!-- Google Fonts Outfit & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Base Variables & Theme Sets */
+    :root {
+      /* Theme 1: Classic Green Felt (Default) */
+      --ds-game-bg: radial-gradient(circle, #1a322c 0%, #0d1714 100%);
+      --ds-game-text: #f7e8cf;
+      --ds-felt-bg: radial-gradient(circle at center, #1b3d32 0%, #0d221b 100%);
+      --ds-wood-border: #281a10;
+      --ds-wood-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
+      
+      --ds-stone-container-bg: rgba(28, 25, 23, 0.98);
+      --ds-stone-container-border: rgba(255, 255, 255, 0.15);
+      --ds-stone-container-text: #f7e8cf;
+      --ds-stone-container-text-muted: #a8a29e;
+      
+      --ds-button-header-bg: rgba(28, 25, 23, 0.8);
+      --ds-button-header-border: 1px solid rgba(255, 255, 255, 0.15);
+      --ds-button-header-text: #ffffff;
+      --ds-button-header-hover-bg: rgba(44, 42, 39, 0.9);
+
+      --ds-primary-action-bg: #ff7e36; /* Daangn Orange matching globals.css */
+      --ds-primary-action-hover-bg: #ff9252; /* Daangn Orange hover matching globals.css */
+      --ds-primary-action-shadow: 0 7px 0 #c14b12; /* matching globals.css */
+      
+      --ds-side-player-card-bg: rgba(24, 24, 27, 0.8);
+      --ds-side-player-card-border: 1.5px solid rgba(247, 232, 207, 0.15);
+      --ds-logs-box-bg: rgba(0, 0, 0, 0.5);
+      --ds-logs-box-border: 1px solid rgba(255, 255, 255, 0.05);
+      --ds-logs-box-text: rgba(255, 255, 255, 0.75);
+    }
+
+    /* Base Variables & Theme Sets */
+    :root {
+      /* Theme 1: Classic Green Felt (Default) */
+      --ds-game-bg: radial-gradient(circle, #1a322c 0%, #0d1714 100%);
+      --ds-game-text: #f7e8cf;
+      --ds-felt-bg: radial-gradient(circle at center, #1b3d32 0%, #0d221b 100%);
+      --ds-wood-border: #281a10;
+      --ds-wood-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 10px 30px rgba(0, 0, 0, 0.5);
+      
+      --ds-stone-container-bg: rgba(28, 25, 23, 0.98);
+      --ds-stone-container-border: rgba(255, 255, 255, 0.15);
+      --ds-stone-container-text: #f7e8cf;
+      --ds-stone-container-text-muted: #a8a29e;
+      
+      --ds-button-header-bg: rgba(28, 25, 23, 0.8);
+      --ds-button-header-border: 1px solid rgba(255, 255, 255, 0.15);
+      --ds-button-header-text: #ffffff;
+      --ds-button-header-hover-bg: rgba(44, 42, 39, 0.9);
+ 
+      --ds-primary-action-bg: #ff7e36; /* Daangn Orange matching globals.css */
+      --ds-primary-action-hover-bg: #ff9252; /* Daangn Orange hover matching globals.css */
+      --ds-primary-action-shadow: 0 7px 0 #c14b12; /* matching globals.css */
+      
+      --ds-side-player-card-bg: rgba(24, 24, 27, 0.8);
+      --ds-side-player-card-border: 1.5px solid rgba(247, 232, 207, 0.15);
+      --ds-logs-box-bg: rgba(0, 0, 0, 0.5);
+      --ds-logs-box-border: 1px solid rgba(255, 255, 255, 0.05);
+      --ds-logs-box-text: rgba(255, 255, 255, 0.75);
+    }
+
+    /* Core Document Layout */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #0f1115;
+      color: #e2e8f0;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Left Sidebar Navigation */
+    aside.ds-sidebar {
+      width: 280px;
+      background: #15181e;
+      border-right: 1px solid #232832;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 100;
+      overflow-y: auto;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-box {
+      width: 42px;
+      height: 42px;
+      background: #ff7e36;
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      font-family: 'Outfit', sans-serif;
+      box-shadow: 0 4px 12px rgba(255, 126, 54, 0.3);
+    }
+    .logo-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-section-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+    ul.nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    ul.nav-list a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: block;
+      transition: all 0.2s ease;
+    }
+    ul.nav-list a:hover, ul.nav-list a.active {
+      color: white;
+      background: #232832;
+    }
+
+    /* Main Content Area */
+    main.ds-content {
+      margin-left: 280px;
+      flex: 1;
+      padding: 48px;
+      max-width: 1280px;
+    }
+
+    header.ds-header {
+      margin-bottom: 40px;
+      border-bottom: 1px solid #232832;
+      padding-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    header h1 {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: white;
+      margin-bottom: 8px;
+    }
+    header p {
+      color: #94a3b8;
+      font-size: 15px;
+      max-width: 720px;
+      line-height: 1.6;
+    }
+
+    /* Live Interactive Playground */
+    .playground-card {
+      background: #15181e;
+      border: 1px solid #232832;
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 48px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .playground-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .theme-selector-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .theme-btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid #232832;
+      background: #1e222b;
+      color: #94a3b8;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .theme-btn:hover {
+      background: #282e3b;
+      color: white;
+    }
+    .theme-btn.active {
+      background: #ff7e36;
+      border-color: #ff7e36;
+      color: white;
+      box-shadow: 0 4px 12px rgba(255, 126, 54, 0.25);
+    }
+    .theme-btn[data-theme="terracotta"].active {
+      background: #b45309;
+      border-color: #b45309;
+    }
+    .theme-btn[data-theme="cyber"].active {
+      background: #f43f5e;
+      border-color: #f43f5e;
+      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25);
+    }
+
+    /* Miniature Game Board Render */
+    .board-render-area {
+      background: var(--ds-game-bg);
+      color: var(--ds-game-text);
+      padding: 24px;
+      border-radius: 12px;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Miniature board wood frame mockup */
+    .mini-wood-frame {
+      flex: 1;
+      border: 6px solid var(--ds-wood-border);
+      box-shadow: var(--ds-wood-shadow);
+      background: var(--ds-felt-bg);
+      border-radius: 10px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      grid-template-columns: 140px 1fr 140px;
+      grid-template-areas:
+        "top-left    top-seat    top-right"
+        "left-seat   center-play right-seat"
+        "bottom-left bottom-seat bottom-right";
+      gap: 6px;
+      padding: 8px;
+      position: relative;
+    }
+
+    /* Core Styles for Render Components */
+    .mini-stat-bar {
+      grid-area: top-seat;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      align-items: center;
+    }
+    .mini-stat-item {
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      padding-left: 8px;
+      font-size: 11px;
+    }
+    .mini-stat-label {
+      font-size: 8px;
+      font-weight: 800;
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .mini-stat-value {
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .mini-player-seat {
+      background: var(--ds-side-player-card-bg);
+      border: var(--ds-side-player-card-border);
+      border-radius: 6px;
+      padding: 6px;
+      width: 100%;
+      text-align: center;
+      font-size: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .mini-player-seat.active-turn {
+      border-color: var(--ds-primary-action-bg);
+      box-shadow: 0 0 8px var(--ds-primary-action-bg);
+    }
+    .mini-player-seat .name {
+      font-weight: 900;
+      color: white;
+    }
+    .mini-player-seat .stats {
+      margin-top: 3px;
+      opacity: 0.7;
+      display: flex;
+      justify-content: space-around;
+      font-size: 8px;
+    }
+
+    .seat-top-mini { grid-area: top-left; display: flex; align-items: center; }
+    .seat-left-mini { grid-area: left-seat; display: flex; flex-direction: column; justify-content: center; }
+    .seat-right-mini { grid-area: right-seat; display: flex; flex-direction: column; justify-content: center; }
+    
+    .center-board-mini {
+      grid-area: center-play;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 8px;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .logs-mini {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 130px;
+      background: var(--ds-logs-box-bg);
+      border: var(--ds-logs-box-border);
+      color: var(--ds-logs-box-text);
+      border-radius: 4px;
+      padding: 4px;
+      font-size: 8px;
+      max-height: 50px;
+      overflow: hidden;
+      font-family: monospace;
+      text-align: left;
+    }
+
+    .settings-btn-mini {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--ds-button-header-bg);
+      border: var(--ds-button-header-border);
+      color: var(--ds-button-header-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .cockpit-mini {
+      grid-area: bottom-seat;
+      width: 100%;
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .dashboard-mini {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      min-width: 0;
+    }
+    
+    .panel-mini {
+      background: var(--ds-stone-container-bg);
+      border: 1px solid var(--ds-stone-container-border);
+      color: var(--ds-stone-container-text);
+      border-radius: 6px;
+      padding: 6px;
+      font-size: 9px;
+    }
+    
+    .action-panel-mini {
+      width: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: center;
+      justify-content: center;
+    }
+
+    .btn-primary-mini {
+      background: var(--ds-primary-action-bg);
+      color: white;
+      box-shadow: var(--ds-primary-action-shadow);
+      border: none;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 9px;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .card-mini {
+      width: 42px;
+      height: 58px;
+      border: 1px solid rgba(120, 78, 38, 0.3);
+      background: linear-gradient(180deg, #fffcf5 0%, #fae6cb 100%);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px;
+      color: #1c1917;
+      font-size: 7px;
+      font-weight: 900;
+    }
+    .card-mini.unrevealed {
+      background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%);
+      border-color: rgba(139, 92, 246, 0.6);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Component List Sections */
+    .ds-section {
+      margin-bottom: 64px;
+      scroll-margin-top: 32px;
+    }
+    .ds-section-header {
+      margin-bottom: 24px;
+      border-bottom: 1px solid #232832;
+      padding-bottom: 12px;
+    }
+    .ds-section-header h2 {
+      font-size: 22px;
+      font-weight: 900;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ds-section-header h2 span {
+      font-family: 'Outfit', sans-serif;
+      color: #ff7e36;
+    }
+    .component-spec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    @media (max-width: 990px) {
+      .component-spec-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .spec-doc {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spec-doc p {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .meta-table th, .meta-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #1e222b;
+    }
+    .meta-table th {
+      color: #64748b;
+      font-weight: 700;
+      width: 120px;
+    }
+    .meta-table td {
+      color: #cbd5e1;
+    }
+
+    .spec-preview {
+      background: #15181e;
+      border: 1px solid #232832;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-height: 200px;
+    }
+
+    /* Isolated components for showcase */
+    .frame-stat {
+      min-width: 0;
+      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      padding-left: 18px;
+    }
+    
+    .frame-icon-button {
+      display: inline-flex;
+      min-height: 54px;
+      min-width: 58px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(72, 65, 54, 0.85), rgba(27, 27, 25, 0.92));
+      color: #f9e8c8;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 5px 0 rgba(0, 0, 0, 0.26);
+      padding: 4px;
+      cursor: pointer;
+    }
+
+    .table-chip {
+      display: inline-flex;
+      min-height: 30px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(74, 54, 34, 0.38);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(247, 220, 150, 0.98), rgba(150, 96, 43, 0.94));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36), 0 4px 0 rgba(28, 25, 23, 0.18);
+      color: #2d1b0f;
+    }
+
+    .game-deck-rail {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border: 1px solid rgba(160, 122, 74, 0.28);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(35, 36, 32, 0.98), rgba(18, 19, 17, 0.98));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 9px 0 rgba(0, 0, 0, 0.24);
+      padding: 10px;
+      width: 100%;
+      max-width: 200px;
+    }
+
+    /* Hand & Opponent item card sizes */
+    .game-card-hand {
+      width: 100px;
+      height: 134px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px;
+      text-align: center;
+      user-select: none;
+      transition: all 0.2s ease;
+      color: #f8fafc;
+    }
+
+    .game-card-opponent-standard {
+      width: 84px;
+      height: 112px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px;
+      text-align: center;
+      user-select: none;
+      transition: all 0.2s ease;
+      color: #f8fafc;
+    }
+
+    .game-card-opponent-medium {
+      width: 76px;
+      height: 101px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px;
+      text-align: center;
+      user-select: none;
+      transition: all 0.2s ease;
+      color: #f8fafc;
+    }
+
+    .game-card-opponent-small {
+      width: 67px;
+      height: 90px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px;
+      text-align: center;
+      user-select: none;
+      transition: all 0.2s ease;
+      color: #f8fafc;
+    }
+
+    /* Category colors matching game */
+    .cat-electronics {
+      border-color: rgba(245, 158, 11, 0.4);
+      background-color: rgba(245, 158, 11, 0.1);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+    }
+    .cat-fashion {
+      border-color: rgba(168, 85, 247, 0.4);
+      background-color: rgba(168, 85, 247, 0.1);
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.15);
+    }
+    .cat-hobby {
+      border-color: rgba(16, 185, 129, 0.4);
+      background-color: rgba(16, 185, 129, 0.1);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.15);
+    }
+    .cat-living {
+      border-color: rgba(59, 130, 246, 0.4);
+      background-color: rgba(59, 130, 246, 0.1);
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.15);
+    }
+    .cat-brick {
+      border-color: rgba(220, 38, 38, 0.6);
+      background-color: rgba(220, 38, 38, 0.15);
+      box-shadow: 0 0 10px rgba(220, 38, 38, 0.25);
+    }
+
+    .themed-board-modal {
+      background: var(--ds-stone-container-bg);
+      border: 3px solid #ff7e36;
+      border-radius: 16px;
+      box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.65), 0 15px 15px -5px rgba(0, 0, 0, 0.06);
+      padding: 28px;
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-header-text {
+      font-size: 15px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      line-height: 1.25;
+      color: #ff7e36;
+    }
+    .modal-header-text.success {
+      color: #10b981;
+    }
+    .modal-title {
+      font-size: 21px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.4;
+    }
+    .modal-details-panel {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 126, 54, 0.25);
+      border-radius: 10px;
+      padding: 22px;
+      text-align: left;
+    }
+    .modal-details-panel.center-align {
+      text-align: center;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      font-size: 15px;
+    }
+    .details-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .details-label {
+      color: var(--ds-stone-container-text-muted);
+      font-weight: 800;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .details-value {
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .details-value.highlight {
+      color: #ff7e36;
+    }
+    .details-desc {
+      font-size: 16px;
+      font-weight: 700;
+      color: #d1d5db;
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn-flat-orange {
+      background: #ff7e36;
+      color: #0c0a09;
+      font-weight: 900;
+      font-size: 14.5px;
+      padding: 9px 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.15s ease;
+      width: 100%;
+      max-width: 180px;
+    }
+    .btn-flat-orange:hover {
+      background: #ff9252;
+    }
+    .btn-flat-cancel {
+      border: 1.5px solid rgba(239, 68, 68, 0.4);
+      background: rgba(127, 29, 29, 0.2);
+      color: #fca5a5;
+      font-weight: 900;
+      font-size: 14.5px;
+      padding: 9px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.15s ease;
+      width: 100%;
+      max-width: 180px;
+    }
+    .btn-flat-cancel:hover {
+      background: rgba(127, 29, 29, 0.4);
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+    .btn-flat-sky {
+      background: #0ea5e9;
+      color: #0c0a09;
+      font-weight: 900;
+      font-size: 14.5px;
+      padding: 9px 18px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.15s ease;
+      width: 100%;
+      max-width: 180px;
+    }
+    .btn-flat-sky:hover {
+      background: #0284c7;
+    }
+
+    .logs-box-center {
+      width: 240px;
+      height: 130px;
+      background: var(--ds-logs-box-bg);
+      border: var(--ds-logs-box-border);
+      border-radius: 6px;
+      padding: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      color: var(--ds-logs-box-text);
+      position: relative;
+    }
+
+    .themed-header-button {
+      background: var(--ds-button-header-bg);
+      border: var(--ds-button-header-border);
+      color: var(--ds-button-header-text);
+    }
+    .themed-header-button:hover {
+      background: var(--ds-button-header-hover-bg);
+    }
+
+    .showcase-error {
+      display: flex;
+      items-align: start;
+      gap: 8px;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      background: rgba(127, 29, 29, 0.2);
+      color: #fca5a5;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+    }
+  </style>
+</head>
+<body class="theme-felt">
+
+  <!-- Left Sidebar -->
+  <aside class="ds-sidebar">
+    <div class="logo-container">
+      <div class="logo-box">믿</div>
+      <div class="logo-title">믿거래 UI</div>
+    </div>
+    
+    <div>
+      <h3 class="nav-section-title">가이드</h3>
+      <ul class="nav-list">
+        <li><a href="#overview" class="active">시스템 개요</a></li>
+        <li><a href="#foundation">기초 구성 요소</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 class="nav-section-title">컴포넌트</h3>
+      <ul class="nav-list">
+        <li><a href="#comp-framestat">1. FrameStat</a></li>
+        <li><a href="#comp-frameiconbutton">2. FrameIconButton</a></li>
+        <li><a href="#comp-deckrail">3. DeckRail</a></li>
+        <li><a href="#comp-tablechip">4. TableChip</a></li>
+        <li><a href="#comp-tablehandcard">5. TableHandCard</a></li>
+        <li><a href="#comp-tableactioncard">6. TableActionCard</a></li>
+        <li><a href="#comp-mydashboard">7. MyDashboard</a></li>
+        <li><a href="#comp-sideplayerseat">8. SidePlayerSeat</a></li>
+        <li><a href="#comp-actionpanel">9. ActionPanel</a></li>
+        <li><a href="#comp-pendingdealpanel">10. PendingDealPanel</a></li>
+        <li><a href="#comp-waitingroom">11. WaitingRoom</a></li>
+        <li><a href="#comp-logpanel">12. LogPanel</a></li>
+        <li><a href="#comp-errornotice">13. ErrorNotice</a></li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="ds-content">
+    <header class="ds-header">
+      <div>
+        <h1>믿거래 디자인 시스템 (Midgeorae Design System)</h1>
+        <p>게임에 탑재되는 핵심 UI 컴포넌트 및 기본 디자인 시스템의 표준 사양 가이드라인입니다. 아래에서 색상, 타이포그래피, 여백 등 기초 요소(Foundation)와 13대 핵심 컴포넌트를 확인하실 수 있습니다.</p>
+      </div>
+    </header>
+
+    <!-- Realtime Mock Board Renderer -->
+    <section id="overview" class="playground-card">
+      <div class="playground-title">
+        <i data-lucide="layout"></i> 실시간 보드판 렌더러 (Classic Green Felt)
+      </div>
+
+      <!-- Live Mock Board -->
+      <div class="board-render-area">
+        <div class="mini-wood-frame">
+          <!-- settings gear and logs -->
+          <div class="logs-mini">
+            [1] 봇1 입장<br>[2] 봇2 입장<br>[3] 게임 시작<br>[4] 경수 차례
+          </div>
+          <div class="settings-btn-mini"><i data-lucide="settings" style="width:12px;height:12px;"></i></div>
+
+          <!-- top seats -->
+          <div class="mini-stat-bar">
+            <div class="mini-stat-item" style="border:none;">
+              <div class="mini-stat-label">남은 턴</div>
+              <div class="mini-stat-value" style="color:var(--ds-primary-action-bg);">8회</div>
+            </div>
+            <div class="mini-stat-item">
+              <div class="mini-stat-label">진행도</div>
+              <div class="mini-stat-value">2/10</div>
+            </div>
+          </div>
+
+          <div class="seat-top-mini">
+            <div class="mini-player-seat">
+              <div class="name">봇1 (상단)</div>
+              <div class="stats"><span>평판 3/5</span><span>자산 20억</span></div>
+            </div>
+          </div>
+
+          <div class="seat-left-mini">
+            <div class="mini-player-seat active-turn">
+              <div class="name">봇2 (좌측)</div>
+              <div class="stats"><span>평판 2/5</span><span>자산 15억</span></div>
+            </div>
+          </div>
+
+          <div class="seat-right-mini">
+            <div class="mini-player-seat">
+              <div class="name">봇3 (우측)</div>
+              <div class="stats"><span>평판 4/5</span><span>자산 30억</span></div>
+            </div>
+          </div>
+
+          <!-- play area -->
+          <div class="center-board-mini">
+            <span style="font-size:10px;font-weight:bold;margin-bottom:8px;opacity:0.6;">테이블 중앙 보드</span>
+            <div class="card-mini unrevealed">
+              <span style="font-size:9px;font-weight:bold;">ACTION</span>
+            </div>
+          </div>
+
+          <!-- bottom seat (me) -->
+          <div class="cockpit-mini">
+            <div class="dashboard-mini panel-mini" style="flex:1;">
+              <div style="font-weight:900;margin-right:6px;border-right:1px solid rgba(255,255,255,0.1);padding-right:6px;">경수 (나)</div>
+              <div class="card-mini">
+                <div class="icon-wrap"><i data-lucide="smartphone" style="width:14px;"></i></div>
+                <span>아이폰</span>
+                <span style="color:#ff7e36">80만원</span>
+              </div>
+              <div class="card-mini">
+                <div class="icon-wrap"><i data-lucide="headphones" style="width:14px;"></i></div>
+                <span>에어팟</span>
+                <span style="color:#ff7e36">20만원</span>
+              </div>
+            </div>
+            <div class="action-panel-mini panel-mini">
+              <div style="font-weight:800;font-size:8px;">내 차례 (거래 신청 가능)</div>
+              <button class="btn-primary-mini">거래 신청 발송</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Foundation Section -->
+    <section id="foundation" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>Foundation</span> 기초 구성 요소 (Design Tokens)</h2>
+      </div>
+      
+      <!-- 1. Colors -->
+      <div style="margin-bottom: 32px;">
+        <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="palette" style="width: 16px; height: 16px; color:#ff7e36;"></i> 색상 시스템 (Color Palette)
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 6px; background: #ff7e36; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 900; color: #fff;">Orange (브랜드)</div>
+              <div style="font-size: 11px; color: #a8a29e; font-family: monospace;">#ff7e36</div>
+            </div>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 6px; background: #1b3d32; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 900; color: #fff;">Felt Green (보드판)</div>
+              <div style="font-size: 11px; color: #a8a29e; font-family: monospace;">#1b3d32</div>
+            </div>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 6px; background: #10b981; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 900; color: #fff;">Emerald (성공/만족)</div>
+              <div style="font-size: 11px; color: #a8a29e; font-family: monospace;">#10b981</div>
+            </div>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 6px; background: #0ea5e9; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 900; color: #fff;">Sky (만족/후기)</div>
+              <div style="font-size: 11px; color: #a8a29e; font-family: monospace;">#0ea5e9</div>
+            </div>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 6px; background: #ef4444; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 900; color: #fff;">Red (경고/취소)</div>
+              <div style="font-size: 11px; color: #a8a29e; font-family: monospace;">#ef4444</div>
+            </div>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 6px; background: #1c1917; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div>
+              <div style="font-size: 12px; font-weight: 900; color: #fff;">Stone (컨테이너)</div>
+              <div style="font-size: 11px; color: #a8a29e; font-family: monospace;">#1c1917</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Typography -->
+      <div style="margin-bottom: 32px;">
+        <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="type" style="width: 16px; height: 16px; color:#ff7e36;"></i> 타이포그래피 (Typography)
+        </h3>
+        <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <div style="font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase;">한글 기본 폰트</div>
+            <div style="font-size: 16px; font-weight: 700; color: #fff; font-family: 'Noto Sans KR', sans-serif;">Noto Sans KR (가시성이 우수한 고딕 서체)</div>
+          </div>
+          <hr style="border-color: #232832; border-style: solid; border-width: 0 0 1px 0;">
+          <div>
+            <div style="font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase;">영문 및 숫자 폰트</div>
+            <div style="font-size: 18px; font-weight: 900; color: #fff; font-family: 'Outfit', sans-serif;">Outfit (카지노 칩 스타일의 대담하고 굵직한 서체)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Spacing & Radius -->
+      <div style="margin-bottom: 32px;">
+        <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="ruler" style="width: 16px; height: 16px; color:#ff7e36;"></i> 여백 및 곡률 규격 (Spacing &amp; Radius)
+        </h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 10px;">여백 (Spacing Scale)</div>
+            <table style="width: 100%; font-size: 13px; color: #cbd5e1; border-collapse: collapse;">
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">gap-2 / p-2</td><td style="padding: 6px; font-family:monospace;">8px</td><td style="padding: 6px; color:#94a3b8;">카드 안 여백, 미니멀 간격</td></tr>
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">gap-3 / p-3</td><td style="padding: 6px; font-family:monospace;">12px</td><td style="padding: 6px; color:#94a3b8;">컴포넌트 간 기본 여백</td></tr>
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">gap-4 / p-4</td><td style="padding: 6px; font-family:monospace;">16px</td><td style="padding: 6px; color:#94a3b8;">보드 테이블 내부 큼직한 간격</td></tr>
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">p-6 / p-7</td><td style="padding: 6px; font-family:monospace;">24px / 28px</td><td style="padding: 6px; color:#94a3b8;">모달 내부 및 보드 마진</td></tr>
+            </table>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 16px;">
+            <div style="font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 10px;">모서리 곡률 (Border Radius)</div>
+            <table style="width: 100%; font-size: 13px; color: #cbd5e1; border-collapse: collapse;">
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">rounded</td><td style="padding: 6px; font-family:monospace;">4px</td><td style="padding: 6px; color:#94a3b8;">미니 직업 버튼 등</td></tr>
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">rounded-lg</td><td style="padding: 6px; font-family:monospace;">8px</td><td style="padding: 6px; color:#94a3b8;">물건 카드, 대시보드 모서리</td></tr>
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">rounded-2xl</td><td style="padding: 6px; font-family:monospace;">16px</td><td style="padding: 6px; color:#94a3b8;">중앙 모달 컨테이너</td></tr>
+              <tr style="border-bottom: 1px solid #232832;"><td style="padding: 6px; font-weight:bold;">rounded-full</td><td style="padding: 6px; font-family:monospace;">9999px</td><td style="padding: 6px; color:#94a3b8;">알약(Pill) 모양 칩, 헤더 버튼</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Base Utility Classes -->
+      <div>
+        <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="code" style="width: 16px; height: 16px; color:#ff7e36;"></i> 공용 유틸리티 클래스 (Base Utility Classes)
+        </h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 14px;">
+            <div style="font-weight: 900; color:#fff; font-size:13px;">.themed-panel</div>
+            <p style="font-size: 12px; color:#94a3b8; margin: 4px 0 8px; font-weight:bold;">석조 배경과 얇은 테두리가 어우러진 기본 카드 컨테이너 클래스</p>
+            <pre style="background:#0f1115; padding:8px; border-radius:4px; font-size:11px; color:#a8a29e; overflow:auto;">background: rgba(28, 25, 23, 0.98);
+border: 1px solid rgba(255, 255, 255, 0.15);
+color: #f7e8cf;</pre>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 14px;">
+            <div style="font-weight: 900; color:#fff; font-size:13px;">.themed-btn-primary</div>
+            <p style="font-size: 12px; color:#94a3b8; margin: 4px 0 8px; font-weight:bold;">강렬한 믿거래 오렌지 브랜드 색상이 가미된 핵심 행동용 버튼</p>
+            <pre style="background:#0f1115; padding:8px; border-radius:4px; font-size:11px; color:#a8a29e; overflow:auto;">background-color: #ff7e36;
+box-shadow: 0 7px 0 #c14b12;</pre>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 14px;">
+            <div style="font-weight: 900; color:#fff; font-size:13px;">.themed-header-button</div>
+            <p style="font-size: 12px; color:#94a3b8; margin: 4px 0 8px; font-weight:bold;">설정 및 미션 등 상호작용 가능한 회색 반투명 헤더 서브 버튼</p>
+            <pre style="background:#0f1115; padding:8px; border-radius:4px; font-size:11px; color:#a8a29e; overflow:auto;">background: rgba(28, 25, 23, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.15);</pre>
+          </div>
+          <div style="background: #1e222b; border: 1px solid #232832; border-radius: 8px; padding: 14px;">
+            <div style="font-weight: 900; color:#fff; font-size:13px;">.themed-text-muted</div>
+            <p style="font-size: 12px; color:#94a3b8; margin: 4px 0 8px; font-weight:bold;">보조 정보 텍스트용으로 명도가 낮은 은은한 회록빛 텍스트 컬러</p>
+            <pre style="background:#0f1115; padding:8px; border-radius:4px; font-size:11px; color:#a8a29e; overflow:auto;">color: #a8a29e;</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Component Sections -->
+    
+    <!-- 1. FrameStat -->
+    <section id="comp-framestat" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>01</span> FrameStat (상단 정보 패널)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>게임 보드 상단 스트립 내부에서 현재의 게임 상태 지표(남은 액션 턴, 라운드 번호, 플레이 제한 등)를 정돈해서 출력해주는 서브 대시보드 컴포넌트입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>게임 화면 상단 헤더 스트립</td></tr>
+            <tr><th>바인딩 변수</th><td><code>--ds-stone-container-text</code>, <code>--ds-stone-container-text-muted</code></td></tr>
+            <tr><th>디자인 의도</th><td>대조형 카운터 스타일로 폰트 크기 비율을 대조하여 시인성을 확보하였습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview" style="gap: 20px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; justify-content: center; display: flex; align-items: center;">
+          <div class="frame-stat" style="border-left: none;">
+            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/55" style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(247, 232, 207, 0.55);">남은 턴수</div>
+            <div class="mt-1 truncate text-2xl font-black text-green-400" style="margin-top: 4px; font-size: 24px; font-weight: 900; color: #4ade80;">8회</div>
+          </div>
+          <div class="frame-stat">
+            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/55" style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.18em; color: rgba(247, 232, 207, 0.55);">진행도</div>
+            <div class="mt-1 truncate text-2xl font-black text-amber-50" style="margin-top: 4px; font-size: 24px; font-weight: 900; color: #fffbeb;">2/10</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. FrameIconButton -->
+    <section id="comp-frameiconbutton" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>02</span> FrameIconButton (헤더 액션 버튼)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>상단 기능 스트립 및 설정 다이얼로그에서 사용되는 아이콘+텍스트 조합의 다용도 헤더 버튼입니다. 마우스 호버 및 클릭 액션 시 입체적인 엠보싱 효과를 제공합니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>헤더 우측 설정 버튼, 모달 내부 액션 버튼 등</td></tr>
+            <tr><th>규격 정보</th><td><code>min-width: 58px × min-height: 54px</code></td></tr>
+            <tr><th>바인딩 변수</th><td><code>--button-header-bg</code>, <code>--button-header-border</code>, <code>--button-header-text</code></td></tr>
+            <tr><th>디자인 의도</th><td>입체적인 casino 칩 스타일 엠보싱 섀도를 가미하여 상호작용 의도를 명확히 전달합니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div style="display:flex;gap:12px;">
+            <button class="motion-button frame-icon-button" title="설정">
+              <span><i data-lucide="settings" style="width:16px;height:16px;"></i></span>
+              <span class="text-[10px] font-black" style="font-size: 10px; font-weight: 900; margin-top: 3px;">설정</span>
+            </button>
+            <button class="motion-button frame-icon-button" title="도움말">
+              <span><i data-lucide="help-circle" style="width:16px;height:16px;"></i></span>
+              <span class="text-[10px] font-black" style="font-size: 10px; font-weight: 900; margin-top: 3px;">도움말</span>
+            </button>
+            <button class="motion-button frame-icon-button" title="초대">
+              <span><i data-lucide="copy" style="width:16px;height:16px;"></i></span>
+              <span class="text-[10px] font-black" style="font-size: 10px; font-weight: 900; margin-top: 3px;">초대</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. DeckRail -->
+    <section id="comp-deckrail" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>03</span> DeckRail (게임 덱 및 상태 레인)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>게임 시장 진행 상태 및 현재 모드(테스트/멀티플레이)를 표기해주고, 호스트 전용 게임 제어 시작 버튼을 포함하고 있는 사이드 보드패널입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>메인 보드 테이블 좌/우측 레인</td></tr>
+            <tr><th>바인딩 변수</th><td><code>--stone-container-bg</code>, <code>--stone-container-border</code>, <code>--primary-action-bg</code></td></tr>
+            <tr><th>디자인 의도</th><td>세로형 서브 영역으로서 보드의 좌우 균형을 잡아주며, 시작 버튼에 강렬한 브랜드 오렌지를 적용해 시선이 집중되도록 설계했습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="game-deck-rail" style="width: 200px; text-align: center;">
+            <div class="deck-rail-title" style="display:flex; align-items:center; justify-content:center; gap:10px; color:#f7ddb0; font-size:15px; font-weight:900; margin-bottom: 6px;">진행</div>
+            <div style="font-size:10px;background:rgba(255,255,255,0.05);padding:4px;border-radius:4px;color:rgba(255,255,255,0.7);font-weight:bold;margin-bottom:8px;">멀티플레이 모드</div>
+            <div style="padding:10px 0;">
+              <div style="font-size:16px;font-weight:900;color:#fff;">대기 중</div>
+              <div style="font-size:9px;opacity:0.6;margin-top:2px;color:rgba(255,255,255,0.5);font-weight:bold;">3-4명 모이면 시작</div>
+            </div>
+            <button class="themed-btn-primary" style="width:100%;padding:8px 0;border:none;border-radius:6px;font-weight:900;cursor:pointer;">게임 시작</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. TableChip -->
+    <section id="comp-tablechip" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>04</span> TableChip (포커 칩 평판 표시기)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>플레이어의 거래 신뢰도(평판 점수) 또는 물건의 등급을 보드 테이블 위에 포커 칩 형태의 입체적 구형으로 시각화한 수치 태그입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>플레이어 정보판 내부, 물건 등급 마크</td></tr>
+            <tr><th>클래스 정보</th><td><code>.table-chip</code></td></tr>
+            <tr><th>디자인 의도</th><td>전형적인 보드게임 카지노의 황금빛 포커 칩 스타일링을 그라데이션으로 반영하여 물리적 질감을 재현했습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="table-chip gap-2 px-3 py-1 text-xs font-black text-stone-700" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-weight: 900; color: #2d1b0f;">
+            <span style="opacity:0.6;">평판 토큰</span>
+            <span>4 / 5</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TableHandCard -->
+    <section id="comp-tablehandcard" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>05</span> TableHandCard (물건 카드)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>플레이어 간의 중고 거래 대상이자 빌런/시민 추리의 핵심이 되는 물건 카드입니다. 카드 등급 및 카테고리에 맞춰 특수 Glow 테두리와 테마가 입혀지며, 화면상의 위치에 따라 두 가지 규격으로 나뉩니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>플레이어 개인 손패 영역 및 타 플레이어의 테이블 정보 영역</td></tr>
+            <tr><th>내 손패 규격</th><td><code>100px × 134px</code> (상세 정보 표현 및 드래그 앤 드롭 정렬 최적화)</td></tr>
+            <tr><th>타인 공개 규격</th><td>
+              <code>84px × 112px</code> (기본 규격) / <br>
+              <code>76px × 101px</code> (중형 규격 - 좌우 세로 배치 영역) / <br>
+              <code>67px × 90px</code> (소형 규격 - 상단 가로 배치 영역)
+            </td></tr>
+            <tr><th>카테고리 테마</th><td>
+              <span style="color:#f59e0b">● 전자기기 (Electronics)</span> | 
+              <span style="color:#a855f7">● 의류 (Fashion)</span> | 
+              <span style="color:#10b981">● 취미 (Hobby)</span> | 
+              <span style="color:#3b82f6">● 생활 (Living)</span> | 
+              <span style="color:#ef4444">● 벽돌 (Brick)</span>
+            </td></tr>
+          </table>
+        </div>
+        <div class="spec-preview" style="gap:12px; flex-wrap: wrap; justify-content: center; background: #0c0f14; padding: 20px; border-radius: 8px; display: flex;">
+          <!-- 내 손패 규격 (100x134px) 예시 1: 전자기기 -->
+          <div class="game-card-hand cat-electronics" style="cursor: pointer;">
+            <div style="font-size:34px; color:#f7e8cf; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="laptop" style="width:34px; height:34px;"></i></div>
+            <div style="width:100%; text-align:center;">
+              <div style="font-size:12px; font-weight:900; color:#fff; line-height:1.1;">노트북</div>
+              <div style="font-size:11px; font-weight:900; color:#fbbf24; margin-top:2px; line-height:1;">120만</div>
+              <div style="font-size:10px; font-weight:bold; color:#a8a29e; margin-top:2px; line-height:1;">미개봉</div>
+            </div>
+          </div>
+
+          <!-- 내 손패 규격 (100x134px) 예시 2: 패션/의류 -->
+          <div class="game-card-hand cat-fashion" style="cursor: pointer;">
+            <div style="font-size:34px; color:#f7e8cf; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="shirt" style="width:34px; height:34px;"></i></div>
+            <div style="width:100%; text-align:center;">
+              <div style="font-size:12px; font-weight:900; color:#fff; line-height:1.1;">패딩 점퍼</div>
+              <div style="font-size:11px; font-weight:900; color:#fbbf24; margin-top:2px; line-height:1;">35만</div>
+              <div style="font-size:10px; font-weight:bold; color:#a8a29e; margin-top:2px; line-height:1;">사용감 있음</div>
+            </div>
+          </div>
+
+          <!-- 타인 공개 기본 규격 (84x112px) 예시: 생활가정 -->
+          <div class="game-card-opponent-standard cat-living">
+            <div style="font-size:28px; color:#f7e8cf; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="sofa" style="width:28px; height:28px;"></i></div>
+            <div style="width:100%; text-align:center;">
+              <div style="font-size:10px; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">소파</div>
+              <div style="font-size:9px; font-weight:900; color:#fbbf24; margin-top:1px;">45만</div>
+            </div>
+          </div>
+
+          <!-- 타인 공개 중형 규격 (76x101px) 예시: 벽돌 (사기 아이템) -->
+          <div class="game-card-opponent-medium cat-brick">
+            <div style="font-size:25px; color:#ef4444; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="package" style="width:25px; height:25px;"></i></div>
+            <div style="width:100%; text-align:center;">
+              <div style="font-size:9px; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">벽돌 (Disguised)</div>
+              <div style="font-size:8.5px; font-weight:900; color:#ef4444; margin-top:1px;">0원</div>
+            </div>
+          </div>
+
+          <!-- 타인 공개 소형 규격 뒷면 예시 (67x90px) -->
+          <div class="game-card-opponent-small" style="background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%); border-color: rgba(139, 92, 246, 0.6); justify-content:center; align-items:center; display: flex; flex-direction: column;">
+            <i data-lucide="help-circle" style="width:18px; height:18px; color:rgba(255,255,255,0.4)"></i>
+            <span style="font-size:7px; color:rgba(255,255,255,0.4); margin-top:4px; font-weight:800; letter-spacing:0.5px;">MIDGEORAE</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. TableActionCard -->
+    <section id="comp-tableactioncard" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>06</span> TableActionCard (행동 카드)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>내 턴에 드로우하여 사용할 수 있는 액션 설명 카드입니다. 거래 신청, 가격 협상, 리뷰 작성 등 각 핵심 액션의 기능과 영향 범위를 상세 서술합니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>행동 선택 화면, 뽑은 행동 카드 연출</td></tr>
+            <tr><th>디자인 의도</th><td>녹색/오렌지색 테두리 색을 통해 방어 카드와 공격적 액션 카드를 시각적으로 즉시 식별할 수 있도록 지원합니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview" style="gap:12px; display:flex;">
+          <div class="table-card table-card-accent-green" style="width: 110px; height: 154px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; text-align: left;">
+            <div style="font-size:11px;font-weight:900;color:#16a34a;line-height:1.2;">아이템 보호</div>
+            <p style="font-size:8px;opacity:0.7;line-height:1.4;margin-top:10px;font-weight:bold;color:#1c1917;">내 중고 물건 거래 실패 시 발생하는 마이너스 자산 1회 방어.</p>
+            <div style="font-size:8px;font-weight:900;color:#16a34a;align-self:flex-end;">방어 카드</div>
+          </div>
+          <div class="table-card table-card-accent-orange" style="width: 110px; height: 154px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; text-align: left;">
+            <div style="font-size:11px;font-weight:900;color:#ff7e36;line-height:1.2;">거래 신청</div>
+            <p style="font-size:8px;opacity:0.7;line-height:1.4;margin-top:10px;font-weight:bold;color:#1c1917;">상대의 오픈된 물건을 대상으로 원하는 가격을 써서 거래 신청.</p>
+            <div style="font-size:8px;font-weight:900;color:#ff7e36;align-self:flex-end;">공격 카드</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. MyDashboard -->
+    <section id="comp-mydashboard" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>07</span> MyDashboard (내 대시보드 매트)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>플레이어 자신만의 영역 매트입니다. 나만의 프로필 요약 카드, 비밀 직업 확인창, 사기 스코어 현황판 및 내 손패 아이템 카드 목록이 한눈에 모이는 컨트롤 데스크입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>게임 보드판 하단 고정 영역</td></tr>
+            <tr><th>바인딩 변수</th><td><code>--ds-stone-container-bg</code>, <code>--ds-stone-container-border</code>, <code>--ds-side-player-card-bg</code></td></tr>
+            <tr><th>디자인 의도</th><td>카드 배열을 가로로 스크롤 가능하게 배치하고 프로필 카드를 결합하여 자신의 정보를 신속히 볼 수 있도록 설계했습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="showcase-dashboard" style="display: flex; gap: 16px; align-items: center; width: 100%;">
+            <!-- 프로필 카드 (side-player-card) -->
+            <div class="side-player-card active-turn" style="width: 180px; padding: 12px; text-align: center; flex-shrink: 0; background: var(--ds-side-player-card-bg); border: var(--ds-side-player-card-border); border-radius: 10px;">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle, #f8d9a4, #b87332); display: flex; align-items: center; justify-content: center; font-weight: 900; color: #1c1917;">경</div>
+                <div style="font-size: 16px; font-weight: 900; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">경수 (나)</div>
+              </div>
+              <div style="margin-top: 8px; display: flex; justify-content: space-around; font-size: 12px; font-weight: 900; color: #d1d5db;">
+                <span>평판 4</span>
+                <span>물건 2</span>
+              </div>
+              <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; display: flex; justify-content: center; gap: 12px; font-size: 11px; color: #a8a29e;">
+                <span>👍 2</span>
+                <span>👎 0</span>
+              </div>
+              <button class="themed-header-button border" style="width: 100%; margin-top: 8px; font-size: 11px; font-weight: 900; border-radius: 4px; padding: 6px 0; cursor: pointer; border: 1px solid var(--ds-button-header-border);">내 직업 보기 👀</button>
+            </div>
+            
+            <!-- 카드 리스트 매트 (themed-panel) -->
+            <div class="themed-panel" style="flex: 1; display: flex; gap: 10px; padding: 12px; border-radius: 8px; align-items: center; overflow-x: auto; background: var(--ds-stone-container-bg); border: 1px solid var(--ds-stone-container-border);">
+              <!-- 내 손패 규격 예시 1 -->
+              <div class="game-card-hand cat-electronics" style="width: 80px; height: 110px; padding: 6px; flex-shrink: 0;">
+                <div style="font-size:24px; color:#f7e8cf; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="headphones" style="width:24px; height:24px;"></i></div>
+                <div style="width:100%; text-align:center;">
+                  <div style="font-size:10px; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">에어팟</div>
+                  <div style="font-size:9px; font-weight:900; color:#fbbf24; margin-top:1px;">20만</div>
+                </div>
+              </div>
+              <!-- 내 손패 규격 예시 2 -->
+              <div class="game-card-hand cat-living" style="width: 80px; height: 110px; padding: 6px; flex-shrink: 0;">
+                <div style="font-size:24px; color:#f7e8cf; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="keyboard" style="width:24px; height:24px;"></i></div>
+                <div style="width:100%; text-align:center;">
+                  <div style="font-size:10px; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">키보드</div>
+                  <div style="font-size:9px; font-weight:900; color:#fbbf24; margin-top:1px;">10만</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. SidePlayerSeat -->
+    <section id="comp-sideplayerseat" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>08</span> SidePlayerSeat (다른 플레이어 미니 정보판)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>테이블 위 좌측, 상단, 우측에 위치한 라이벌 플레이어들의 매트 및 보유 물건 카드 가로 열입니다. 상대 턴일 때 활성 테두리 애니메이션이 작동합니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>보드판 상단, 좌측, 우측 레일</td></tr>
+            <tr><th>바인딩 변수</th><td><code>--ds-side-player-card-bg</code>, <code>--ds-side-player-card-border</code>, <code>--ds-primary-action-bg</code></td></tr>
+            <tr><th>디자인 의도</th><td>적은 공간에서도 상대 프로필과 노출된 중고 거래품 목록을 손쉽게 식별 가능하도록 극도로 미니멀하게 리사이징했습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div class="side-player-card active-turn" style="width:180px; text-align: center; background: var(--ds-side-player-card-bg); border: var(--ds-side-player-card-border); position: relative; border-radius: 10px; padding: 10px;">
+              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <div style="width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, #f8d9a4, #b87332); display: flex; align-items: center; justify-content: center; font-weight: 900; color: #1c1917; font-size: 11px;">빌</div>
+                <div style="font-size: 16px; font-weight: 900; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">빌런봇</div>
+              </div>
+              <div style="margin-top: 8px; display: flex; justify-content: space-around; font-size: 12px; font-weight: 900; color: #d1d5db;">
+                <span>평판 2</span>
+                <span>물건 2</span>
+              </div>
+              <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; display: flex; justify-content: center; gap: 12px; font-size: 11px; color: #a8a29e;">
+                <span>👍 1</span>
+                <span>👎 1</span>
+              </div>
+              <span style="position: absolute; top: -6px; right: -6px; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 900; border: 1px solid var(--ds-stone-container-border); background: var(--ds-stone-container-bg); color: #fff;">BOT</span>
+            </div>
+            <!-- 상대 공개 물건 가로열 (standard 크기) -->
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <div class="game-card-opponent-standard cat-electronics">
+                <div style="font-size:28px; color:#f7e8cf; display:flex; align-items:center; justify-content:center; flex:1;"><i data-lucide="smartphone" style="width:28px; height:28px;"></i></div>
+                <div style="width:100%; text-align:center;">
+                  <div style="font-size:10px; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">스마트폰</div>
+                  <div style="font-size:9px; font-weight:900; color:#fbbf24; margin-top:1px;">80만</div>
+                </div>
+              </div>
+              <div class="game-card-opponent-standard" style="background: linear-gradient(135deg, #4c1d95 0%, #1e1b4b 100%); border-color: rgba(139, 92, 246, 0.6); justify-content:center; align-items:center; display: flex; flex-direction: column;">
+                <i data-lucide="help-circle" style="width:20px; height:20px; color:rgba(255,255,255,0.4)"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. ActionPanel -->
+    <section id="comp-actionpanel" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>09</span> ActionPanel (액션 가격 결정 슬라이더)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>내 턴에 거래 신청 등의 가격 협상 카드를 사용해 상대와 거래를 할 때, 구체적인 희망 가격(asking price)을 1만 단위 단위로 스텝 조정할 수 있는 <code>PriceInputControl</code> 컴포넌트입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>행동 진행 cockpit 영역</td></tr>
+            <tr><th>바인딩 변수</th><td><code>--ds-stone-container-bg</code>, <code>--ds-stone-container-border</code>, <code>--ds-primary-action-bg</code></td></tr>
+            <tr><th>디자인 의도</th><td>양 끝의 1만 단위 조정 스태퍼 버튼과 중간의 인풋 창으로 가격 조정을 터치 친화적이고 직관적으로 제공합니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="themed-board-modal" style="max-width: 320px; padding: 20px; gap: 12px;">
+            <div style="font-size:12px;font-weight:900;color:#ff7e36;">💡 거래 희망가 설정</div>
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin:8px 0; select-none;">
+              <button type="button" style="padding: 6px 10px; background:#1c1917; border:1px solid rgba(255,126,54,0.2); color:#d1d5db; font-size:14px; font-weight:900; border-radius:4px; cursor:pointer;">-1만</button>
+              <div style="display:flex; align-items:center; background:rgba(0,0,0,0.45); border:1px solid rgba(255,126,54,0.3); padding:4px 10px; border-radius:4px;">
+                <input type="number" value="80" disabled style="width:50px; text-align:center; color:#fff; background:transparent; border:none; font-size:16px; font-weight:900; outline:none;" />
+                <span style="font-size:13px; color:#ff7e36; font-weight:900; margin-left:4px;">만</span>
+              </div>
+              <button type="button" style="padding: 6px 10px; background:#1c1917; border:1px solid rgba(255,126,54,0.2); color:#d1d5db; font-size:14px; font-weight:900; border-radius:4px; cursor:pointer;">+1만</button>
+            </div>
+            <button class="btn-flat-orange" style="width:100%; max-width:none; font-weight:900; cursor:pointer;">거래 제안 보내기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. PendingDealPanel -->
+    <section id="comp-pendingdealpanel" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>10</span> PendingDealPanel (거래 심사 패널)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>상대방이 나에게 거래 신청이나 판매 신청을 보냈을 때 활성화되는 실시간 제안 검토 팝업입니다. <code>ThemedBoardModal</code> 공용 모달을 기반으로 렌더링되며, 수락 시 쿨거래, 거절 시 거래가 취소됩니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>보드 테이블 중앙 오버레이</td></tr>
+            <tr><th>클래스 정보</th><td><code>.themed-board-modal</code></td></tr>
+            <tr><th>디자인 의도</th><td>강력한 주의 경고 모달로서 주황색 두꺼운 테두리(#ff7e36)와 어두운 석조(Stone) 테마 배경으로 결정을 유도하도록 설계했습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="themed-board-modal" style="text-align: center;">
+            <div class="modal-header-text">📢 자동봇 1님이 70만 제시했습니다.</div>
+            <h2 class="modal-title" style="margin-top: 6px;">거래 제안 심사</h2>
+            <div class="modal-details-panel space-y-3.5" style="margin-top: 10px;">
+              <div class="details-grid">
+                <div class="details-item">
+                  <span class="details-label">제안 상품</span>
+                  <span class="details-value highlight">[아이폰]</span>
+                </div>
+                <div class="details-item">
+                  <span class="details-label">현재 시세</span>
+                  <span class="details-value">80만</span>
+                </div>
+                <div class="details-item">
+                  <span class="details-label">아이템 종류</span>
+                  <span class="details-value">전자기기 (미개봉)</span>
+                </div>
+              </div>
+              <div style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 14px; padding-top: 14px; display: flex; align-items: center; justify-content: center; gap: 20px; font-weight: 900; font-size: 18px;">
+                <span style="color:#a8a29e;">제시 가격</span>
+                <span style="color:#ff7e36; font-size: 20px;">70만</span>
+              </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 10px;">
+              <button class="btn-flat-orange flex-1 cursor-pointer"><i data-lucide="thumbs-up" style="width:14px;height:14px;display:inline;margin-right:6px;"></i>쿨거래</button>
+              <button class="btn-flat-cancel flex-1 cursor-pointer"><i data-lucide="ban" style="width:14px;height:14px;display:inline;margin-right:6px;"></i>거래취소</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. WaitingRoom -->
+    <section id="comp-waitingroom" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>11</span> WaitingRoom (대기실 설정 패널)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>방 생성 후 실제 게임을 시작하기 전에 플레이어 목록을 확인하고, 봇을 추가하거나 게임을 바로 시작할 수 있는 대기 화면 컴포넌트입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>게임방 진입 시 초기 대기 스크린</td></tr>
+            <tr><th>테마 스타일</th><td>밝은 화이트/그레이 톤 (<code>bg-stone-50</code>, <code>bg-white</code>, <code>border-stone-300</code>)</td></tr>
+            <tr><th>디자인 의도</th><td>이전의 카지노 어두운 톤에서 탈락하여, 깔끔하고 차분한 모던 그레이 톤으로 가시성과 방 코드 시인성을 확보하였습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview" style="background-color: #f5f5f4; border: 1px solid #d6d3d1; padding: 24px; border-radius: 12px; display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 380px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 20px; font-weight: 900; color: #1c1917; margin: 0;">대기실</h2>
+            <span style="height: 8px; width: 8px; border-radius: 50%; background-color: #22c55e; animation: pulse 2s infinite;"></span>
+          </div>
+          <div style="border: 1px solid #d6d3d1; background-color: #fff; padding: 12px 16px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 10px; font-weight: 900; color: #78716c; text-transform: uppercase;">방 코드</div>
+              <div style="font-size: 20px; font-weight: 900; color: #1c1917; tracking-wider: 0.05em; margin-top: 2px;">F4G2</div>
+            </div>
+            <button style="border: 1px solid #1c1917; background-color: transparent; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px;"><i data-lucide="copy" style="width:16px;height:16px;color:#1c1917;"></i></button>
+          </div>
+          <div style="margin-top: 8px;">
+            <label style="font-size: 12px; font-weight: 700; color: #44403c;">참여 중인 플레이어 (2/4)</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+              <div style="border: 1px solid #d6d3d1; background-color: #fff; padding: 10px 14px; font-size: 13px; font-weight: 700; color: #1c1917; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><i data-lucide="crown" style="width:14px;height:14px;color:#ea580c;display:inline;"></i>경수</div>
+              </div>
+              <div style="border: 1px solid #d6d3d1; background-color: #fff; padding: 10px 14px; font-size: 13px; font-weight: 700; color: #1c1917; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;">
+                <div>봇1</div>
+                <span style="font-size: 10px; padding: 2px 6px; background-color: #f5f5f4; border: 1px solid #e7e5e4; color: #78716c; border-radius: 4px;">봇</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button style="flex: 1; border: 1px solid #1c1917; background-color: transparent; color: #1c1917; padding: 10px 0; font-weight: 900; font-size: 13px; cursor: pointer; border-radius: 4px;">방 나가기</button>
+            <button style="flex: 1; background-color: #ea580c; border: none; color: #fff; padding: 10px 0; font-weight: 900; font-size: 13px; cursor: pointer; border-radius: 4px;">게임 시작</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. LogPanel -->
+    <section id="comp-logpanel" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>12</span> LogPanel (실시간 액션 피드)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>게임 속에서 펼쳐지는 모든 역사적 사건들(거래 성사, 사기 탐지, 평판 획득 등)을 리얼타임으로 한 줄씩 누적하여 히스토리를 제공하는 피드 창입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>보드 테이블 좌측 하단 고정 영역</td></tr>
+            <tr><th>클래스 정보</th><td><code>.logs-box-center</code> (크기 조절 가능)</td></tr>
+            <tr><th>디자인 의도</th><td>텍스트를 모노스페이스 서체로 하여 거래 장부 같은 신뢰감을 살렸고, 스크롤을 통해 지난 행적을 추적할 수 있도록 지원합니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="logs-box-center border border-white/5 relative" style="width: 240px; height: 130px; display: flex; flex-direction: column;">
+            <!-- Resize Handle Mockup -->
+            <div style="position: absolute; top: 0; right: 0; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; cursor: ne-resize;">
+              <div style="width: 6px; height: 6px; border-top: 2px solid rgba(245,158,11,0.5); border-right: 2px solid rgba(245,158,11,0.5);"></div>
+            </div>
+            <div style="font-size: 13px; font-weight: 900; color: rgba(247,220,150,0.5); border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; pr-3: 12px; select-none: none;">
+              <span>게임 로그</span>
+              <button style="font-size: 9px; padding: 2px 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.7); cursor: pointer; border-radius: 4px; font-weight: bold;">🔍 전체보기</button>
+            </div>
+            <div style="opacity: 0.8; font-family: monospace; display: flex; flex-direction: column; gap: 3px; font-size: 11px; flex: 1; overflow-y: auto;">
+              <div class="truncate">[15:40] 경수님이 에어팟 쿨거래</div>
+              <div class="truncate">[15:41] 봇2님이 경수님 후기 만족 등록</div>
+              <div class="truncate" style="color: #ef4444; font-weight: bold;">[15:41] ⚠️ 사기 의심 감지!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13. ErrorNotice -->
+    <section id="comp-errornotice" class="ds-section">
+      <div class="ds-section-header">
+        <h2><span>13</span> ErrorNotice (경고 안내바)</h2>
+      </div>
+      <div class="component-spec-grid">
+        <div class="spec-doc">
+          <p>사용 불가능한 카드 지목, 상대 머니 부족, 대기 인원 초과 등 비정상 동작 또는 서버 예외 발생 시 하단에 팝업되는 직관적인 경고 피드백입니다.</p>
+          <table class="meta-table">
+            <tr><th>사용 위치</th><td>화면 상단 에러 오버레이</td></tr>
+            <tr><th>디자인 의도</th><td>어두운 붉은색 반투명 톤과 삼각 느낌표 마크를 결합하여 플레이어의 비정상적 액션을 안전하게 방어하고 재지정을 돕습니다.</td></tr>
+          </table>
+        </div>
+        <div class="spec-preview">
+          <div class="showcase-error" style="width: 100%;">
+            <i data-lucide="alert-triangle" style="width:16px;height:16px;color:#fca5a5;" class="shrink-0 mt-0.5"></i>
+            <span>상대방의 소지금이 부족하여 거래를 제안할 수 없습니다.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Lucide Icons Initialization
+    lucide.createIcons();
+
+
+
+    // Smooth scroll for nav items
+    const navLinks = document.querySelectorAll('ul.nav-list a');
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        navLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

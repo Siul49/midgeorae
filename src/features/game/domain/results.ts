@@ -1,4 +1,29 @@
 import type { RoomResult, ServerPlayer } from "../server/types";
+import {
+  CONDITION_MULTIPLIERS,
+  CITIZEN_VICTORY_ASSET_GOAL,
+  VILLAIN_SCAM_VICTORY_LIMIT,
+} from "../rules/game-rules";
+import { ALL_ITEMS } from "../data/items";
+
+export function getFakeItemForBrick(instanceId: string) {
+  let hash = 0;
+  for (let i = 0; i < instanceId.length; i++) {
+    hash = instanceId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % ALL_ITEMS.length;
+  return ALL_ITEMS[index]!;
+}
+
+export function getBrickFakeCondition(instanceId: string): "mint" | "used" | "broken" {
+  let hash = 0;
+  for (let i = 0; i < instanceId.length; i++) {
+    hash = instanceId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const conditions = ["mint", "used", "broken"] as const;
+  const index = Math.abs(hash) % conditions.length;
+  return conditions[index];
+}
 
 export function countReports(
   reports: Record<string, string>,
@@ -9,27 +34,36 @@ export function countReports(
   }, {});
 }
 
-export function getItemAssetValue(item: { isBrick?: boolean; marketPrice: number; condition: string | null }): number {
-  if (item.isBrick) return 0;
-  let multiplier = 1.0;
-  if (item.condition === "mint") {
-    multiplier = 0.8;
-  } else if (item.condition === "used") {
-    multiplier = 0.6;
-  } else if (item.condition === "broken" || item.condition === "defective") {
-    multiplier = 0.4;
+export function getItemAssetValue(
+  item: { isBrick?: boolean; marketPrice: number; condition: string | null; instanceId?: string; acquiredPrice?: number | null },
+  roomStatus: string = "finished"
+): number {
+  if (item.isBrick) {
+    if (roomStatus !== "reporting" && roomStatus !== "finished" && item.instanceId) {
+      const fake = getFakeItemForBrick(item.instanceId);
+      const fakeCond = getBrickFakeCondition(item.instanceId);
+      const multiplier = fakeCond && fakeCond in CONDITION_MULTIPLIERS
+        ? CONDITION_MULTIPLIERS[fakeCond as keyof typeof CONDITION_MULTIPLIERS]
+        : 1.0;
+      return fake.marketPrice * multiplier;
+    }
+    return 0;
   }
+  const cond = item.condition;
+  const multiplier = cond && cond in CONDITION_MULTIPLIERS
+    ? CONDITION_MULTIPLIERS[cond as keyof typeof CONDITION_MULTIPLIERS]
+    : 1.0;
   return item.marketPrice * multiplier;
 }
 
-export function calculateAsset(player: ServerPlayer) {
+export function calculateAsset(player: ServerPlayer, roomStatus: string = "finished") {
   return (
     player.money +
-    player.hand.reduce((sum, item) => sum + getItemAssetValue(item), 0)
+    player.hand.reduce((sum, item) => sum + getItemAssetValue(item, roomStatus), 0)
   );
 }
 
-export function checkJobMission(player: ServerPlayer): boolean {
+export function checkJobMission(player: ServerPlayer, roomStatus: string = "finished"): boolean {
   if (!player.job) return false;
   const hand = player.hand ?? [];
   const nonBricks = hand.filter((item) => !item.isBrick);
@@ -43,20 +77,20 @@ export function checkJobMission(player: ServerPlayer): boolean {
     case "housewife":
       return nonBricks.length > 0 && nonBricks.every((item) => item.category === "living");
     case "brick-collector":
-      return bricks.length >= 4;
+      return bricks.length >= 2;
     case "collector":
       return hand.length >= 8;
     case "citizen":
-      return calculateAsset(player) >= 2500000;
+      return calculateAsset(player, roomStatus) >= CITIZEN_VICTORY_ASSET_GOAL;
     default:
       return false;
   }
 }
 
-export function calculateCitizenWinner(citizens: ServerPlayer[]): string {
+export function calculateCitizenWinner(citizens: ServerPlayer[], roomStatus: string = "finished"): string {
   if (citizens.length === 0) return "";
 
-  const completedCitizens = citizens.filter((p) => checkJobMission(p));
+  const completedCitizens = citizens.filter((p) => checkJobMission(p, roomStatus));
 
   if (completedCitizens.length === 1) {
     return completedCitizens[0].id;
@@ -65,11 +99,10 @@ export function calculateCitizenWinner(citizens: ServerPlayer[]): string {
   const pool = completedCitizens.length >= 2 ? completedCitizens : citizens;
 
   const sorted = [...pool].sort((a, b) => {
-    const assetA = calculateAsset(a);
-    const assetB = calculateAsset(b);
+    const assetA = calculateAsset(a, roomStatus);
+    const assetB = calculateAsset(b, roomStatus);
     if (assetB !== assetA) return assetB - assetA;
     if (b.reputationTokens !== a.reputationTokens) return b.reputationTokens - a.reputationTokens;
-    if (b.manner !== a.manner) return b.manner - a.manner;
     return b.money - a.money;
   });
 
@@ -91,7 +124,7 @@ export function calculateReportResult(
   const citizenWinnerId = calculateCitizenWinner(citizens);
 
   // 빌런 승리 조건: 검거되지 않았고, 동시에 성공적으로 2회 이상 사기를 쳤어야 함 (총자산 가치보다 비싸게 판매)
-  const villainWins = !villainCaught && villainScamCount >= 2;
+  const villainWins = !villainCaught && villainScamCount >= VILLAIN_SCAM_VICTORY_LIMIT;
 
   const winnerId = villainWins ? villainId : citizenWinnerId;
 

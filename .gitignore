@@ -58,3 +58,21 @@ test-results/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local scratch and logs
+/scratch/
+/bot-data/
+
+# large lecture materials
+/docs/lecture/
+
+# large binary files and folders
+*.zip
+*.mp4
+*.xd
+*.pdf
+*.pptx
+*.docx
+/docs/기말과제 예시*/
+
+

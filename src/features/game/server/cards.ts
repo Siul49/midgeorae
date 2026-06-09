@@ -25,44 +25,44 @@ const ITEM_IMAGE_BY_ID: Record<string, string> = {
 export const ACTION_CARDS: ActionCardSnapshot[] = [
   {
     type: "tradeRequest",
-    title: "구매 신청",
-    description: "다른 플레이어의 물건 카드 1장에 구매 신청을 보냅니다.",
+    title: "살게요! 🙋",
+    description: "다른 이웃의 물품 1장을 골라 살게요 제안을 보냅니다. (가격 조율 가능)",
     imagePath: "/game-cards/actions/trade-request.svg",
   },
   {
     type: "freeGive",
-    title: "무료나눔",
-    description: "자신의 물건 카드 1장을 다른 플레이어에게 0원(무료나눔)에 건네줍니다.",
+    title: "무료나눔 🎁",
+    description: "내 손패의 물품 1장을 다른 이웃에게 0원(무료나눔)에 기분 좋게 선물해요. (거절 불가)",
     imagePath: "/game-cards/actions/free-give.svg",
   },
   {
     type: "directTrade",
-    title: "직거래",
-    description: "거래할 물건 카드를 먼저 공개하고 거래합니다.",
+    title: "만나서 직거래 🤝",
+    description: "거래하고 싶은 물품을 상호 확실히 공개한 다음 정정당당하게 협상해요.",
     imagePath: "/game-cards/actions/direct-trade.svg",
   },
   {
     type: "badReview",
-    title: "악플테러",
-    description: "지목한 플레이어의 좋아요 토큰 1개를 소멸시킵니다.",
+    title: "비매너 후기 👎",
+    description: "비매너 유저를 신고하여 대상 플레이어의 평판 토큰 1개를 차감시킵니다.",
     imagePath: "/game-cards/cards/event-11-e11.svg",
   },
   {
     type: "recycle",
-    title: "분리수거",
-    description: "벽돌 카드가 있다면 1장을 게임에서 제거합니다.",
+    title: "분리수거 ♻️",
+    description: "내 손패에 필요 없는 벽돌이나 잡동사니 카드 1장을 폐기해 정리합니다.",
     imagePath: "/game-cards/actions/recycle.svg",
   },
   {
     type: "swap",
-    title: "물물교환",
-    description: "지목한 플레이어와 물건 카드 1장을 무작위로 맞교환합니다.",
+    title: "물물교환 🔄",
+    description: "지목한 이웃의 손패 중 무작위 1장과 내 카드 1장을 재미로 맞교환해요.",
     imagePath: "/game-cards/cards/event-15-e15.svg",
   },
   {
     type: "saleRequest",
-    title: "판매 신청",
-    description: "내 물건 카드 1장의 가격을 정해 다른 플레이어에게 판매 신청을 보냅니다.",
+    title: "팔아요! 📢",
+    description: "내 멋진 물품 1장을 선택하고 직접 가격을 책정해 이웃에게 제안해 봐요.",
     imagePath: "/game-cards/actions/direct-trade.svg",
   },
 ];
@@ -114,28 +114,69 @@ export function makeItemDeck() {
 
 export function dealItemHands(
   playerIds: string[],
+  villainId?: string,
   cardsPerPlayer = CARDS_PER_PLAYER,
 ): Record<string, ServerItemCard[]> {
-  let deck = [...makeItemDeck()].sort(() => Math.random() - 0.5);
+  const deckSource = makeItemDeck();
+  const brickCards = deckSource.filter(card => card.isBrick).sort(() => Math.random() - 0.5);
+  const normalCards = deckSource.filter(card => !card.isBrick).sort(() => Math.random() - 0.5);
+
   let drawIndex = 0;
   const hands = Object.fromEntries(
     playerIds.map((playerId) => [playerId, [] as ServerItemCard[]]),
   );
 
-  for (let round = 0; round < cardsPerPlayer; round += 1) {
-    for (const ownerId of playerIds) {
-      if (deck.length === 0) {
-        deck = [...makeItemDeck()].sort(() => Math.random() - 0.5);
+  for (const ownerId of playerIds) {
+    const isVillain = villainId === ownerId;
+
+    if (isVillain) {
+      // 빌런: 벽돌 2개 분배
+      for (let i = 0; i < 2; i++) {
+        const card = brickCards.shift() || {
+          id: `brick-${drawIndex}`,
+          name: "벽돌",
+          marketPrice: 0,
+          category: null,
+          condition: null,
+          acquiredPrice: null,
+          isBrick: true,
+          imagePath: "/game-cards/actions/brick.svg",
+        };
+        hands[ownerId].push({
+          ...card,
+          instanceId: `${card.id}-${drawIndex}`,
+          revealed: false,
+          revealedToPlayerIds: [ownerId],
+        });
+        drawIndex += 1;
       }
-      const card = deck.shift();
-      if (!card) continue;
-      hands[ownerId].push({
-        ...card,
-        instanceId: `${card.id}-${drawIndex}`,
-        revealed: false,
-        revealedToPlayerIds: [ownerId],
-      });
-      drawIndex += 1;
+      // 빌런: 일반 카드 3개 분배
+      for (let i = 0; i < 3; i++) {
+        const card = normalCards.shift();
+        if (card) {
+          hands[ownerId].push({
+            ...card,
+            instanceId: `${card.id}-${drawIndex}`,
+            revealed: false,
+            revealedToPlayerIds: [ownerId],
+          });
+          drawIndex += 1;
+        }
+      }
+    } else {
+      // 시민: 일반 카드 5개 분배
+      for (let i = 0; i < 5; i++) {
+        const card = normalCards.shift();
+        if (card) {
+          hands[ownerId].push({
+            ...card,
+            instanceId: `${card.id}-${drawIndex}`,
+            revealed: false,
+            revealedToPlayerIds: [ownerId],
+          });
+          drawIndex += 1;
+        }
+      }
     }
   }
 

@@ -81,7 +81,6 @@ export interface ServerPlayer {
   job?: JobCardSnapshot;
   money: number;
   reputationTokens: number;
-  manner: number;
   likes: number;
   dislikes: number;
   position: number;
@@ -96,18 +95,18 @@ export interface PublicPlayer {
   isHost: boolean;
   isBot: boolean;
   reputationTokens: number;
-  manner: number;
   likes: number;
   dislikes: number;
   position: number;
   itemCount: number;
   publicItems: ItemCardSnapshot[];
   assetRank?: number;
-  money?: never;
-  job?: never;
-  hand?: never;
-  role?: never;
-  mission?: never;
+
+  role?: PlayerRole;
+  job?: JobCardSnapshot;
+  money?: number;
+  totalAssets?: number;
+  isMissionComplete?: boolean;
 }
 
 export interface RoomResult {
@@ -145,6 +144,7 @@ export interface Room {
   updatedAt: number;
   revealAllItems?: boolean;
   villainScamCount?: number;
+  roundScamCount?: number;
   showBrickDisguise?: boolean;
   startingPlayerId?: string | null;
 }
@@ -185,6 +185,7 @@ export interface RoomSnapshot {
   version: number;
   revealAllItems?: boolean;
   villainScamCount?: number;
+  roundScamCount?: number;
   showBrickDisguise?: boolean;
   startingPlayerId?: string | null;
 }
@@ -220,7 +221,8 @@ export type RoomAction =
   | { type: "ackActionCard" }
   | { type: "leaveRoom" }
   | { type: "toggleRevealAllItems" }
-  | { type: "toggleShowBrickDisguise" };
+  | { type: "toggleShowBrickDisguise" }
+  | { type: "renamePlayer"; name: string };
 
 export interface RoomSessionResult {
   room: RoomSnapshot;

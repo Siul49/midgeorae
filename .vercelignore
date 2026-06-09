@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+.claude
+.superpowers
+playwright-report
+test-results
+scratch
+bot-data
+docs
+server.log

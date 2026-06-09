@@ -137,6 +137,7 @@ describe("game result domain", () => {
         villain: "citizen-a",
       },
       "villain",
+      2,
     );
 
     expect(result).toEqual({
@@ -209,6 +210,24 @@ describe("game result domain", () => {
       );
 
       expect(result.winnerId).toBe("citizen-b");
+    });
+
+    it("returns the brick-collector who completed their mission by holding at least 2 brick cards", () => {
+      const citizenA = makePlayer("citizen-a", 100_000, [0, 0], "citizen", "brick-collector", ["electronics", "electronics"], [true, true]);
+      const citizenB = makePlayer("citizen-b", 300_000, [0], "citizen", "brick-collector", ["electronics"], [true]);
+      const villain = makePlayer("villain", 500_000, [100_000], "villain");
+
+      const result = calculateReportResult(
+        [citizenA, citizenB, villain],
+        {
+          "citizen-a": "villain",
+          "citizen-b": "villain",
+          villain: "citizen-a",
+        },
+        "villain",
+      );
+
+      expect(result.winnerId).toBe("citizen-a");
     });
   });
 });

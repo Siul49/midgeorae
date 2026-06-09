@@ -1,3 +1,11 @@
+import {
+  MAX_MANNER,
+  MIN_MANNER,
+  MANNER_SATISFIED_INCREMENT,
+  MANNER_UNSATISFIED_DECREMENT,
+  MAX_REPUTATION,
+} from "../rules/game-rules";
+
 export interface TradeReviewOutcomeInput {
   reviewerReputationTokens: number;
   targetReputationTokens: number;
@@ -20,13 +28,14 @@ export function calculateTradeReviewOutcome(
   input: TradeReviewOutcomeInput,
 ): TradeReviewOutcome {
   if (input.satisfied) {
-    const targetReputationTokens = Math.min(5, input.targetReputationTokens + 1);
+    const reviewerReputationTokens = input.reviewerReputationTokens;
+    const targetReputationTokens = Math.min(MAX_REPUTATION, input.targetReputationTokens + 1);
     return {
-      reviewerReputationTokens: input.reviewerReputationTokens,
+      reviewerReputationTokens,
       targetReputationTokens,
       targetLikes: input.targetLikes + 1,
       targetDislikes: input.targetDislikes,
-      targetManner: Math.min(42, Number((input.targetManner + 0.5).toFixed(1))),
+      targetManner: input.targetManner,
       eliminatedPlayer: null,
     };
   }
@@ -37,7 +46,7 @@ export function calculateTradeReviewOutcome(
     targetReputationTokens,
     targetLikes: input.targetLikes,
     targetDislikes: input.targetDislikes + 1,
-    targetManner: Math.max(30, Number((input.targetManner - 1).toFixed(1))),
+    targetManner: input.targetManner,
     eliminatedPlayer: targetReputationTokens === 0 ? "target" : null,
   };
 }

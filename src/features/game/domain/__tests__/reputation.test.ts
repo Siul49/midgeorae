@@ -13,26 +13,13 @@ describe("game reputation domain", () => {
         satisfied: true,
       }),
     ).toEqual({
-      reviewerReputationTokens: 4,
-      targetReputationTokens: 6,
-      targetManner: 37,
+      reviewerReputationTokens: 5,
+      targetReputationTokens: 5,
+      targetManner: 36.5,
       targetLikes: 1,
       targetDislikes: 0,
       eliminatedPlayer: null,
     });
-  });
-
-  it("eliminates the reviewer when they spend their last reputation token", () => {
-    expect(
-      calculateTradeReviewOutcome({
-        reviewerReputationTokens: 1,
-        targetReputationTokens: 5,
-        targetManner: 41.8,
-        targetLikes: 0,
-        targetDislikes: 0,
-        satisfied: true,
-      }).eliminatedPlayer,
-    ).toBe("reviewer");
   });
 
   it("destroys one target reputation token on an unsatisfied review", () => {
@@ -48,7 +35,7 @@ describe("game reputation domain", () => {
     ).toEqual({
       reviewerReputationTokens: 5,
       targetReputationTokens: 4,
-      targetManner: 35.5,
+      targetManner: 36.5,
       targetLikes: 0,
       targetDislikes: 1,
       eliminatedPlayer: null,
@@ -67,7 +54,7 @@ describe("game reputation domain", () => {
       }),
     ).toMatchObject({
       targetReputationTokens: 0,
-      targetManner: 30,
+      targetManner: 30.2,
       targetDislikes: 3,
       eliminatedPlayer: "target",
     });

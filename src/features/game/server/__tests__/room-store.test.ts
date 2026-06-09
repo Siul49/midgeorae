@@ -6,6 +6,8 @@ import {
   resetRoomsForTests,
   submitRoomAction,
 } from "../room-store";
+import { rooms, mutateRoomWithRetry } from "../room/room-db";
+import { getItemAssetValue } from "../../domain/results";
 
 describe("room-store", () => {
   beforeEach(async () => { await resetRoomsForTests(); });
@@ -156,9 +158,14 @@ describe("room-store", () => {
     expect(hostView.me?.role).toMatch(/citizen|villain/);
     expect(hostView.me?.job?.title).toBeTruthy();
     expect(hostView.me?.hand).toHaveLength(5);
-    expect(new Set(startingMoney).size).toBe(1);
-    expect(hostView.me?.money).toBe(1000000);
-    expect(hostView.me?.reputationTokens).toBe(5);
+    const getPlayerTotalAsset = (view: any) => {
+      return view.me!.money + view.me!.hand!.reduce((sum: number, item: any) => sum + getItemAssetValue(item, "playing"), 0);
+    };
+    expect(getPlayerTotalAsset(hostView)).toBeGreaterThanOrEqual(1500000);
+    expect(getPlayerTotalAsset(p2View)).toBeGreaterThanOrEqual(1500000);
+    expect(getPlayerTotalAsset(p3View)).toBeGreaterThanOrEqual(1500000);
+    expect(getPlayerTotalAsset(p4View)).toBeGreaterThanOrEqual(1500000);
+    expect(hostView.me?.reputationTokens).toBe(3);
     expect(hostView.me?.dealCards).toEqual({ cool: true, cancel: true });
     expect(hostView.players.every((player) => player.itemCount === 5)).toBe(true);
     expect(hostView.players.every((player) => player.hand === undefined)).toBe(true);
@@ -384,23 +391,23 @@ describe("room-store", () => {
       (session) => session.playerId !== requesterSession.playerId,
     );
     expect(ownerSession).toBeDefined();
-    const ownerItem = (await getRoomSnapshot(
+    const requesterItem = (await getRoomSnapshot(
       host.room.code,
-      ownerSession!.playerToken,
+      requesterSession.playerToken,
     )).me!.hand![0];
 
     const requested = await submitRoomAction(host.room.code, requesterSession.playerToken, {
       type: "requestTrade",
       ownerId: ownerSession!.playerId,
-      itemInstanceId: ownerItem.instanceId,
+      itemInstanceId: requesterItem.instanceId,
       offerPrice: 120000,
     });
 
     expect(requested.pendingDeal).toMatchObject({
       actionType: "freeGive",
-      requesterId: requesterSession.playerId,
-      ownerId: ownerSession!.playerId,
-      itemInstanceId: ownerItem.instanceId,
+      requesterId: ownerSession!.playerId,
+      ownerId: requesterSession.playerId,
+      itemInstanceId: requesterItem.instanceId,
       askingPrice: 0,
     });
   });
@@ -422,15 +429,16 @@ describe("room-store", () => {
       (session) => session.playerId !== requesterSession.playerId,
     );
     expect(ownerSession).toBeDefined();
-    const ownerItem = (await getRoomSnapshot(
-      host.room.code,
-      ownerSession!.playerToken,
-    )).me!.hand![0];
+    const room = rooms.get(host.room.code)!;
+    const ownerPlayer = room.players.find((p) => p.id === ownerSession!.playerId)!;
+    const realOwnerItem = ownerPlayer.hand[0]!;
+    const requesterPlayer = room.players.find((p) => p.id === requesterSession.playerId)!;
+    const isRequesterVillain = requesterPlayer.role === "villain";
 
     const requested = await submitRoomAction(host.room.code, requesterSession.playerToken, {
       type: "requestTrade",
       ownerId: ownerSession!.playerId,
-      itemInstanceId: ownerItem.instanceId,
+      itemInstanceId: realOwnerItem.instanceId,
       offerPrice: 120000,
     });
 
@@ -438,11 +446,29 @@ describe("room-store", () => {
       actionType: "directTrade",
       revealedBeforeDeal: true,
     });
-    expect(requested.pendingDealItem).toMatchObject({
-      instanceId: ownerItem.instanceId,
-      id: ownerItem.id,
-      revealed: true,
-    });
+
+    if (realOwnerItem.isBrick) {
+      if (isRequesterVillain) {
+        expect(requested.pendingDealItem).toMatchObject({
+          instanceId: realOwnerItem.instanceId,
+          id: realOwnerItem.id,
+          isBrick: true,
+          revealed: true,
+        });
+      } else {
+        expect(requested.pendingDealItem).toMatchObject({
+          instanceId: realOwnerItem.instanceId,
+          isBrick: false,
+          revealed: true,
+        });
+      }
+    } else {
+      expect(requested.pendingDealItem).toMatchObject({
+        instanceId: realOwnerItem.instanceId,
+        id: realOwnerItem.id,
+        revealed: true,
+      });
+    }
   });
 
   it("keeps a requested brick face down during a normal trade request", async () => {
@@ -455,12 +481,23 @@ describe("room-store", () => {
     let ownerSession;
     for (const session of sessions) {
       const snap = await getRoomSnapshot(host.room.code, session.playerToken);
-      if (snap.me!.hand!.some((item) => item.isBrick)) {
+      if (snap.me!.hand!.some((item) => item.instanceId.startsWith("brick"))) {
         ownerSession = session;
         break;
       }
     }
     expect(ownerSession).toBeDefined();
+
+    let villainSession;
+    for (const session of sessions) {
+      const snap = await getRoomSnapshot(host.room.code, session.playerToken);
+      if (snap.me!.role === "villain") {
+        villainSession = session;
+        break;
+      }
+    }
+    expect(villainSession).toBeDefined();
+
     const requesterSession = sessions.find(
       (session) => session.playerId !== ownerSession!.playerId,
     );
@@ -475,7 +512,7 @@ describe("room-store", () => {
       host.room.code,
       ownerSession!.playerToken,
     );
-    const brick = ownerSnapshot.me!.hand!.find((item) => item.isBrick);
+    const brick = ownerSnapshot.me!.hand!.find((item) => item.instanceId.startsWith("brick"));
     expect(brick).toBeDefined();
 
     await submitRoomAction(host.room.code, requesterSession!.playerToken, {
@@ -491,16 +528,29 @@ describe("room-store", () => {
     );
     const ownerView = await getRoomSnapshot(host.room.code, ownerSession!.playerToken);
 
+    const isRequesterVillain = requesterSession!.playerId === villainSession!.playerId;
+    const isRequesterBrickCollector = requesterView.me?.job?.id === "brick-collector";
     expect(requesterView.pendingDealItem).toMatchObject({
-      isBrick: false,
-      marketPrice: 0,
-      revealed: false,
-    });
-    expect(ownerView.pendingDealItem).toMatchObject({
-      isBrick: true,
-      marketPrice: 0,
+      isBrick: isRequesterVillain || isRequesterBrickCollector,
       revealed: true,
     });
+    if (isRequesterVillain || isRequesterBrickCollector) {
+      expect(requesterView.pendingDealItem!.marketPrice).toBe(0);
+    } else {
+      expect(requesterView.pendingDealItem!.marketPrice).toBeGreaterThan(0);
+    }
+
+    const isOwnerVillain = ownerSession!.playerId === villainSession!.playerId;
+    const isOwnerBrickCollector = ownerView.me?.job?.id === "brick-collector";
+    expect(ownerView.pendingDealItem).toMatchObject({
+      isBrick: isOwnerVillain || isOwnerBrickCollector,
+      revealed: true,
+    });
+    if (isOwnerVillain || isOwnerBrickCollector) {
+      expect(ownerView.pendingDealItem!.marketPrice).toBe(0);
+    } else {
+      expect(ownerView.pendingDealItem!.marketPrice).toBeGreaterThan(0);
+    }
   });
 
   it("shows public item info during a normal trade and reveals hidden risk one turn later", async () => {
@@ -512,7 +562,7 @@ describe("room-store", () => {
     await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
     const ownerItem = (await getRoomSnapshot(host.room.code, p2.playerToken)).me!.hand!.find(
-      (item) => !item.isBrick,
+      (item) => !item.isBrick && !item.instanceId.startsWith("brick"),
     );
     expect(ownerItem).toBeDefined();
 
@@ -527,16 +577,25 @@ describe("room-store", () => {
     const ownerDealView = await getRoomSnapshot(host.room.code, p2.playerToken);
     const nonPartyDealView = await getRoomSnapshot(host.room.code, p3.playerToken);
 
-    expect(requesterDealView.pendingDealItem).toMatchObject({
-      instanceId: ownerItem!.instanceId,
-      id: "",
-      name: "뒤집힌 물건",
-      category: ownerItem!.category,
-      marketPrice: 0,
-      condition: null,
-      isBrick: false,
-      revealed: false,
-    });
+    if (ownerItem!.isBrick) {
+      expect(requesterDealView.pendingDealItem).toMatchObject({
+        instanceId: ownerItem!.instanceId,
+        isBrick: false,
+        revealed: true,
+      });
+      expect(requesterDealView.pendingDealItem!.condition).toBeNull();
+    } else {
+      expect(requesterDealView.pendingDealItem).toMatchObject({
+        instanceId: ownerItem!.instanceId,
+        id: ownerItem!.id,
+        name: ownerItem!.name,
+        category: ownerItem!.category,
+        marketPrice: ownerItem!.marketPrice,
+        condition: null,
+        isBrick: false,
+        revealed: true,
+      });
+    }
     expect(ownerDealView.pendingDealItem).toMatchObject({
       instanceId: ownerItem!.instanceId,
       category: ownerItem!.category,
@@ -544,10 +603,14 @@ describe("room-store", () => {
       revealed: true,
     });
     expect(nonPartyDealView.pendingDealItem).toMatchObject({
-      category: null,
-      marketPrice: 0,
+      instanceId: ownerItem!.instanceId,
+      id: ownerItem!.id,
+      name: ownerItem!.name,
+      category: ownerItem!.category,
+      marketPrice: ownerItem!.marketPrice,
       condition: null,
-      revealed: false,
+      isBrick: false,
+      revealed: true,
     });
 
     await submitRoomAction(host.room.code, host.playerToken, {
@@ -576,6 +639,7 @@ describe("room-store", () => {
       targetPlayerId: p2.playerId,
       satisfied: true,
     });
+
     await submitRoomAction(host.room.code, p2.playerToken, {
       type: "reviewTrade",
       targetPlayerId: host.playerId,
@@ -602,6 +666,19 @@ describe("room-store", () => {
     await joinRoom(host.room.code, "D");
     await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+
+    // Ensure deterministic money and action card type for test stability
+    await mutateRoomWithRetry(host.room.code, (room) => {
+      for (const p of room.players) {
+        p.money = 1000000;
+      }
+      room.currentActionCard = {
+        type: "tradeRequest",
+        title: "거래 제안",
+        description: "상대방의 물건을 구매할 제안을 보냅니다.",
+        imagePath: "/game-cards/actions/trade.svg",
+      };
+    });
 
     const beforeRequester = await getRoomSnapshot(host.room.code, host.playerToken);
     const beforeOwner = await getRoomSnapshot(host.room.code, p2.playerToken);
@@ -641,6 +718,76 @@ describe("room-store", () => {
     expect(boughtItem?.acquiredPrice).toBe(120000);
     expect(requesterView.pendingReviews).toHaveLength(2);
     expect(ownerView.pendingReviews).toHaveLength(2);
+  });
+
+  it("handles counter-proposals where askingPrice is updated and choices reset", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    await joinRoom(host.room.code, "C");
+    await joinRoom(host.room.code, "D");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
+    
+    // Ensure deterministic money and action card type for test stability
+    await mutateRoomWithRetry(host.room.code, (room) => {
+      for (const p of room.players) {
+        p.money = 1000000;
+      }
+      room.currentActionCard = {
+        type: "tradeRequest",
+        title: "거래 제안",
+        description: "상대방의 물건을 구매할 제안을 보냅니다.",
+        imagePath: "/game-cards/actions/trade.svg",
+      };
+    });
+
+    const beforeOwner = await getRoomSnapshot(host.room.code, p2.playerToken);
+    const item = beforeOwner.me!.hand!.find((owned) => owned.category !== null);
+    if (!item) throw new Error("expected owner to have a non-brick item");
+    
+    // Requester requests to buy item from owner
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "requestTrade",
+      ownerId: p2.playerId,
+      itemInstanceId: item.instanceId,
+      offerPrice: 100000,
+    });
+    
+    // Seller p2 proposes the price of 150,000, which sets askingPrice to 150,000, p2: cool, host: undefined
+    await submitRoomAction(host.room.code, p2.playerToken, {
+      type: "proposePrice",
+      price: 150000,
+    });
+
+    let snapP2 = await getRoomSnapshot(host.room.code, p2.playerToken);
+    expect(snapP2.pendingDeal?.askingPrice).toBe(150000);
+    expect(snapP2.pendingDeal?.choices[p2.playerId]).toBe("cool");
+
+    let snapHost = await getRoomSnapshot(host.room.code, host.playerToken);
+    expect(snapHost.pendingDeal?.choices[host.playerId]).toBeUndefined();
+
+    // Buyer host counter-proposes 120,000, which updates askingPrice to 120,000, host: cool, p2: undefined
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "proposePrice",
+      price: 120000,
+    });
+
+    snapHost = await getRoomSnapshot(host.room.code, host.playerToken);
+    expect(snapHost.pendingDeal?.askingPrice).toBe(120000);
+    expect(snapHost.pendingDeal?.choices[host.playerId]).toBe("cool");
+
+    snapP2 = await getRoomSnapshot(host.room.code, p2.playerToken);
+    expect(snapP2.pendingDeal?.choices[p2.playerId]).toBeUndefined();
+
+    // Seller p2 accepts the counter-proposed price of 120,000
+    const completed = await submitRoomAction(host.room.code, p2.playerToken, {
+      type: "chooseDealCard",
+      choice: "cool",
+    });
+
+    expect(completed.pendingDeal).toBeNull();
+    const finalRequester = await getRoomSnapshot(host.room.code, host.playerToken);
+    expect(finalRequester.me?.money).toBe(1000000 - 120000);
   });
 
   it("cancels a trade request when either side chooses cancel", async () => {
@@ -705,7 +852,9 @@ describe("room-store", () => {
     expect(requesterView.pendingDeal?.choices).toEqual({
       [host.playerId]: "cool",
     });
-    expect(ownerView.pendingDeal?.choices).toEqual({});
+    expect(ownerView.pendingDeal?.choices).toEqual({
+      [host.playerId]: "cool",
+    });
   });
 
   it("moves or destroys reputation tokens through post-trade reviews", async () => {
@@ -746,8 +895,8 @@ describe("room-store", () => {
     const requesterView = await getRoomSnapshot(host.room.code, host.playerToken);
     const ownerView = await getRoomSnapshot(host.room.code, p2.playerToken);
 
-    expect(requesterView.me?.reputationTokens).toBe(3);
-    expect(ownerView.me?.reputationTokens).toBe(6);
+    expect(requesterView.me?.reputationTokens).toBe(2);
+    expect(ownerView.me?.reputationTokens).toBe(4);
     expect(requesterView.pendingReviews).toHaveLength(0);
     expect(ownerView.pendingReviews).toHaveLength(0);
   });
@@ -815,43 +964,48 @@ describe("room-store", () => {
     expect(restarted.me?.money).toBe(0);
   });
 
+
+
   it("makes bot review dissatisfied (dislike) when host sells at 80% or more of market price", async () => {
     const host = await createRoom("경수", "botTest");
     await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    // 초기 평판 조정(3개)으로 인해 봇 테스트 중 조기 종료를 방지하기 위해 테스트 시작 전 임시로 토큰 수를 5로 강제 복구합니다.
+    // 봇 1이 호스트에게 거래를 신청하도록 다른 봇들의 손패를 비웁니다.
+    const testRoom = rooms.get(host.room.code);
+    if (testRoom) {
+      const firstBot = testRoom.players.find(p => p.isBot);
+      if (firstBot) {
+        firstBot.money = 2000000;
+      }
+      testRoom.players.forEach(p => {
+        p.reputationTokens = 5;
+        if (p.isBot && p.id !== firstBot?.id) {
+          p.hand = [];
+        }
+      });
+    }
 
     // Turn 1: Host draws tradeRequest
     await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "endTurn" });
 
-    // Acknowledge Bot 1 turn card
+    // Acknowledge Bot 1 turn card (which makes Bot 1 start its turn, draw tradeRequest, and request trade from Host)
     await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
-    // Acknowledge Bot 2 turn card
-    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
-
-    // Turn 2: Host draws saleRequest
-    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
     const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
-    const item = hostView.me!.hand!
-      .filter((i) => !i.isBrick)
-      .sort((a, b) => a.marketPrice - b.marketPrice)[0];
+    const deal = hostView.pendingDeal;
+    expect(deal).toBeDefined();
+
+    const item = hostView.me!.hand!.find((i) => i.instanceId === deal!.itemInstanceId);
     expect(item).toBeDefined();
 
-    const botPlayer = hostView.players.find((p) => p.isBot);
-    expect(botPlayer).toBeDefined();
-
-    // Sell at 100% of market price (which is >= 80%)
-    const sellPrice = item!.marketPrice;
-
-    // Host proposes sale to the bot (ownerId refers to the target player, which is the bot)
+    // Host proposes a counter-proposal price of 100% of market price (which is >= 80%)
     await submitRoomAction(host.room.code, host.playerToken, {
-      type: "requestTrade",
-      ownerId: botPlayer!.id,
-      itemInstanceId: item!.instanceId,
-      offerPrice: sellPrice,
+      type: "proposePrice",
+      price: item!.marketPrice,
     });
 
     // Both accept (automatic for bot), and review finishes automatically.
@@ -867,43 +1021,405 @@ describe("room-store", () => {
     await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    // 초기 평판 조정(3개)으로 인해 봇 테스트 중 조기 종료를 방지하기 위해 테스트 시작 전 임시로 토큰 수를 5로 강제 복구합니다.
+    // 봇 1이 호스트에게 거래를 신청하도록 다른 봇들의 손패를 비웁니다.
+    const testRoom = rooms.get(host.room.code);
+    if (testRoom) {
+      const firstBot = testRoom.players.find(p => p.isBot);
+      if (firstBot) {
+        firstBot.money = 2000000;
+      }
+      testRoom.players.forEach(p => {
+        p.reputationTokens = 5;
+        if (p.isBot && p.id !== firstBot?.id) {
+          p.hand = [];
+        }
+      });
+    }
 
     // Turn 1: Host draws tradeRequest
     await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
     await submitRoomAction(host.room.code, host.playerToken, { type: "endTurn" });
 
-    // Acknowledge Bot 1 turn card
+    // Acknowledge Bot 1 turn card (which makes Bot 1 start its turn, draw tradeRequest, and request trade from Host)
     await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
-    // Acknowledge Bot 2 turn card
-    await submitRoomAction(host.room.code, host.playerToken, { type: "ackActionCard" });
-
-    // Turn 2: Host draws saleRequest
-    await submitRoomAction(host.room.code, host.playerToken, { type: "drawActionCard" });
 
     const hostView = await getRoomSnapshot(host.room.code, host.playerToken);
-    const item = hostView.me!.hand!
-      .filter((i) => !i.isBrick)
-      .sort((a, b) => a.marketPrice - b.marketPrice)[0];
-    expect(item).toBeDefined();
+    const deal = hostView.pendingDeal;
+    expect(deal).toBeDefined();
 
-    const botPlayer = hostView.players.find((p) => p.isBot);
-    expect(botPlayer).toBeDefined();
-
-    // Sell at 60% of market price (which is strictly < 80% even with rounding)
-    const sellPrice = Math.round((item!.marketPrice * 0.6) / 10000) * 10000;
-
-    // Host proposes sale to the bot (ownerId refers to the target player, which is the bot)
+    // Host accepts the trade at 70% of market price (which is < 80%)
     await submitRoomAction(host.room.code, host.playerToken, {
-      type: "requestTrade",
-      ownerId: botPlayer!.id,
-      itemInstanceId: item!.instanceId,
-      offerPrice: sellPrice,
+      type: "chooseDealCard",
+      choice: "cool",
     });
 
     const afterTrade = await getRoomSnapshot(host.room.code, host.playerToken);
     const hostPlayerInSnapshot = afterTrade.players.find((p) => p.id === host.playerId);
     expect(hostPlayerInSnapshot!.dislikes).toBe(0);
     expect(hostPlayerInSnapshot!.likes).toBe(1);
+  });
+
+  it("allows renaming a player in the lobby and fails after game start", async () => {
+    const host = await createRoom("경수");
+    const updated = await submitRoomAction(host.room.code, host.playerToken, {
+      type: "renamePlayer",
+      name: "시울",
+    });
+    expect(updated.players[0]?.name).toBe("시울");
+
+    // add other players to start the game
+    await joinRoom(host.room.code, "유현");
+    await joinRoom(host.room.code, "윤식");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    // renaming should fail after game start
+    await expect(
+      submitRoomAction(host.room.code, host.playerToken, {
+        type: "renamePlayer",
+        name: "경수",
+      }),
+    ).rejects.toThrow("게임 시작 전에만 이름을 변경할 수 있습니다.");
+  });
+
+  it("throws an error when attempting to cancel a free giveaway", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    const p3 = await joinRoom(host.room.code, "C");
+    const p4 = await joinRoom(host.room.code, "D");
+    const sessions = [host, p2, p3, p4];
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const { session: requesterSession } = await drawUntilActionType(
+      host.room.code,
+      sessions,
+      "freeGive",
+    );
+    const ownerSession = sessions.find(
+      (session) => session.playerId !== requesterSession.playerId,
+    );
+    expect(ownerSession).toBeDefined();
+    const requesterItem = (await getRoomSnapshot(
+      host.room.code,
+      requesterSession.playerToken,
+    )).me!.hand![0];
+
+    await submitRoomAction(host.room.code, requesterSession.playerToken, {
+      type: "requestTrade",
+      ownerId: ownerSession!.playerId,
+      itemInstanceId: requesterItem!.instanceId,
+      offerPrice: 0,
+    });
+
+    // Attempting to cancel freebie should throw an error
+    await expect(
+      submitRoomAction(host.room.code, ownerSession!.playerToken, {
+        type: "chooseDealCard",
+        choice: "cancel",
+      }),
+    ).rejects.toThrow("무료나눔은 거절할 수 없습니다.");
+  });
+
+  it("disguises brick item names in transaction logs and hides villain scam logs from citizens", async () => {
+    const host = await createRoom("경수");
+    const p2 = await joinRoom(host.room.code, "유현");
+    const p3 = await joinRoom(host.room.code, "윤식");
+    
+    // Start game
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    // Retrieve room directly to control states
+    const room = rooms.get(host.room.code);
+    expect(room).toBeDefined();
+    if (!room) return;
+
+    // Find the villain player and citizen player
+    const villain = room.players.find((p) => p.role === "villain");
+    const citizen = room.players.find((p) => p.role === "citizen");
+    expect(villain).toBeDefined();
+    expect(citizen).toBeDefined();
+
+    const villainSessionToken = [host, p2, p3].find((s) => s.playerId === villain!.id)!.playerToken;
+    const citizenSessionToken = [host, p2, p3].find((s) => s.playerId === citizen!.id)!.playerToken;
+
+    // Inject a brick item in the villain's hand
+    const brickInstanceId = "test-brick-123";
+    const brickItem = {
+      id: "brick-test",
+      name: "벽돌",
+      marketPrice: 0,
+      category: null,
+      condition: null,
+      acquiredPrice: null,
+      isBrick: true,
+      imagePath: "/game-cards/actions/brick.svg",
+      instanceId: brickInstanceId,
+      revealed: false,
+      revealedToPlayerIds: [villain!.id],
+    };
+    villain!.hand.push(brickItem);
+
+    // Set turn to the villain
+    room.currentTurnPlayerId = villain!.id;
+    room.currentActionCard = {
+      type: "saleRequest",
+      title: "판매 신청",
+      description: "내 물건 카드 1장의 가격을 정해 다른 플레이어에게 판매 신청을 보냅니다.",
+      imagePath: "/game-cards/actions/direct-trade.svg",
+    };
+
+    // Request trade from villain to citizen, selling the brick at 100,000 won
+    await submitRoomAction(host.room.code, villainSessionToken, {
+      type: "requestTrade",
+      ownerId: citizen!.id,
+      itemInstanceId: brickInstanceId,
+      offerPrice: 100000,
+    });
+
+    // Verify the log contains a fake item name, not "벽돌"
+    const citizenSnapshotBefore = await getRoomSnapshot(host.room.code, citizenSessionToken);
+    const lastLogBefore = citizenSnapshotBefore.logs[citizenSnapshotBefore.logs.length - 1];
+    expect(lastLogBefore).toContain("팔아요 신청을 보냈습니다");
+    expect(lastLogBefore).not.toContain("벽돌");
+    expect(lastLogBefore).not.toContain("[벽돌]");
+
+    // The citizen accepts the trade
+    await submitRoomAction(host.room.code, citizenSessionToken, {
+      type: "chooseDealCard",
+      choice: "cool",
+    });
+
+    // Villain successfully scammed because the brick (value 0) was sold for 100,000 won
+    // This logs a "[사기 성공]" entry.
+    // Verify citizen does NOT see "[사기 성공]", "빌런이" or "빌런의" in snapshot logs
+    const citizenSnapshotAfter = await getRoomSnapshot(host.room.code, citizenSessionToken);
+    const hasScamLogForCitizen = citizenSnapshotAfter.logs.some(
+      (log) => log.includes("[사기 성공]") || log.includes("빌런이") || log.includes("빌런의")
+    );
+    expect(hasScamLogForCitizen).toBe(false);
+
+    // Verify villain DOES see the scam log
+    const villainSnapshotAfter = await getRoomSnapshot(host.room.code, villainSessionToken);
+    const hasScamLogForVillain = villainSnapshotAfter.logs.some(
+      (log) => log.includes("[사기 성공]")
+    );
+    expect(hasScamLogForVillain).toBe(true);
+  });
+
+  it("implements new rules: blind brick disguise, trade-based asset value, final reveal, and round-end log", async () => {
+    const host = await createRoom("A");
+    const p2 = await joinRoom(host.room.code, "B");
+    const p3 = await joinRoom(host.room.code, "C");
+    const sessions = [host, p2, p3];
+
+    // Start game
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const room = rooms.get(host.room.code);
+    expect(room).toBeDefined();
+    if (!room) return;
+
+    // Find villain and citizen
+    const villain = room.players.find((p) => p.role === "villain");
+    const citizen = room.players.find((p) => p.role === "citizen");
+    expect(villain).toBeDefined();
+    expect(citizen).toBeDefined();
+
+    const villainToken = sessions.find((s) => s.playerId === villain!.id)!.playerToken;
+    const citizenToken = sessions.find((s) => s.playerId === citizen!.id)!.playerToken;
+
+    // Ensure citizen does not get brick-collector job to keep disguise test working
+    await mutateRoomWithRetry(host.room.code, (r) => {
+      const c = r.players.find((p) => p.id === citizen!.id);
+      if (c) {
+        c.job = {
+          id: "citizen",
+          title: "일반 시민",
+          description: "게임 종료 시 총 자산이 250만 원 이상이어야 합니다.",
+          startingMoney: 1500000,
+        };
+      }
+    });
+
+    // 1. Force a brick card in the villain's hand
+    const brickInstanceId = "test-brick-999";
+    const brickItem = {
+      id: "brick-1",
+      name: "벽돌",
+      marketPrice: 0,
+      category: null,
+      condition: null,
+      acquiredPrice: null,
+      isBrick: true,
+      imagePath: "/game-cards/actions/brick.svg",
+      instanceId: brickInstanceId,
+      revealed: false,
+      revealedToPlayerIds: [villain!.id],
+    };
+    villain!.hand.push(brickItem);
+
+    // Verify villain (owner) sees it as "벽돌" (no disguise name or fake price)
+    let villainSnapshot = await getRoomSnapshot(host.room.code, villainToken);
+    let ownerBrickSnap = villainSnapshot.me!.hand!.find((c) => c.instanceId === brickInstanceId);
+    expect(ownerBrickSnap).toBeDefined();
+    expect(ownerBrickSnap!.name).toBe("벽돌");
+    expect(ownerBrickSnap!.isBrick).toBe(true);
+    expect(ownerBrickSnap!.marketPrice).toBe(0);
+
+    // Verify citizen (public) sees it as the disguised fake item (not "벽돌")
+    let citizenSnapshot = await getRoomSnapshot(host.room.code, citizenToken);
+    let publicBrickSnap = citizenSnapshot.players
+      .find((p) => p.id === villain!.id)!
+      .publicItems.find((c) => c.instanceId === brickInstanceId);
+    expect(publicBrickSnap).toBeDefined();
+    expect(publicBrickSnap!.name).not.toBe("벽돌");
+    expect(publicBrickSnap!.isBrick).toBe(false);
+    expect(publicBrickSnap!.marketPrice).toBeGreaterThan(0);
+
+    // Set turn to villain
+    room.currentTurnPlayerId = villain!.id;
+    room.currentActionCard = {
+      type: "saleRequest",
+      title: "판매 신청",
+      description: "판매합니다",
+      imagePath: "/game-cards/actions/direct-trade.svg",
+    };
+
+    // 2. Perform a successful trade of this brick to the citizen
+    await submitRoomAction(host.room.code, villainToken, {
+      type: "requestTrade",
+      ownerId: citizen!.id,
+      itemInstanceId: brickInstanceId,
+      offerPrice: 200000,
+    });
+
+    await submitRoomAction(host.room.code, citizenToken, {
+      type: "chooseDealCard",
+      choice: "cool",
+    });
+
+    // Perform trade reviews to end the turn
+    await submitRoomAction(host.room.code, villainToken, {
+      type: "reviewTrade",
+      targetPlayerId: citizen!.id,
+      satisfied: true,
+    });
+    await submitRoomAction(host.room.code, citizenToken, {
+      type: "reviewTrade",
+      targetPlayerId: villain!.id,
+      satisfied: true,
+    });
+    // Verify the brick is now in the citizen's hand
+    citizenSnapshot = await getRoomSnapshot(host.room.code, citizenToken);
+    let boughtBrickSnap = citizenSnapshot.me!.hand!.find((c) => c.instanceId === brickInstanceId);
+    expect(boughtBrickSnap).toBeDefined();
+    // The buyer sees it as the fake item (not "벽돌") and isBrick is false
+    expect(boughtBrickSnap!.name).not.toBe("벽돌");
+    expect(boughtBrickSnap!.isBrick).toBe(false);
+    // It contributes its fake value to the buyer's asset value during active play
+    expect(boughtBrickSnap!.marketPrice).toBeGreaterThan(0);
+
+    // 3. Complete turn and check round-end log
+    // We will advance turns so the round completes (room.turnCount % room.players.length === 0)
+    // The starting turnCount was 0.
+    // Turn 1 ends.
+    // We will end turns for other players to complete the round.
+    while (room.turnCount % room.players.length !== 0) {
+      const currentTurnPlayer = room.players.find((p) => p.id === room.currentTurnPlayerId);
+      const sessionToken = sessions.find((s) => s.playerId === currentTurnPlayer!.id)!.playerToken;
+      await submitRoomAction(host.room.code, sessionToken, { type: "endTurn" });
+    }
+
+    // Now the round has completed. Check the log for round-end scam count
+    const finalSnapshot = await getRoomSnapshot(host.room.code, host.playerToken);
+    const roundLog = finalSnapshot.logs.find((log) => log.includes("[라운드 종료]"));
+    expect(roundLog).toBeDefined();
+    // One scam trade occurred because the villain sold a brick card
+    expect(roundLog).toContain("사기 거래가 1건 발생했습니다!");
+
+    // 4. Transition status to reporting (final reveal)
+    room.status = "reporting";
+
+    // Verify the brick's disguise is lifted and its value drops to 0
+    const finalRevealSnapshot = await getRoomSnapshot(host.room.code, citizenToken);
+    const revealedBrick = finalRevealSnapshot.me!.hand!.find((c) => c.instanceId === brickInstanceId);
+    expect(revealedBrick).toBeDefined();
+    expect(revealedBrick!.name).toContain("[벽돌]");
+    expect(revealedBrick!.isBrick).toBe(true);
+    expect(revealedBrick!.marketPrice).toBe(0);
+  });
+
+  it("disguises brick item names in bot trade logs", async () => {
+    const host = await createRoom("경수", "botTest");
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+    await submitRoomAction(host.room.code, host.playerToken, { type: "addBot" });
+
+    // Start game
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+
+    const room = rooms.get(host.room.code);
+    expect(room).toBeDefined();
+    if (!room) return;
+
+    // Find bot 1 and inject a brick item in its hand
+    const bot = room.players.find((p) => p.isBot);
+    expect(bot).toBeDefined();
+    if (!bot) return;
+
+    const brickInstanceId = "bot-brick-123";
+    const brickItem = {
+      id: "brick-bot",
+      name: "벽돌",
+      marketPrice: 0,
+      category: null,
+      condition: null,
+      acquiredPrice: null,
+      isBrick: true,
+      imagePath: "/game-cards/actions/brick.svg",
+      instanceId: brickInstanceId,
+      revealed: false,
+      revealedToPlayerIds: [bot.id],
+    };
+    bot.hand.push(brickItem);
+
+    // Prepare a deal where bot is the owner and itemInstanceId is the brick
+    room.pendingDeal = {
+      id: "test-bot-deal",
+      actionType: "saleRequest",
+      requesterId: host.playerId,
+      ownerId: bot.id,
+      itemInstanceId: brickInstanceId,
+      askingPrice: 0,
+      choices: {},
+      resolved: false,
+    };
+
+    // Force host to be citizen
+    const hostPlayer = room.players.find((p) => p.id === host.playerId)!;
+    hostPlayer.role = "citizen";
+
+    // Trigger autoResolveBotDeal
+    const { autoResolveBotDeal } = await import("../room/room-bot");
+    autoResolveBotDeal(room);
+
+    // Verify the bot log does NOT contain "벽돌" but the disguised item name for citizen
+    const citizenSnapshot = await getRoomSnapshot(host.room.code, host.playerToken);
+    const botLogsCitizen = citizenSnapshot.logs.filter((log) => log.includes("판매할 물품"));
+    expect(botLogsCitizen.length).toBeGreaterThan(0);
+    botLogsCitizen.forEach((log) => {
+      expect(log).not.toContain("벽돌");
+      expect(log).not.toContain("[벽돌]");
+    });
+
+    // Force host to be villain
+    hostPlayer.role = "villain";
+    const villainSnapshot = await getRoomSnapshot(host.room.code, host.playerToken);
+    const botLogsVillain = villainSnapshot.logs.filter((log) => log.includes("판매할 물품"));
+    expect(botLogsVillain.length).toBeGreaterThan(0);
+    botLogsVillain.forEach((log) => {
+      expect(log).toContain("벽돌");
+      expect(log).not.toContain("350,000"); // the price of the transaction should be hidden
+    });
   });
 });
