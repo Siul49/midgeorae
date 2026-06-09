@@ -12,10 +12,8 @@ import type {
 } from "../types";
 
 export function getPlayerRanks(room: Room): Record<string, number> {
-  const remainingActions = room.marketActionLimit - room.usedActionCount;
-  const isLastTurns = room.marketActionLimit > 0 && remainingActions <= 4;
   const assets = room.players.map((p) => {
-    const totalVal = calculateAsset(p, room.status, isLastTurns);
+    const totalVal = calculateAsset(p, room.status);
     return { id: p.id, totalVal };
   });
   assets.sort((a, b) => b.totalVal - a.totalVal);
@@ -154,11 +152,8 @@ export function toItemSnapshot(
 ): ItemCardSnapshot {
   let res: ItemCardSnapshot;
 
-  const remainingActions = room.marketActionLimit - room.usedActionCount;
-  const isLastTurns = room.marketActionLimit > 0 && remainingActions <= 4;
-
-  // 1. If it's a brick and we are in reporting/finished phase or last 4 turns: reveal the brick card with value 0 to everyone
-  if (item.isBrick && (room.status === "reporting" || room.status === "finished" || isLastTurns)) {
+  // 1. If it's a brick and we are in reporting/finished phase: reveal the brick card with value 0 to everyone
+  if (item.isBrick && (room.status === "reporting" || room.status === "finished")) {
     const fakeName = item.disguiseName ?? getFakeItemForBrick(item.instanceId).name;
     const fakeCategory = item.disguiseCategory ?? getFakeItemForBrick(item.instanceId).category;
     res = {
@@ -310,9 +305,7 @@ export function toPublicPlayer(
     publicPlayer.role = player.role;
     publicPlayer.job = player.job;
     publicPlayer.money = player.money;
-    const remainingActions = room.marketActionLimit - room.usedActionCount;
-    const isLastTurns = room.marketActionLimit > 0 && remainingActions <= 4;
-    publicPlayer.totalAssets = calculateAsset(player, room.status, isLastTurns);
+    publicPlayer.totalAssets = calculateAsset(player, room.status);
     publicPlayer.isMissionComplete = player.role === "villain"
       ? (room.villainScamCount ?? 0) >= 2
       : checkJobMission(player, room.status);

@@ -258,13 +258,20 @@ export function MyDashboard({
               const selected = selectedItemId === item.instanceId && (activeActionType === "saleRequest" || activeActionType === "recycle");
               const isDragging = draggedIndex === index;
               const categoryColors = {
-                electronics: "border-amber-500/40 bg-amber-950/20 shadow-[0_0_8px_rgba(245,158,11,0.15)]",
-                fashion: "border-purple-500/40 bg-purple-950/20 shadow-[0_0_8px_rgba(168,85,247,0.15)]",
-                hobby: "border-emerald-500/40 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]",
-                living: "border-blue-500/40 bg-blue-950/20 shadow-[0_0_8px_rgba(59,130,246,0.15)]",
+                electronics: "border-amber-500 bg-amber-950/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] text-amber-200",
+                fashion: "border-purple-500 bg-purple-950/40 shadow-[0_0_12px_rgba(168,85,247,0.25)] text-purple-200",
+                hobby: "border-emerald-500 bg-emerald-950/40 shadow-[0_0_12px_rgba(16,185,129,0.25)] text-emerald-200",
+                living: "border-blue-500 bg-blue-950/40 shadow-[0_0_12px_rgba(59,130,246,0.25)] text-blue-200",
               };
 
-              const brickTheme = "border-red-600/60 bg-red-950/30 shadow-[0_0_10px_rgba(220,38,38,0.25)]";
+              const categoryTextColors = {
+                electronics: "text-amber-400",
+                fashion: "text-purple-400",
+                hobby: "text-emerald-400",
+                living: "text-blue-400",
+              };
+
+              const brickTheme = "border-red-500 bg-red-950/50 shadow-[0_0_15px_rgba(239,68,68,0.35)] text-red-200";
 
               const cardThemeClass = item.isBrick 
                 ? brickTheme
@@ -286,15 +293,17 @@ export function MyDashboard({
                       setSelectedItemId(item.instanceId);
                     }
                   }}
-                  className={`motion-button flex flex-col items-center justify-between border rounded-lg p-2 text-center transition-all w-[100px] h-[134px] shrink-0 select-none ${
+                  className={`motion-button flex flex-col items-center justify-between border rounded-lg p-2 text-center transition-all w-[100px] h-[134px] shrink-0 select-none ${cardThemeClass} ${
                     isDragging ? "opacity-30 scale-95 border-dashed border-orange-500/50" : "cursor-grab active:cursor-grabbing"
                   } ${
                     selected
-                      ? "selected-card-glow z-10"
-                      : `${cardThemeClass} hover:scale-105 hover:border-white/40 ${isThisCardInteractive ? "card-glowing-interactive pulse-active cursor-pointer" : ""}`
+                      ? "selected-card-glow z-10 border-[3.5px] border-orange-400 scale-[1.03]"
+                      : `hover:scale-105 hover:border-white/40 ${isThisCardInteractive ? "card-glowing-interactive pulse-active cursor-pointer" : ""}`
                   }`}
                 >
-                  <div className="text-[34px] leading-none text-stone-200 flex-1 flex items-center justify-center pointer-events-none">
+                  <div className={`text-[34px] leading-none flex-1 flex items-center justify-center pointer-events-none ${
+                    item.isBrick ? "text-red-400" : (item.category ? categoryTextColors[item.category as keyof typeof categoryTextColors] : "text-stone-200")
+                  }`}>
                     {productIcon(item, 34)}
                   </div>
                   <div className="w-full text-center mt-1 pointer-events-none">
@@ -444,16 +453,13 @@ export function OnlinePlayerHand({
       )}
 
       <div className="asset-banner asset-banner-large flex items-center gap-2">
-        <span className="flex items-center gap-1.5">
+        <span
+          onClick={() => setShowAssetDetails(!showAssetDetails)}
+          className="flex items-center gap-1.5 cursor-pointer hover:text-amber-200 transition-colors select-none"
+          title="자산 정산 상세 내역 보기"
+        >
           💰 총 자산: <strong className="text-amber-300 font-extrabold">{moneyLabel(totalAssets)}</strong>
-          <button
-            type="button"
-            onClick={() => setShowAssetDetails(!showAssetDetails)}
-            className="text-amber-500/80 hover:text-amber-400 cursor-pointer transition-colors p-0.5 hover:bg-amber-500/10 rounded flex items-center justify-center"
-            title="자산 정산 상세 내역 보기"
-          >
-            <HelpCircle size={14} />
-          </button>
+          <HelpCircle size={14} className="text-amber-500/80 hover:text-amber-400 transition-colors" />
         </span>
         <span className="text-stone-500 font-normal mx-1">|</span>
         <span>💵 보유 현금: <strong className="text-amber-400 font-black">{moneyLabel(me.money ?? 0)}</strong></span>

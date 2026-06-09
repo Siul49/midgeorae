@@ -136,15 +136,13 @@ export function MidgeoraeOnlineGame() {
   const myHand = useMemo(() => me?.hand ?? [], [me?.hand]);
   const totalAssets = useMemo(() => {
     if (!me || !snapshot) return 0;
-    const remainingActions = snapshot.marketActionLimit - snapshot.usedActionCount;
-    const isLastTurns = snapshot.marketActionLimit > 0 && remainingActions <= 4;
     const isFinished = snapshot.status === "reporting" || snapshot.status === "finished";
 
     return (
       (me.money ?? 0) +
       myHand.reduce((sum, item) => {
         if (item.isBrick) {
-          if (me.role === "villain" && !isLastTurns && !isFinished) {
+          if (me.role === "villain" && !isFinished) {
             const fakePrice = item.disguiseMarketPrice ?? getFakeItemForBrick(item.instanceId).marketPrice;
             const fakeCond = item.disguiseCondition ?? getBrickFakeCondition(item.instanceId);
             let multiplier = 1.0;
@@ -254,6 +252,14 @@ export function MidgeoraeOnlineGame() {
       setRoleAcknowledged(false);
     }
   }, [snapshot?.status]);
+
+  useEffect(() => {
+    if (pendingDeal || !currentAction) {
+      setSelectedItemId("");
+      setDealTargetId("");
+      setActionTargetId("");
+    }
+  }, [pendingDeal, currentAction]);
 
   const myPendingReviews = useMemo(() => {
     return pendingReviews.filter((r) => r.reviewerId === session?.playerId);
@@ -689,7 +695,7 @@ export function MidgeoraeOnlineGame() {
       {/* Last Turns Warning Banner */}
       {snapshot.status === "playing" && (snapshot.marketActionLimit - snapshot.usedActionCount <= 4) && (
         <div className="absolute top-[32px] left-1/2 -translate-x-1/2 z-40 bg-red-950/90 border border-red-500/50 px-5 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-pulse select-none">
-          <span className="text-red-400 font-extrabold text-xs">🚨 경고: 남은 시장 행동이 4회 이하입니다! 모든 벽돌 카드가 공개되었습니다!</span>
+          <span className="text-red-400 font-extrabold text-xs">🚨 경고: 남은 시장 행동이 4회 이하입니다! 곧 게임이 종료됩니다!</span>
         </div>
       )}
 

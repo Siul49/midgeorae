@@ -163,10 +163,17 @@ const playAudio = (type: "hover" | "select" | "flip") => {
 };
 
 const categoryColors = {
-  electronics: "border-amber-500/80 bg-amber-950/20 shadow-[0_0_8px_rgba(245,158,11,0.15)]",
-  fashion: "border-purple-500/80 bg-purple-950/20 shadow-[0_0_8px_rgba(168,85,247,0.15)]",
-  hobby: "border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]",
-  living: "border-blue-500/80 bg-blue-950/20 shadow-[0_0_8px_rgba(59,130,246,0.15)]",
+  electronics: "border-amber-500 bg-amber-950/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] text-amber-200",
+  fashion: "border-purple-500 bg-purple-950/40 shadow-[0_0_12px_rgba(168,85,247,0.25)] text-purple-200",
+  hobby: "border-emerald-500 bg-emerald-950/40 shadow-[0_0_12px_rgba(16,185,129,0.25)] text-emerald-200",
+  living: "border-blue-500 bg-blue-950/40 shadow-[0_0_12px_rgba(59,130,246,0.25)] text-blue-200",
+};
+
+const categoryTextColors = {
+  electronics: "text-amber-400",
+  fashion: "text-purple-400",
+  hobby: "text-emerald-400",
+  living: "text-blue-400",
 };
 
 // --- PendingDealPanel ---
@@ -386,11 +393,13 @@ export function PendingDealPanel({
                 <div
                   className={`discover-card-front border-2 p-3.5 flex flex-col justify-between rounded-2xl absolute inset-0 ${
                     item.isBrick 
-                      ? "border-red-600/80 bg-red-950/30 shadow-[0_0_10px_rgba(220,38,38,0.25)]"
+                      ? "border-red-500 bg-red-950/50 shadow-[0_0_15px_rgba(239,68,68,0.35)] text-red-200"
                       : (item.category ? categoryColors[item.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40")
                   }`}
                 >
-                  <div className="flex-1 flex items-center justify-center mt-1 text-stone-300">
+                  <div className={`flex-1 flex items-center justify-center mt-1 ${
+                    item.isBrick ? "text-red-400" : (item.category ? categoryTextColors[item.category as keyof typeof categoryTextColors] : "text-stone-300")
+                  }`}>
                     {productIcon(item, 52)}
                   </div>
                   <div className="w-full text-center pb-2">

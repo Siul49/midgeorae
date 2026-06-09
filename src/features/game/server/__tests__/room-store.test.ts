@@ -429,6 +429,20 @@ describe("room-store", () => {
       (session) => session.playerId !== requesterSession.playerId,
     );
     expect(ownerSession).toBeDefined();
+
+    // Ensure citizen requester does not get brick-collector job to keep disguise test working
+    await mutateRoomWithRetry(host.room.code, (r) => {
+      const req = r.players.find((p) => p.id === requesterSession.playerId);
+      if (req && req.role === "citizen") {
+        req.job = {
+          id: "citizen",
+          title: "일반 시민",
+          description: "게임 종료 시 총 자산이 250만 원 이상이어야 합니다.",
+          startingMoney: 1500000,
+        };
+      }
+    });
+
     const room = rooms.get(host.room.code)!;
     const ownerPlayer = room.players.find((p) => p.id === ownerSession!.playerId)!;
     const realOwnerItem = ownerPlayer.hand[0]!;

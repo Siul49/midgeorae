@@ -290,13 +290,20 @@ export function SidePlayerSeat({
             : "알수 없음";
 
           const categoryColors = {
-            electronics: "border-amber-500/40 bg-amber-950/20 shadow-[0_0_8px_rgba(245,158,11,0.15)]",
-            fashion: "border-purple-500/40 bg-purple-950/20 shadow-[0_0_8px_rgba(168,85,247,0.15)]",
-            hobby: "border-emerald-500/40 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]",
-            living: "border-blue-500/40 bg-blue-950/20 shadow-[0_0_8px_rgba(59,130,246,0.15)]",
+            electronics: "border-amber-500 bg-amber-950/40 shadow-[0_0_8px_rgba(245,158,11,0.25)] text-amber-200",
+            fashion: "border-purple-500 bg-purple-950/40 shadow-[0_0_8px_rgba(168,85,247,0.25)] text-purple-200",
+            hobby: "border-emerald-500 bg-emerald-950/40 shadow-[0_0_8px_rgba(16,185,129,0.25)] text-emerald-200",
+            living: "border-blue-500 bg-blue-950/40 shadow-[0_0_8px_rgba(59,130,246,0.25)] text-blue-200",
           };
 
-          const brickTheme = "border-red-600/60 bg-red-950/30 shadow-[0_0_10px_rgba(220,38,38,0.25)]";
+          const categoryTextColors = {
+            electronics: "text-amber-400",
+            fashion: "text-purple-400",
+            hobby: "text-emerald-400",
+            living: "text-blue-400",
+          };
+
+          const brickTheme = "border-red-500 bg-red-950/50 shadow-[0_0_10px_rgba(239,68,68,0.35)] text-red-200";
 
           const cardThemeClass = item.isBrick 
             ? brickTheme
@@ -314,18 +321,20 @@ export function SidePlayerSeat({
               type="button"
               disabled={!isCardInteractive}
               onClick={() => onSelectCard && onSelectCard(player.id, item.instanceId)}
-              className={`${cardWidthClass} ${cardHeightClass} border rounded-lg transition-all flex flex-col items-center justify-between ${cardPaddingClass} select-none relative ${
+              className={`${cardWidthClass} ${cardHeightClass} border rounded-lg transition-all flex flex-col items-center justify-between ${cardPaddingClass} select-none relative ${cardThemeClass} ${
                 isThisCardInteractive ? "card-glowing-interactive pulse-active cursor-pointer" : ""
               } ${
                 isSelected
-                  ? "selected-card-glow z-10"
-                  : `${cardThemeClass} hover:scale-105 hover:border-white/40`
+                  ? "selected-card-glow z-10 border-[3.5px] border-orange-400 scale-[1.03]"
+                  : "hover:scale-105 hover:border-white/40"
               }`}
               title={cardTooltip}
             >
               {showFaceUp ? (
                 <>
-                  <div className="flex-1 flex items-center justify-center text-stone-200">
+                  <div className={`flex-1 flex items-center justify-center ${
+                    item.isBrick ? "text-red-400" : (item.category ? categoryTextColors[item.category as keyof typeof categoryTextColors] : "text-stone-200")
+                  }`}>
                     {productIcon(item, iconSize)}
                   </div>
                   <div className="w-full text-center mt-1">
