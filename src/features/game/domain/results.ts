@@ -36,10 +36,11 @@ export function countReports(
 
 export function getItemAssetValue(
   item: { isBrick?: boolean; marketPrice: number; condition: string | null; instanceId?: string; acquiredPrice?: number | null },
-  roomStatus: string = "finished"
+  roomStatus: string = "finished",
+  isLastTurns: boolean = false
 ): number {
   if (item.isBrick) {
-    if (roomStatus !== "reporting" && roomStatus !== "finished" && item.instanceId) {
+    if (!isLastTurns && roomStatus !== "reporting" && roomStatus !== "finished" && item.instanceId) {
       const fake = getFakeItemForBrick(item.instanceId);
       const fakeCond = getBrickFakeCondition(item.instanceId);
       const multiplier = fakeCond && fakeCond in CONDITION_MULTIPLIERS
@@ -56,10 +57,10 @@ export function getItemAssetValue(
   return item.marketPrice * multiplier;
 }
 
-export function calculateAsset(player: ServerPlayer, roomStatus: string = "finished") {
+export function calculateAsset(player: ServerPlayer, roomStatus: string = "finished", isLastTurns: boolean = false) {
   return (
     player.money +
-    player.hand.reduce((sum, item) => sum + getItemAssetValue(item, roomStatus), 0)
+    player.hand.reduce((sum, item) => sum + getItemAssetValue(item, roomStatus, isLastTurns), 0)
   );
 }
 

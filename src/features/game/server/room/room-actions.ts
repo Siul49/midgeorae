@@ -236,7 +236,7 @@ export function drawActionCard(room: Room, actor: ServerPlayer) {
     card = getRandomActionCardByProbability();
   }
 
-  if (room.mode === "botTest" && card) {
+  if (process.env.NODE_ENV === "test" && room.mode === "botTest" && card) {
     if (actor.isHost) {
       room.hostDrawCount = (room.hostDrawCount || 0) + 1;
       const hostSequence = [
