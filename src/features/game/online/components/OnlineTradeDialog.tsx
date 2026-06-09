@@ -604,17 +604,14 @@ export function ActionPanel({
   const isSaleOrGive = isSale || isFreeGive;
 
   const [shuffledCards, setShuffledCards] = useState<ItemCardSnapshot[]>([]);
-  const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (isFreeGive && myHand.length > 0) {
       const shuffled = [...myHand].sort(() => Math.random() - 0.5);
       setShuffledCards(shuffled);
-      setFlippedIndex(null);
       setSelectedItemId("");
     } else {
       setShuffledCards([]);
-      setFlippedIndex(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFreeGive, action?.title]);
@@ -739,32 +736,16 @@ export function ActionPanel({
             <div className="flex justify-center gap-5 py-2">
               {shuffledCards.map((item, index) => {
                 const isSelected = selectedItemId === item.instanceId;
-                const isFlipped = flippedIndex === index;
                 
-                const categoryColors = {
-                  electronics: "border-amber-500/80 bg-amber-950/20 shadow-[0_0_8px_rgba(245,158,11,0.15)]",
-                  fashion: "border-purple-500/80 bg-purple-950/20 shadow-[0_0_8px_rgba(168,85,247,0.15)]",
-                  hobby: "border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]",
-                  living: "border-blue-500/80 bg-blue-950/20 shadow-[0_0_8px_rgba(59,130,246,0.15)]",
-                };
-                const brickTheme = "border-red-600/80 bg-red-950/30 shadow-[0_0_10px_rgba(220,38,38,0.25)]";
-                
-                const cardThemeClass = item.isBrick 
-                  ? brickTheme
-                  : (item.category ? categoryColors[item.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40");
-
                 return (
                   <div
                     key={item.instanceId}
                     className={`discover-card-container w-[115px] h-[155px] select-none ${
-                      isFlipped ? "is-flipped" : ""
-                    } ${isSelected ? "is-selected" : ""}`}
+                      isSelected ? "is-selected" : ""
+                    }`}
                     onClick={() => {
-                      if (flippedIndex !== null) return;
-                      setFlippedIndex(index);
                       setSelectedItemId(item.instanceId);
-                      playAudio("flip");
-                      setTimeout(() => playAudio("select"), 200);
+                      playAudio("select");
                     }}
                     onMouseEnter={() => playAudio("hover")}
                   >
@@ -772,25 +753,6 @@ export function ActionPanel({
                       {/* Card Back */}
                       <div className="discover-card-back bg-stone-900 border-2 border-stone-700/60 shadow-lg flex items-center justify-center rounded-xl absolute inset-0">
                         <span className="text-stone-600 font-black text-4xl select-none">?</span>
-                      </div>
-
-                      {/* Card Front */}
-                      <div
-                        className={`discover-card-front border-2 p-2.5 flex flex-col justify-between rounded-xl absolute inset-0 ${cardThemeClass}`}
-                      >
-                        {/* Icon */}
-                        <div className="flex-1 flex items-center justify-center mt-1 text-stone-300">
-                          {productIcon(item, 40)}
-                        </div>
-                        {/* Content */}
-                        <div className="w-full text-center pb-2">
-                          <div className="font-bold text-white text-[12px] tracking-tight truncate w-full px-1">
-                            {item.name}
-                          </div>
-                          <div className="font-black text-[#ff8e53] text-[10px] mt-0.5 leading-none">
-                            {moneyLabel(item.marketPrice)}
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -801,12 +763,12 @@ export function ActionPanel({
             {/* Status / Instruction text */}
             <div className="text-center mt-3 h-5">
               {selectedItemId ? (
-                <span className="text-xs font-black text-orange-400">
-                  🎁 [{myHand.find(i => i.instanceId === selectedItemId)?.name ?? "선택된 카드"}] 무료나눔 (0원)
+                <span className="text-xs font-black text-orange-400 animate-pulse">
+                  🎁 무료나눔할 카드가 선택되었습니다. (어떤 카드인지 공개되지 않음)
                 </span>
               ) : (
                 <span className="text-xs font-bold text-amber-500/70 animate-pulse">
-                  원하는 카드를 클릭하여 뒤집으세요!
+                  뒷면인 카드를 클릭하여 선택하세요!
                 </span>
               )}
             </div>
