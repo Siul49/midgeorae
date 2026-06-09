@@ -126,64 +126,111 @@ export function dealItemHands(
   villainId?: string,
   cardsPerPlayer = CARDS_PER_PLAYER,
 ): Record<string, ServerItemCard[]> {
-  const deckSource = makeItemDeck();
-  const brickCards = deckSource.filter(card => card.isBrick).sort(() => Math.random() - 0.5);
-  const normalCards = deckSource.filter(card => !card.isBrick).sort(() => Math.random() - 0.5);
+  const conditions = ["mint", "used", "broken"] as const;
 
+  // 1. Shuffle ALL_ITEMS to select unique items for normal cards + brick disguises
+  const shuffledItems = [...ALL_ITEMS].sort(() => Math.random() - 0.5);
+
+  // How many normal cards do we need?
+  // Villain gets 3 normal cards + 2 bricks.
+  // Other players get cardsPerPlayer (5) normal cards.
+  const numBricks = 2;
+  const numNormal = playerIds.length * cardsPerPlayer - numBricks;
+  const totalUniqueNeeded = numNormal + numBricks; // which is exactly playerIds.length * cardsPerPlayer
+
+  // Select unique items. If we need more than we have (e.g. 5 players = 25 items, but we only have 24 in ALL_ITEMS), repeat items safely
+  const selectedItems: typeof ALL_ITEMS = [];
+  for (let i = 0; i < totalUniqueNeeded; i++) {
+    selectedItems.push(shuffledItems[i % shuffledItems.length]);
+  }
+
+  // Divide into normal items and brick disguise items
+  const normalItemPool = selectedItems.slice(0, numNormal);
+  const brickDisguisePool = selectedItems.slice(numNormal);
+
+  // 2. Create the normal cards
   let drawIndex = 0;
+  const normalCards: ServerItemCard[] = normalItemPool.map((item) => ({
+    instanceId: `${item.id}-${drawIndex++}`,
+    id: item.id,
+    name: item.name,
+    marketPrice: item.marketPrice,
+    category: item.category,
+    condition: conditions[Math.floor(Math.random() * conditions.length)],
+    acquiredPrice: null,
+    isBrick: false,
+    imagePath: ITEM_IMAGE_BY_ID[item.id] ?? "/game-cards/backs/item-back.svg",
+    revealed: false,
+    revealedToPlayerIds: [],
+  }));
+
+  // 3. Create the brick cards with their unique disguise attached
+  const brickCards: ServerItemCard[] = brickDisguisePool.map((fakeItem) => {
+    const fakeCond = conditions[Math.floor(Math.random() * conditions.length)];
+    const brickInstanceId = `brick-${drawIndex++}`;
+    return {
+      instanceId: brickInstanceId,
+      id: brickInstanceId,
+      name: "벽돌",
+      marketPrice: 0,
+      category: null,
+      condition: null,
+      acquiredPrice: null,
+      isBrick: true,
+      imagePath: "/game-cards/actions/brick.svg",
+      revealed: false,
+      revealedToPlayerIds: [],
+      // Storing disguise info directly on the card!
+      disguiseId: fakeItem.id,
+      disguiseName: fakeItem.name,
+      disguiseCategory: fakeItem.category,
+      disguiseCondition: fakeCond,
+      disguiseMarketPrice: fakeItem.marketPrice,
+      disguiseImagePath: ITEM_IMAGE_BY_ID[fakeItem.id] ?? "/game-cards/backs/item-back.svg",
+    };
+  });
+
+  // 4. Distribute to hands
   const hands = Object.fromEntries(
     playerIds.map((playerId) => [playerId, [] as ServerItemCard[]]),
   );
+
+  let normalDrawIndex = 0;
+  let brickDrawIndex = 0;
 
   for (const ownerId of playerIds) {
     const isVillain = villainId === ownerId;
 
     if (isVillain) {
-      // 빌런: 벽돌 2개 분배
+      // Villain: 2 brick cards
       for (let i = 0; i < 2; i++) {
-        const card = brickCards.shift() || {
-          id: `brick-${drawIndex}`,
-          name: "벽돌",
-          marketPrice: 0,
-          category: null,
-          condition: null,
-          acquiredPrice: null,
-          isBrick: true,
-          imagePath: "/game-cards/actions/brick.svg",
-        };
-        hands[ownerId].push({
-          ...card,
-          instanceId: `${card.id}-${drawIndex}`,
-          revealed: false,
-          revealedToPlayerIds: [ownerId],
-        });
-        drawIndex += 1;
-      }
-      // 빌런: 일반 카드 3개 분배
-      for (let i = 0; i < 3; i++) {
-        const card = normalCards.shift();
-        if (card) {
+        const brickCard = brickCards[brickDrawIndex++];
+        if (brickCard) {
           hands[ownerId].push({
-            ...card,
-            instanceId: `${card.id}-${drawIndex}`,
-            revealed: false,
+            ...brickCard,
             revealedToPlayerIds: [ownerId],
           });
-          drawIndex += 1;
+        }
+      }
+      // Villain: 3 normal cards
+      for (let i = 0; i < 3; i++) {
+        const normalCard = normalCards[normalDrawIndex++];
+        if (normalCard) {
+          hands[ownerId].push({
+            ...normalCard,
+            revealedToPlayerIds: [ownerId],
+          });
         }
       }
     } else {
-      // 시민: 일반 카드 5개 분배
-      for (let i = 0; i < 5; i++) {
-        const card = normalCards.shift();
-        if (card) {
+      // Citizen: 5 normal cards
+      for (let i = 0; i < cardsPerPlayer; i++) {
+        const normalCard = normalCards[normalDrawIndex++];
+        if (normalCard) {
           hands[ownerId].push({
-            ...card,
-            instanceId: `${card.id}-${drawIndex}`,
-            revealed: false,
+            ...normalCard,
             revealedToPlayerIds: [ownerId],
           });
-          drawIndex += 1;
         }
       }
     }

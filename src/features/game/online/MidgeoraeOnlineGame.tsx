@@ -145,8 +145,8 @@ export function MidgeoraeOnlineGame() {
       myHand.reduce((sum, item) => {
         if (item.isBrick) {
           if (me.role === "villain" && !isLastTurns && !isFinished) {
-            const fake = getFakeItemForBrick(item.instanceId);
-            const fakeCond = getBrickFakeCondition(item.instanceId);
+            const fakePrice = item.disguiseMarketPrice ?? getFakeItemForBrick(item.instanceId).marketPrice;
+            const fakeCond = item.disguiseCondition ?? getBrickFakeCondition(item.instanceId);
             let multiplier = 1.0;
             if (fakeCond === "mint") {
               multiplier = 0.8;
@@ -155,7 +155,7 @@ export function MidgeoraeOnlineGame() {
             } else if (fakeCond === "broken" || fakeCond === "defective") {
               multiplier = 0.4;
             }
-            return sum + (fake.marketPrice ?? 0) * multiplier;
+            return sum + fakePrice * multiplier;
           }
           return sum;
         }

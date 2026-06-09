@@ -159,12 +159,13 @@ export function toItemSnapshot(
 
   // 1. If it's a brick and we are in reporting/finished phase or last 4 turns: reveal the brick card with value 0 to everyone
   if (item.isBrick && (room.status === "reporting" || room.status === "finished" || isLastTurns)) {
-    const fake = getFakeItemForBrick(item.instanceId);
+    const fakeName = item.disguiseName ?? getFakeItemForBrick(item.instanceId).name;
+    const fakeCategory = item.disguiseCategory ?? getFakeItemForBrick(item.instanceId).category;
     res = {
       instanceId: item.instanceId,
       id: item.id,
-      name: `[벽돌] ${fake.name}`,
-      category: fake.category,
+      name: `[벽돌] ${fakeName}`,
+      category: fakeCategory,
       condition: "mint",
       marketPrice: 0,
       acquiredPrice: item.acquiredPrice,
@@ -175,8 +176,12 @@ export function toItemSnapshot(
   }
   // 2. During active gameplay, handle brick disguise rules
   else if (item.isBrick && room.status !== "reporting" && room.status !== "finished") {
-    const fake = getFakeItemForBrick(item.instanceId);
-    const fakeCond = getBrickFakeCondition(item.instanceId);
+    const fakeId = item.disguiseId ?? getFakeItemForBrick(item.instanceId).id;
+    const fakeName = item.disguiseName ?? getFakeItemForBrick(item.instanceId).name;
+    const fakeCategory = item.disguiseCategory ?? getFakeItemForBrick(item.instanceId).category;
+    const fakeMarketPrice = item.disguiseMarketPrice ?? getFakeItemForBrick(item.instanceId).marketPrice;
+    const fakeImagePath = item.disguiseImagePath ?? getFakeItemForBrick(item.instanceId).imagePath;
+    const fakeCond = item.disguiseCondition ?? getBrickFakeCondition(item.instanceId);
 
     if (viewer.role === "villain" || viewer.job?.id === "brick-collector") {
       // Villain or Brick Collector sees it as "벽돌" (no fake name, no category, no market price)
@@ -191,19 +196,25 @@ export function toItemSnapshot(
         isBrick: true,
         imagePath: "/game-cards/actions/brick.svg",
         revealed: true,
+        disguiseId: fakeId,
+        disguiseName: fakeName,
+        disguiseCategory: fakeCategory,
+        disguiseCondition: fakeCond,
+        disguiseMarketPrice: fakeMarketPrice,
+        disguiseImagePath: fakeImagePath,
       };
     } else {
       // Citizen (owner or buyer or public) sees it as the disguised fake item
       res = {
         instanceId: item.instanceId,
-        id: fake.id,
-        name: fake.name,
-        category: fake.category,
+        id: fakeId,
+        name: fakeName,
+        category: fakeCategory,
         condition: fakeCond,
-        marketPrice: fake.marketPrice,
+        marketPrice: fakeMarketPrice,
         acquiredPrice: item.acquiredPrice,
         isBrick: false,
-        imagePath: fake.imagePath,
+        imagePath: fakeImagePath,
         revealed: true,
       };
     }

@@ -42,6 +42,12 @@ export interface ItemCardSnapshot {
   isBrick: boolean;
   imagePath: string;
   revealed: boolean;
+  disguiseId?: string;
+  disguiseName?: string;
+  disguiseCategory?: ItemCategory;
+  disguiseCondition?: ItemCondition;
+  disguiseMarketPrice?: number;
+  disguiseImagePath?: string;
 }
 
 export interface ServerItemCard extends ItemCardSnapshot {

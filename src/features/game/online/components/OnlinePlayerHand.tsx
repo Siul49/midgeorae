@@ -292,7 +292,11 @@ export function MyDashboard({
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragEnd={handleDragEnd}
-                  onClick={() => setSelectedItemId(item.instanceId)}
+                  onClick={() => {
+                    if (isHandCardInteractive) {
+                      setSelectedItemId(item.instanceId);
+                    }
+                  }}
                   className={`motion-button flex flex-col items-center justify-between border rounded-lg p-2 text-center transition-all w-[100px] h-[134px] shrink-0 select-none ${
                     isDragging ? "opacity-30 scale-95 border-dashed border-orange-500/50" : "cursor-grab active:cursor-grabbing"
                   } ${
