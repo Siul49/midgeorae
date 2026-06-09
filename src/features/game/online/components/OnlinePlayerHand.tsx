@@ -377,14 +377,119 @@ export function OnlinePlayerHand({
 }: OnlinePlayerHandProps) {
   if (!me) return null;
 
+  const [showAssetDetails, setShowAssetDetails] = useState(false);
+
   const likes = snapshot.players.find((p) => p.id === me.id)?.likes ?? 0;
   const dislikes = snapshot.players.find((p) => p.id === me.id)?.dislikes ?? 0;
   const villainScamCount = snapshot.villainScamCount ?? 0;
 
+  const isVillain = me.role === "villain";
+  const { brickCount, brickValue, normalItemsInfo } = React.useMemo(() => {
+    let bCount = 0;
+    let bValue = 0;
+    const nInfo: { name: string; value: number }[] = [];
+
+    const remainingActions = snapshot.marketActionLimit - snapshot.usedActionCount;
+    const isLastTurns = snapshot.marketActionLimit > 0 && remainingActions <= 4;
+    const isFinished = snapshot.status === "reporting" || snapshot.status === "finished";
+
+    myHand.forEach((item) => {
+      if (item.isBrick) {
+        bCount += 1;
+        if (isVillain && !isLastTurns && !isFinished) {
+          const fakePrice = item.disguiseMarketPrice ?? getFakeItemForBrick(item.instanceId).marketPrice;
+          const fakeCond = item.disguiseCondition ?? getBrickFakeCondition(item.instanceId);
+          let multiplier = 1.0;
+          if (fakeCond === "mint") {
+            multiplier = 0.8;
+          } else if (fakeCond === "used") {
+            multiplier = 0.6;
+          } else if (fakeCond === "broken" || fakeCond === "defective") {
+            multiplier = 0.4;
+          }
+          bValue += fakePrice * multiplier;
+        }
+      } else {
+        let multiplier = 1.0;
+        if (item.condition === "mint") {
+          multiplier = 0.8;
+        } else if (item.condition === "used") {
+          multiplier = 0.6;
+        } else if (item.condition === "broken" || item.condition === "defective") {
+          multiplier = 0.4;
+        }
+        nInfo.push({
+          name: item.name,
+          value: (item.marketPrice ?? 0) * multiplier
+        });
+      }
+    });
+
+    return {
+      brickCount: bCount,
+      brickValue: bValue,
+      normalItemsInfo: nInfo,
+    };
+  }, [myHand, isVillain, snapshot]);
+
   return (
-    <div className="seat-bottom">
-      <div className="asset-banner asset-banner-large">
-        <span>💰 총 자산: {moneyLabel(totalAssets)}</span>
+    <div className="seat-bottom relative">
+      {showAssetDetails && (
+        <div className="absolute bottom-[calc(100%-4px)] left-1/2 -translate-x-1/2 z-[40] w-[260px] flex flex-col gap-2.5 p-3.5 bg-stone-950/95 backdrop-blur-md border border-amber-500/30 shadow-[0_0_25px_rgba(245,158,11,0.2)] rounded-xl text-left select-text">
+          <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+            <span className="text-[13px] text-amber-400 font-black flex items-center gap-1">💰 자산 정산 상세 내역</span>
+            <button
+              type="button"
+              onClick={() => setShowAssetDetails(false)}
+              className="text-stone-400 hover:text-white cursor-pointer font-black text-xs h-5 w-5 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="space-y-2 pt-1 text-xs text-stone-300">
+            <div className="flex justify-between">
+              <span className="text-stone-400">💵 보유 현금</span>
+              <span className="font-bold text-amber-400">{moneyLabel(me.money ?? 0)}</span>
+            </div>
+
+            {brickCount > 0 && (
+              <div className="flex justify-between border-t border-white/5 pt-1.5">
+                <span className="text-stone-400">🧱 벽돌 ({brickCount}개 합산)</span>
+                <span className="font-bold text-stone-300">{moneyLabel(brickValue)}</span>
+              </div>
+            )}
+
+            {normalItemsInfo.length > 0 && (
+              <div className="border-t border-white/5 pt-1.5 space-y-1.5">
+                {normalItemsInfo.map((item, idx) => (
+                  <div key={idx} className="flex justify-between gap-2">
+                    <span className="truncate text-stone-400">🏷️ {item.name}</span>
+                    <span className="font-semibold text-stone-200 shrink-0">{moneyLabel(item.value)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex justify-between border-t border-amber-500/20 pt-2 font-black text-[13px] text-amber-300">
+              <span>🧮 총 합계</span>
+              <span>{moneyLabel(totalAssets)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="asset-banner asset-banner-large flex items-center gap-2">
+        <span className="flex items-center gap-1.5">
+          💰 총 자산: <strong className="text-amber-300 font-extrabold">{moneyLabel(totalAssets)}</strong>
+          <button
+            type="button"
+            onClick={() => setShowAssetDetails(!showAssetDetails)}
+            className="text-amber-500/80 hover:text-amber-400 cursor-pointer transition-colors p-0.5 hover:bg-amber-500/10 rounded flex items-center justify-center"
+            title="자산 정산 상세 내역 보기"
+          >
+            <HelpCircle size={14} />
+          </button>
+        </span>
         <span className="text-stone-500 font-normal mx-1">|</span>
         <span>💵 보유 현금: <strong className="text-amber-400 font-black">{moneyLabel(me.money ?? 0)}</strong></span>
       </div>
