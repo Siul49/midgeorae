@@ -273,17 +273,6 @@ export function MyDashboard({
               const isHandCardInteractive = isMyTurn && (activeActionType === "saleRequest" || activeActionType === "recycle");
               const isThisCardInteractive = isHandCardInteractive && (!selectedItemId || selected);
 
-              const isVillain = me.role === "villain";
-              let fakeName = "";
-              let fakePrice = 0;
-              let fakeCond: "mint" | "used" | "broken" | null = null;
-              if (item.isBrick && isVillain) {
-                const fake = getFakeItemForBrick(item.instanceId);
-                fakeName = fake.name;
-                fakePrice = fake.marketPrice;
-                fakeCond = getBrickFakeCondition(item.instanceId);
-              }
-
               return (
                 <button
                   key={item.instanceId}
@@ -310,39 +299,15 @@ export function MyDashboard({
                   </div>
                   <div className="w-full text-center mt-1 pointer-events-none">
                     <div className="text-[12px] font-black text-white whitespace-normal break-all leading-[1.1] w-full text-center" title={item.name}>
-                      {item.isBrick && isVillain ? (
-                        <>
-                          벽돌
-                          <div className="text-[10px] font-normal text-stone-400 leading-tight">(위장: {fakeName})</div>
-                        </>
-                      ) : (
-                        item.name
-                      )}
+                      {item.name}
                     </div>
                     <div className="text-[11px] font-black text-orange-400 truncate w-full mt-0.5 leading-none">
-                      {item.isBrick ? (
-                        isVillain ? (
-                          <>
-                            0원
-                            <span className="text-[9.5px] font-normal text-amber-500/80 ml-1">({moneyLabel(fakePrice)})</span>
-                          </>
-                        ) : (
-                          "0원"
-                        )
-                      ) : (
-                        item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "정가 미공개"
-                      )}
+                      {item.isBrick ? "0원" : (item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "정가 미공개")}
                     </div>
-                    {item.isBrick && isVillain && fakeCond ? (
+                    {!item.isBrick && item.condition && (
                       <div className="text-[10px] font-bold text-stone-400 truncate w-full leading-none mt-1">
-                        (상태: {conditionLabel(fakeCond)})
+                        {conditionLabel(item.condition)}
                       </div>
-                    ) : (
-                      !item.isBrick && item.condition && (
-                        <div className="text-[10px] font-bold text-stone-400 truncate w-full leading-none mt-1">
-                          {conditionLabel(item.condition)}
-                        </div>
-                      )
                     )}
                   </div>
                 </button>
