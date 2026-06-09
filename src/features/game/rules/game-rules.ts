@@ -32,19 +32,19 @@ export const JOB_CARDS: JobCardSnapshot[] = [
   {
     id: "developer",
     title: "개발자",
-    description: "보유한 모든 물건의 카테고리가 '전자제품'이어야 합니다. (최소 1개 이상 보유)",
+    description: "보유한 물건 중 '전자제품' 카테고리가 2개 이상이어야 합니다. (다른 물품 동시 보유 가능)",
     startingMoney: DEFAULT_STARTING_MONEY,
   },
   {
     id: "model",
     title: "모델",
-    description: "보유한 모든 물건의 카테고리가 '패션잡화'이어야 합니다. (최소 1개 이상 보유)",
+    description: "보유한 물건 중 '패션잡화' 카테고리가 2개 이상이어야 합니다. (다른 물품 동시 보유 가능)",
     startingMoney: DEFAULT_STARTING_MONEY,
   },
   {
     id: "housewife",
     title: "주부",
-    description: "보유한 모든 물건의 카테고리가 '생활용품'이어야 합니다. (최소 1개 이상 보유)",
+    description: "보유한 물건 중 '생활용품' 카테고리가 2개 이상이어야 합니다. (다른 물품 동시 보유 가능)",
     startingMoney: DEFAULT_STARTING_MONEY,
   },
   {

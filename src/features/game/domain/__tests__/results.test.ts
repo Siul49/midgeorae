@@ -154,10 +154,10 @@ describe("game result domain", () => {
 
   describe("citizen victory with job missions", () => {
     it("returns the single citizen who completed their mission as winner", () => {
-      // citizen-a is "developer" and has only electronics, succeeds
-      const citizenA = makePlayer("citizen-a", 100_000, [50_000], "citizen", "developer", ["electronics"]);
-      // citizen-b is "model" but has electronics, fails
-      const citizenB = makePlayer("citizen-b", 300_000, [10_000], "citizen", "model", ["electronics"]);
+      // citizen-a is "developer" and has 2 electronics, succeeds
+      const citizenA = makePlayer("citizen-a", 100_000, [50_000, 30_000], "citizen", "developer", ["electronics", "electronics"]);
+      // citizen-b is "model" but has only electronics, fails
+      const citizenB = makePlayer("citizen-b", 300_000, [10_000, 20_000], "citizen", "model", ["electronics", "electronics"]);
       const villain = makePlayer("villain", 500_000, [100_000], "villain");
 
       const result = calculateReportResult(
@@ -175,9 +175,9 @@ describe("game result domain", () => {
     });
 
     it("returns the citizen with more assets when multiple citizens complete their mission", () => {
-      // both completed developer mission
-      const citizenA = makePlayer("citizen-a", 100_000, [50_000], "citizen", "developer", ["electronics"]); // total 150k
-      const citizenB = makePlayer("citizen-b", 300_000, [50_000], "citizen", "developer", ["electronics"]); // total 350k
+      // both completed developer mission (have at least 2 electronics)
+      const citizenA = makePlayer("citizen-a", 100_000, [50_000, 50_000], "citizen", "developer", ["electronics", "electronics"]); // total 200k
+      const citizenB = makePlayer("citizen-b", 300_000, [50_000, 50_000], "citizen", "developer", ["electronics", "electronics"]); // total 400k
       const villain = makePlayer("villain", 500_000, [100_000], "villain");
 
       const result = calculateReportResult(
@@ -194,7 +194,7 @@ describe("game result domain", () => {
     });
 
     it("returns the citizen with more assets when no citizens complete their mission", () => {
-      // both failed developer mission because they have fashion items
+      // both failed developer mission because they don't have 2 electronics (they have fashion)
       const citizenA = makePlayer("citizen-a", 100_000, [50_000], "citizen", "developer", ["fashion"]); // total 150k
       const citizenB = makePlayer("citizen-b", 300_000, [10_000], "citizen", "developer", ["fashion"]); // total 310k
       const villain = makePlayer("villain", 500_000, [100_000], "villain");

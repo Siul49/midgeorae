@@ -71,11 +71,11 @@ export function checkJobMission(player: ServerPlayer, roomStatus: string = "fini
 
   switch (player.job.id) {
     case "developer":
-      return nonBricks.length > 0 && nonBricks.every((item) => item.category === "electronics");
+      return nonBricks.filter((item) => item.category === "electronics").length >= 2;
     case "model":
-      return nonBricks.length > 0 && nonBricks.every((item) => item.category === "fashion");
+      return nonBricks.filter((item) => item.category === "fashion").length >= 2;
     case "housewife":
-      return nonBricks.length > 0 && nonBricks.every((item) => item.category === "living");
+      return nonBricks.filter((item) => item.category === "living").length >= 2;
     case "brick-collector":
       return bricks.length >= 2;
     case "collector":
