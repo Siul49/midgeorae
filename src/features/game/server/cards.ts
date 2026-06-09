@@ -80,19 +80,16 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
 
 export function makeActionDeck() {
   return [
+    ACTION_CARDS[0], // tradeRequest (40%)
     ACTION_CARDS[0],
     ACTION_CARDS[0],
     ACTION_CARDS[0],
-    ACTION_CARDS[6],
-    ACTION_CARDS[6],
-    ACTION_CARDS[6],
-    ACTION_CARDS[1],
-    ACTION_CARDS[1],
-    ACTION_CARDS[2],
-    ACTION_CARDS[2],
-    ACTION_CARDS[3],
-    ACTION_CARDS[4],
-    ACTION_CARDS[5],
+    ACTION_CARDS[6], // saleRequest (10%)
+    ACTION_CARDS[1], // freeGive (10%)
+    ACTION_CARDS[2], // directTrade (10%)
+    ACTION_CARDS[3], // badReview (10%)
+    ACTION_CARDS[4], // recycle (10%)
+    ACTION_CARDS[5], // swap (10%)
   ].map((card) => ({ ...card }));
 }
 
