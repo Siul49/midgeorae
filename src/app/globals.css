@@ -1795,6 +1795,16 @@
   border-color: rgba(239, 68, 68, 0.6);
 }
 
+/* Button Active/Click states for responsive tactile feedback */
+.btn-flat-orange:active:not(:disabled),
+.btn-flat-emerald:active:not(:disabled),
+.btn-flat-sky:active:not(:disabled),
+.btn-flat-cancel:active:not(:disabled) {
+  transform: scale(0.96);
+  filter: brightness(0.9);
+  transition: transform 0.05s ease;
+}
+
 .profile-glowing-interactive.pulse-active {
   animation: selection-pulse 1.5s infinite alternate;
 }

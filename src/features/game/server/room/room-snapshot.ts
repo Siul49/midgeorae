@@ -65,6 +65,17 @@ export function getFakeItemForBrick(instanceId: string) {
     figure: "/game-cards/cards/item-14-figure.svg",
     jacket: "/game-cards/cards/item-15-jacket.svg",
     speaker: "/game-cards/cards/item-16-speaker.svg",
+    // Fallback mappings for the remaining 10 items to prevent card back leaks
+    sunglasses: "/game-cards/cards/item-13-watch.svg",
+    wallet: "/game-cards/cards/item-12-bag.svg",
+    boardgame_set: "/game-cards/cards/item-05-books.svg",
+    camping_gear: "/game-cards/cards/item-04-bicycle.svg",
+    coffee_machine: "/game-cards/cards/item-16-speaker.svg",
+    air_purifier: "/game-cards/cards/item-16-speaker.svg",
+    chair: "/game-cards/cards/item-14-figure.svg",
+    desk_lamp: "/game-cards/cards/item-10-keyboard.svg",
+    robot_vacuum: "/game-cards/cards/item-16-speaker.svg",
+    toaster: "/game-cards/cards/item-16-speaker.svg",
   };
 
   return {
