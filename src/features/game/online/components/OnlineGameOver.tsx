@@ -4,6 +4,16 @@ import React from "react";
 import { Star } from "lucide-react";
 import type { RoomSnapshot, RoomAction } from "@/features/game/server/types";
 import { playerName, StatusBox } from "./OnlineHelpers";
+import { CONDITION_MULTIPLIERS } from "@/features/game/rules/game-rules";
+
+function getClientItemValue(item: any): number {
+  if (item.isBrick) return 0;
+  const cond = item.condition;
+  const multiplier = cond && cond in CONDITION_MULTIPLIERS
+    ? CONDITION_MULTIPLIERS[cond as keyof typeof CONDITION_MULTIPLIERS]
+    : 1.0;
+  return item.marketPrice * multiplier;
+}
 
 interface OnlineGameOverProps {
   snapshot: RoomSnapshot;
@@ -39,10 +49,14 @@ export function OnlineGameOver({
             </p>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid gap-3 sm:grid-cols-5">
           <StatusBox label="빌런" value={villainName} />
           <StatusBox label="탈락" value={eliminatedName} />
           <StatusBox label="최종 우승" value={winnerName} />
+          <StatusBox
+            label="사기 성공"
+            value={snapshot.villainScamCount !== undefined ? `${snapshot.villainScamCount}회` : "-"}
+          />
           <StatusBox
             label="색출"
             value={result.villainCaught ? "성공" : "실패"}
@@ -59,6 +73,7 @@ export function OnlineGameOver({
                   <th className="py-2 font-bold">플레이어</th>
                   <th className="py-2 font-bold">역할 / 직업</th>
                   <th className="py-2 font-bold text-center">평판 (좋아요)</th>
+                  <th className="py-2 font-bold">보유 물품</th>
                   <th className="py-2 font-bold text-right">최종 자산</th>
                   <th className="py-2 font-bold text-center">미션 달성</th>
                 </tr>
@@ -87,8 +102,45 @@ export function OnlineGameOver({
                       <td className="py-2.5 text-center">
                         <span className="font-mono">{p.reputationTokens}</span>/5 (👍 <span className="font-mono">{p.likes}</span>)
                       </td>
+                      <td className="py-2.5 text-stone-700">
+                        {p.publicItems && p.publicItems.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {p.publicItems.map((item, idx) => {
+                              const val = getClientItemValue(item);
+                              return (
+                                <span
+                                  key={idx}
+                                  className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border font-medium ${
+                                    item.isBrick
+                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      : "bg-stone-50 text-stone-700 border-stone-200"
+                                  }`}
+                                  title={`${item.name} (${item.condition ?? '상태 없음'}, 실제 가치: ${val.toLocaleString()}원)`}
+                                >
+                                  {item.isBrick ? "🧱" : "📦"}{" "}
+                                  <span className="truncate max-w-[80px]">{item.name}</span>
+                                  <span className="text-[9px] text-stone-400 font-mono ml-0.5">
+                                    ({val > 0 ? `${(val / 10000).toFixed(0)}만` : "0"})
+                                  </span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-stone-400 text-[10px]">-</span>
+                        )}
+                      </td>
                       <td className="py-2.5 text-right font-mono pr-2">
-                        {p.totalAssets !== undefined ? `${p.totalAssets.toLocaleString()}원` : "-"}
+                        {p.totalAssets !== undefined ? (
+                          <div>
+                            <div className="font-bold">{p.totalAssets.toLocaleString()}원</div>
+                            <div className="text-[9px] text-stone-400 font-normal">
+                              (현금: {p.money !== undefined ? `${(p.money / 10000).toFixed(0)}만` : "-"} / 물품: {p.totalAssets !== undefined && p.money !== undefined ? `${((p.totalAssets - p.money) / 10000).toFixed(0)}만` : "-"})
+                            </div>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
                       </td>
                       <td className="py-2.5 text-center">
                         {p.isMissionComplete ? (
