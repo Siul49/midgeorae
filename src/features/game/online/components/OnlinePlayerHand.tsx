@@ -249,7 +249,7 @@ export function MyDashboard({
 
       {/* Right: Cards Row - Left-aligned within the centered container to keep positions stable */}
       <div className="flex-1 flex flex-col justify-center h-full min-w-0 py-1">
-        <div className="flex items-center justify-start gap-4 overflow-x-auto overflow-y-hidden min-h-0 px-4 py-2 h-full w-full no-scrollbar">
+        <div className="flex items-center justify-start gap-4 overflow-x-auto overflow-y-hidden min-h-0 px-4 py-6 -my-4 h-[calc(100%+32px)] w-full no-scrollbar">
           {sortedHand.length === 0 ? (
             <div className="text-xs text-stone-500 font-bold select-none">게임 시작 대기 중...</div>
           ) : (
