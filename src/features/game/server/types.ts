@@ -1,4 +1,15 @@
-import type { ItemCategory, ItemCondition } from "../types";
+export type ItemCategory = "electronics" | "fashion" | "hobby" | "living";
+export type ItemCondition = "mint" | "used" | "defective" | "broken";
+
+export interface Item {
+  id: string;
+  name: string;
+  emoji: string;
+  marketPrice: number; // in 원
+  category: ItemCategory;
+  condition: ItemCondition;
+}
+
 
 export type RoomStatus = "waiting" | "playing" | "reporting" | "finished";
 export type RoomMode = "real" | "botTest";

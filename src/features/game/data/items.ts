@@ -1,4 +1,4 @@
-import type { Item } from "../types";
+import type { Item } from "../server/types";
 
 export const ALL_ITEMS: Item[] = [
   { id: "iphone", name: "아이폰 15", emoji: "📱", marketPrice: 500000, category: "electronics", condition: "mint" },
