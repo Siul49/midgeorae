@@ -158,6 +158,18 @@ export function MidgeoraeOnlineGame() {
     [me?.id, snapshot?.players],
   );
 
+  const turnOrder = useMemo(() => {
+    if (!snapshot) return [];
+    const players = snapshot.players;
+    const startingId = snapshot.startingPlayerId;
+    if (!startingId) return players;
+
+    const startIndex = players.findIndex((p) => p.id === startingId);
+    if (startIndex === -1) return players;
+
+    return [...players.slice(startIndex), ...players.slice(0, startIndex)];
+  }, [snapshot]);
+
   const leftPlayer = useMemo(() => {
     if (!snapshot || !me) return null;
     const n = snapshot.players.length;
@@ -606,6 +618,35 @@ export function MidgeoraeOnlineGame() {
   // --- 3. RENDER GAME BOARD & PHASE ---
   return (
     <main className="fullscreen-game-container text-stone-950">
+      {/* Top Left Turn Order Info */}
+      {snapshot.status === "playing" && (
+        <div className="absolute top-7 left-7 z-50 flex flex-col gap-1.5 select-none">
+          <div className="text-[10px] font-black text-amber-500/80 uppercase tracking-widest leading-none mb-0.5">
+            🔄 진행 순서
+          </div>
+          <div className="themed-header-button flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-stone-900/60 backdrop-blur-sm shadow-md">
+            {turnOrder.map((player, idx) => {
+              const isCurrent = player.id === snapshot.currentTurnPlayerId;
+              return (
+                <div key={player.id} className="flex items-center gap-1.5">
+                  {idx > 0 && <span className="text-stone-500 font-bold">➡️</span>}
+                  <span
+                    className={`px-2.5 py-1 rounded-full font-black transition-all ${
+                      isCurrent
+                        ? "bg-orange-500 text-stone-950 scale-105 shadow-[0_0_12px_rgba(249,115,22,0.5)]"
+                        : "text-stone-300 bg-stone-900/30"
+                    }`}
+                  >
+                    {player.name}
+                    {player.id === me?.id && " (나)"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Top Right Header Buttons */}
       <div className="absolute top-7 right-7 z-50 flex items-center gap-2 select-none">
         {snapshot.status === "playing" && (
