@@ -34,6 +34,7 @@ import {
   playerName,
   isTradeRequestAction,
 } from "./components/OnlineHelpers";
+import { getFakeItemForBrick, getBrickFakeCondition } from "../domain/results";
 
 interface Session {
   code: string;
@@ -134,11 +135,30 @@ export function MidgeoraeOnlineGame() {
   const me = snapshot?.me ?? null;
   const myHand = useMemo(() => me?.hand ?? [], [me?.hand]);
   const totalAssets = useMemo(() => {
-    if (!me) return 0;
+    if (!me || !snapshot) return 0;
+    const remainingActions = snapshot.marketActionLimit - snapshot.usedActionCount;
+    const isLastTurns = snapshot.marketActionLimit > 0 && remainingActions <= 4;
+    const isFinished = snapshot.status === "reporting" || snapshot.status === "finished";
+
     return (
       (me.money ?? 0) +
       myHand.reduce((sum, item) => {
-        if (item.isBrick) return sum;
+        if (item.isBrick) {
+          if (me.role === "villain" && !isLastTurns && !isFinished) {
+            const fake = getFakeItemForBrick(item.instanceId);
+            const fakeCond = getBrickFakeCondition(item.instanceId);
+            let multiplier = 1.0;
+            if (fakeCond === "mint") {
+              multiplier = 0.8;
+            } else if (fakeCond === "used") {
+              multiplier = 0.6;
+            } else if (fakeCond === "broken" || fakeCond === "defective") {
+              multiplier = 0.4;
+            }
+            return sum + (fake.marketPrice ?? 0) * multiplier;
+          }
+          return sum;
+        }
         let multiplier = 1.0;
         if (item.condition === "mint") {
           multiplier = 0.8;
@@ -150,7 +170,7 @@ export function MidgeoraeOnlineGame() {
         return sum + (item.marketPrice ?? 0) * multiplier;
       }, 0)
     );
-  }, [me, myHand]);
+  }, [me, myHand, snapshot]);
 
   const isMyTurn = Boolean(me && me.id === snapshot?.currentTurnPlayerId);
   const otherPlayers = useMemo(
