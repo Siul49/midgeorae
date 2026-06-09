@@ -270,7 +270,7 @@ export function MyDashboard({
                 : (item.category ? categoryColors[item.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40");
 
               const isHandCardInteractive = isMyTurn && (activeActionType === "saleRequest" || activeActionType === "recycle");
-              const isThisCardInteractive = isHandCardInteractive;
+              const isThisCardInteractive = isHandCardInteractive && (!selectedItemId || selected);
 
               return (
                 <button

@@ -306,6 +306,8 @@ export function SidePlayerSeat({
             ? `${(item.marketPrice / 10000).toLocaleString("ko-KR")}만` 
             : (item.isBrick ? "0원" : "정가 미공개");
 
+          const isThisCardInteractive = isCardInteractive && (!selectedItemId || isSelected);
+
           return (
             <button
               key={item.instanceId}
@@ -313,7 +315,7 @@ export function SidePlayerSeat({
               disabled={!isCardInteractive}
               onClick={() => onSelectCard && onSelectCard(player.id, item.instanceId)}
               className={`${cardWidthClass} ${cardHeightClass} border rounded-lg transition-all flex flex-col items-center justify-between ${cardPaddingClass} select-none relative ${
-                isCardInteractive ? "card-glowing-interactive pulse-active cursor-pointer" : ""
+                isThisCardInteractive ? "card-glowing-interactive pulse-active cursor-pointer" : ""
               } ${
                 isSelected
                   ? "selected-card-glow z-10"
