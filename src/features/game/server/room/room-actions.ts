@@ -657,21 +657,14 @@ export function ackActionCard(room: Room, actor: ServerPlayer) {
 }
 
 export function leaveRoom(room: Room, actor: ServerPlayer) {
+  if (room.hostPlayerId === actor.id || actor.isHost) {
+    room.players = [];
+    room.logs.push(`방장 ${actor.name}님이 동네를 떠나 방이 폭파되었습니다. 🚪`);
+    return;
+  }
+
   room.players = room.players.filter((p) => p.id !== actor.id);
   room.logs.push(`${actor.name}님이 동네를 떠났습니다(퇴장). 🚪`);
-
-  if (room.hostPlayerId === actor.id || actor.isHost) {
-    const nextHost = room.players.find((p) => !p.isBot);
-    const fallbackHost = room.players[0];
-    const newHost = nextHost || fallbackHost;
-    if (newHost) {
-      newHost.isHost = true;
-      room.hostPlayerId = newHost.id;
-      room.logs.push(`${newHost.name}님이 새로운 방장이 되었습니다. 👑`);
-    } else {
-      room.hostPlayerId = "";
-    }
-  }
 
   if (room.pendingDeal && (room.pendingDeal.ownerId === actor.id || room.pendingDeal.requesterId === actor.id)) {
     room.logs.push(`거래 당사자인 ${actor.name}님이 나가버려서 진행 중이던 거래가 불발되었습니다. 😢`);

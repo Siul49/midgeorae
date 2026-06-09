@@ -2,9 +2,9 @@
 
 import React from "react";
 import { Star } from "lucide-react";
-import type { RoomSnapshot, RoomAction } from "@/features/game/server/types";
+import type { RoomSnapshot, RoomAction } from "../../server/types";
 import { playerName, StatusBox } from "./OnlineHelpers";
-import { CONDITION_MULTIPLIERS } from "@/features/game/rules/game-rules";
+import { CONDITION_MULTIPLIERS } from "../../rules/game-rules";
 
 function getClientItemValue(item: any): number {
   if (item.isBrick) return 0;
