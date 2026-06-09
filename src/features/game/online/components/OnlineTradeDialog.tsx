@@ -128,6 +128,47 @@ export function PriceInputControl({ value, onChange, disabled, marketPrice }: Pr
   );
 }
 
+// Global Helpers for Discover Cards
+const playAudio = (type: "hover" | "select" | "flip") => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const audioCtx = new AudioCtx();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    if (type === "hover") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(260, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(130, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+    } else if (type === "select") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(640, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    } else if (type === "flip") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+    }
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch (e) {}
+};
+
+const categoryColors = {
+  electronics: "border-amber-500/80 bg-amber-950/20 shadow-[0_0_8px_rgba(245,158,11,0.15)]",
+  fashion: "border-purple-500/80 bg-purple-950/20 shadow-[0_0_8px_rgba(168,85,247,0.15)]",
+  hobby: "border-emerald-500/80 bg-emerald-950/20 shadow-[0_0_8px_rgba(16,185,129,0.15)]",
+  living: "border-blue-500/80 bg-blue-950/20 shadow-[0_0_8px_rgba(59,130,246,0.15)]",
+};
+
 // --- PendingDealPanel ---
 interface PendingDealPanelProps {
   snapshot: RoomSnapshot;
@@ -159,6 +200,12 @@ export function PendingDealPanel({
     if (deal && deal.askingPrice > 0) return deal.askingPrice;
     return item && item.marketPrice > 0 ? Math.round((item.marketPrice * 0.7) / 10000) * 10000 : 100000;
   });
+
+  const [giftFlipped, setGiftFlipped] = useState(false);
+
+  useEffect(() => {
+    setGiftFlipped(false);
+  }, [deal?.id]);
 
   useEffect(() => {
     if (deal) {
@@ -246,33 +293,50 @@ export function PendingDealPanel({
         </div>
       );
     } else {
-      actionsNode = (
-        <>
-          <button
-            onClick={() => onChoose("cool")}
-            className="btn-flat-orange flex-1 cursor-pointer"
-          >
-            <ThumbsUp size={14} className="inline mr-1.5" />
-            쿨거래
-          </button>
-          {deal.actionType !== "freeGive" && proposalPrice !== deal.askingPrice && (
+      if (deal.actionType === "freeGive" && me?.id === deal.requesterId) {
+        actionsNode = (
+          <div className="flex justify-center w-full">
             <button
-              onClick={() => onPropose(proposalPrice)}
-              className="btn-flat-sky flex-1 cursor-pointer"
+              onClick={() => onChoose("cool")}
+              disabled={!giftFlipped}
+              className={`btn-flat-orange flex-1 max-w-[320px] cursor-pointer ${
+                giftFlipped ? "btn-golden-glow animate-pulse" : "opacity-40 cursor-not-allowed"
+              }`}
             >
-              <RotateCcw size={14} className="inline mr-1.5" />
-              다시 제안
+              <ThumbsUp size={14} className="inline mr-1.5" />
+              선물 받기
             </button>
-          )}
-          <button
-            onClick={() => onChoose("cancel")}
-            className="btn-flat-cancel flex-1 cursor-pointer"
-          >
-            <Ban size={14} className="inline mr-1.5" />
-            거래취소
-          </button>
-        </>
-      );
+          </div>
+        );
+      } else {
+        actionsNode = (
+          <>
+            <button
+              onClick={() => onChoose("cool")}
+              className="btn-flat-orange flex-1 cursor-pointer"
+            >
+              <ThumbsUp size={14} className="inline mr-1.5" />
+              쿨거래
+            </button>
+            {deal.actionType !== "freeGive" && proposalPrice !== deal.askingPrice && (
+              <button
+                onClick={() => onPropose(proposalPrice)}
+                className="btn-flat-sky flex-1 cursor-pointer"
+              >
+                <RotateCcw size={14} className="inline mr-1.5" />
+                다시 제안
+              </button>
+            )}
+            <button
+              onClick={() => onChoose("cancel")}
+              className="btn-flat-cancel flex-1 cursor-pointer"
+            >
+              <Ban size={14} className="inline mr-1.5" />
+              거래취소
+            </button>
+          </>
+        );
+      }
     }
   } else {
     actionsNode = (
@@ -293,7 +357,74 @@ export function PendingDealPanel({
       actions={actionsNode}
     >
       <div className="modal-details-panel space-y-3.5">
-        {item ? (
+        {deal.actionType === "freeGive" && item ? (
+          <div className="flex flex-col items-center justify-center py-4">
+            <div
+              className={`discover-card-container w-[140px] h-[190px] select-none ${
+                (me?.id !== deal.requesterId || giftFlipped) ? "is-flipped" : ""
+              } ${me?.id === deal.requesterId && !giftFlipped ? "cursor-pointer" : ""}`}
+              onClick={() => {
+                if (me?.id !== deal.requesterId || giftFlipped) return;
+                setGiftFlipped(true);
+                playAudio("flip");
+                setTimeout(() => playAudio("select"), 200);
+              }}
+              onMouseEnter={() => {
+                if (me?.id === deal.requesterId && !giftFlipped) {
+                  playAudio("hover");
+                }
+              }}
+            >
+              <div className="discover-card-inner w-full h-full">
+                {/* Card Back */}
+                <div className="discover-card-back bg-gradient-to-br from-amber-600 to-amber-900 border-2 border-amber-500 shadow-xl flex flex-col items-center justify-center rounded-2xl absolute inset-0 gap-2">
+                  <span className="text-stone-100 font-black text-5xl select-none animate-bounce">🎁</span>
+                  <span className="text-[10px] font-black text-amber-200 tracking-wider">클릭하여 열기</span>
+                </div>
+
+                {/* Card Front */}
+                <div
+                  className={`discover-card-front border-2 p-3.5 flex flex-col justify-between rounded-2xl absolute inset-0 ${
+                    item.isBrick 
+                      ? "border-red-600/80 bg-red-950/30 shadow-[0_0_10px_rgba(220,38,38,0.25)]"
+                      : (item.category ? categoryColors[item.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40")
+                  }`}
+                >
+                  <div className="flex-1 flex items-center justify-center mt-1 text-stone-300">
+                    {productIcon(item, 52)}
+                  </div>
+                  <div className="w-full text-center pb-2">
+                    <div className="font-extrabold text-white text-[13px] tracking-tight truncate w-full px-1">
+                      {item.name}
+                    </div>
+                    <div className="font-black text-[#ff8e53] text-[11px] mt-0.5 leading-none">
+                      {moneyLabel(item.marketPrice)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Description Text */}
+            <div className="text-center mt-4 h-6">
+              {me?.id === deal.requesterId ? (
+                giftFlipped ? (
+                  <span className="text-xs font-black text-orange-400">
+                    {item.isBrick ? "🚨 어머나! [벽돌]을 선물받았습니다!" : "🎉 [정상 물품]을 선물받았습니다!"}
+                  </span>
+                ) : (
+                  <span className="text-xs font-bold text-amber-500/70 animate-pulse">
+                    도착한 선물 상자를 클릭하여 열어보세요!
+                  </span>
+                )
+              ) : (
+                <span className="text-xs font-bold text-stone-400">
+                  {playerName(snapshot, deal.requesterId)}님이 선물을 열어보고 있습니다...
+                </span>
+              )}
+            </div>
+          </div>
+        ) : item ? (
           <>
             <div className="details-grid">
               <div className="details-item">
@@ -483,39 +614,6 @@ export function ActionPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFreeGive, action?.title]);
-
-  const playAudio = (type: "hover" | "select" | "flip") => {
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const audioCtx = new AudioCtx();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      if (type === "hover") {
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(260, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(130, audioCtx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-      } else if (type === "select") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(640, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-      } else if (type === "flip") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(280, audioCtx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-      }
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.3);
-    } catch (e) {}
-  };
 
   const selectedItem = (
     isRequestingOthersItem ? requestableItems : myHand

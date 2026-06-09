@@ -647,6 +647,13 @@ export function MidgeoraeOnlineGame() {
         </div>
       )}
 
+      {/* Last Turns Warning Banner */}
+      {snapshot.status === "playing" && (snapshot.marketActionLimit - snapshot.usedActionCount <= 4) && (
+        <div className="absolute top-[32px] left-1/2 -translate-x-1/2 z-40 bg-red-950/90 border border-red-500/50 px-5 py-2 rounded-full shadow-2xl flex items-center gap-2 animate-pulse select-none">
+          <span className="text-red-400 font-extrabold text-xs">🚨 경고: 남은 시장 행동이 4회 이하입니다! 모든 벽돌 카드가 공개되었습니다!</span>
+        </div>
+      )}
+
       {/* Top Right Header Buttons */}
       <div className="absolute top-7 right-7 z-50 flex items-center gap-2 select-none">
         {snapshot.status === "playing" && (
@@ -847,95 +854,48 @@ export function MidgeoraeOnlineGame() {
                 </ThemedBoardModal>
               ) : (
                 !pendingDeal && pendingReviews.length === 0 && currentAction && isActionCardFullyAcked && (
-                  currentAction.type === "freeGive" && isMyTurn ? (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-md rounded-xl p-2">
-                      <div className="w-full max-w-[680px]">
-                        <ActionPanel
-                          action={currentAction}
-                          isMyTurn={isMyTurn}
-                          loading={loading}
-                          myHand={myHand}
-                          selectedItemId={selectedItemId}
-                          setSelectedItemId={setSelectedItemId}
-                          otherPlayers={otherPlayers}
-                          requestableItems={requestableItems}
-                          dealTargetId={dealTargetId}
-                          setDealTargetId={setDealTargetId}
-                          askingPrice={askingPrice}
-                          setAskingPrice={setAskingPrice}
-                          actionTargetId={actionTargetId}
-                          setActionTargetId={setActionTargetId}
-                          pendingDealActive={Boolean(pendingDeal)}
-                          currentPlayerName={playerName(snapshot, snapshot.currentTurnPlayerId ?? "")}
-                          onDraw={() => submitAction({ type: "drawActionCard" })}
-                          onRequestTrade={requestSelectedItem}
-                          onTerror={() =>
-                            submitAction({
-                              type: "terrorReview",
-                              targetPlayerId: actionTargetId,
-                            })
-                          }
-                          onRecycle={(itemInstanceId) =>
-                            submitAction({
-                              type: "recycleBrick",
-                              itemInstanceId,
-                            })
-                          }
-                          onSwap={() =>
-                            submitAction({
-                              type: "swapRandomItem",
-                              targetPlayerId: actionTargetId,
-                            })
-                          }
-                          onSkip={() => submitAction({ type: "endTurn" })}
-                          compact
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full max-w-[680px] pr-1">
-                      <ActionPanel
-                        action={currentAction}
-                        isMyTurn={isMyTurn}
-                        loading={loading}
-                        myHand={myHand}
-                        selectedItemId={selectedItemId}
-                        setSelectedItemId={setSelectedItemId}
-                        otherPlayers={otherPlayers}
-                        requestableItems={requestableItems}
-                        dealTargetId={dealTargetId}
-                        setDealTargetId={setDealTargetId}
-                        askingPrice={askingPrice}
-                        setAskingPrice={setAskingPrice}
-                        actionTargetId={actionTargetId}
-                        setActionTargetId={setActionTargetId}
-                        pendingDealActive={Boolean(pendingDeal)}
-                        currentPlayerName={playerName(snapshot, snapshot.currentTurnPlayerId ?? "")}
-                        onDraw={() => submitAction({ type: "drawActionCard" })}
-                        onRequestTrade={requestSelectedItem}
-                        onTerror={() =>
-                          submitAction({
-                            type: "terrorReview",
-                            targetPlayerId: actionTargetId,
-                          })
-                        }
-                        onRecycle={(itemInstanceId) =>
-                          submitAction({
-                            type: "recycleBrick",
-                            itemInstanceId,
-                          })
-                        }
-                        onSwap={() =>
-                          submitAction({
-                            type: "swapRandomItem",
-                            targetPlayerId: actionTargetId,
-                          })
-                        }
-                        onSkip={() => submitAction({ type: "endTurn" })}
-                        compact
-                      />
-                    </div>
-                  )
+                  <div className="w-full max-w-[680px] pr-1">
+                    <ActionPanel
+                      action={currentAction}
+                      isMyTurn={isMyTurn}
+                      loading={loading}
+                      myHand={myHand}
+                      selectedItemId={selectedItemId}
+                      setSelectedItemId={setSelectedItemId}
+                      otherPlayers={otherPlayers}
+                      requestableItems={requestableItems}
+                      dealTargetId={dealTargetId}
+                      setDealTargetId={setDealTargetId}
+                      askingPrice={askingPrice}
+                      setAskingPrice={setAskingPrice}
+                      actionTargetId={actionTargetId}
+                      setActionTargetId={setActionTargetId}
+                      pendingDealActive={Boolean(pendingDeal)}
+                      currentPlayerName={playerName(snapshot, snapshot.currentTurnPlayerId ?? "")}
+                      onDraw={() => submitAction({ type: "drawActionCard" })}
+                      onRequestTrade={requestSelectedItem}
+                      onTerror={() =>
+                        submitAction({
+                          type: "terrorReview",
+                          targetPlayerId: actionTargetId,
+                        })
+                      }
+                      onRecycle={(itemInstanceId) =>
+                        submitAction({
+                          type: "recycleBrick",
+                          itemInstanceId,
+                        })
+                      }
+                      onSwap={() =>
+                        submitAction({
+                          type: "swapRandomItem",
+                          targetPlayerId: actionTargetId,
+                        })
+                      }
+                      onSkip={() => submitAction({ type: "endTurn" })}
+                      compact
+                    />
+                  </div>
                 )
               )
             )}
