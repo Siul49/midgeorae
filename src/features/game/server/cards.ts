@@ -91,7 +91,6 @@ export function makeActionDeck() {
     ACTION_CARDS[2],
     ACTION_CARDS[2],
     ACTION_CARDS[3],
-    ACTION_CARDS[3],
     ACTION_CARDS[4],
     ACTION_CARDS[5],
   ].map((card) => ({ ...card }));
