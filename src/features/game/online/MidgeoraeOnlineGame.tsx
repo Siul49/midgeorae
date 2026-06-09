@@ -13,6 +13,7 @@ import type {
   RoomAction,
   RoomMode,
   PublicPlayer,
+  ItemCardSnapshot,
 } from "@/features/game/server/types";
 
 // Import split components
@@ -33,6 +34,8 @@ import {
   moneyLabel,
   playerName,
   isTradeRequestAction,
+  productIcon,
+  conditionLabel,
 } from "./components/OnlineHelpers";
 import { getFakeItemForBrick, getBrickFakeCondition } from "../domain/results";
 
@@ -51,6 +54,22 @@ interface RoomSessionResult {
   playerId: string;
   playerToken: string;
 }
+
+const categoryColors = {
+  electronics: "border-amber-500 bg-amber-950/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] text-amber-200",
+  fashion: "border-purple-500 bg-purple-950/40 shadow-[0_0_12px_rgba(168,85,247,0.25)] text-purple-200",
+  hobby: "border-emerald-500 bg-emerald-950/40 shadow-[0_0_12px_rgba(16,185,129,0.25)] text-emerald-200",
+  living: "border-blue-500 bg-blue-950/40 shadow-[0_0_12px_rgba(59,130,246,0.25)] text-blue-200",
+};
+
+const categoryTextColors = {
+  electronics: "text-amber-400",
+  fashion: "text-purple-400",
+  hobby: "text-emerald-400",
+  living: "text-blue-400",
+};
+
+const brickTheme = "border-red-500 bg-red-950/50 shadow-[0_0_15px_rgba(239,68,68,0.35)] text-red-200";
 
 const SESSION_KEY = "midgeorae-online-session";
 
@@ -90,6 +109,11 @@ export function MidgeoraeOnlineGame() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isPriceListOpen, setIsPriceListOpen] = useState(false);
   const [isMissionListOpen, setIsMissionListOpen] = useState(false);
+  const [barterResult, setBarterResult] = useState<{
+    sentItem: ItemCardSnapshot;
+    receivedItem: ItemCardSnapshot;
+    partnerName: string;
+  } | null>(null);
   const [roleAcknowledged, setRoleAcknowledged] = useState(false);
   
   const [logBoxSize, setLogBoxSize] = useState({ width: 240, height: 130 });
@@ -337,7 +361,7 @@ export function MidgeoraeOnlineGame() {
 
       const newLogs = current.logs.filter(log => !prev.logs.includes(log));
       const lastLog = newLogs[newLogs.length - 1] || "";
-      const swapMatch = lastLog.match(/(.+)님과 (.+)님이 물건 카드를 맞교환했습니다/);
+      const swapMatch = lastLog.match(/(.+)님과 (.+)님이 설레는 물물교환으로 카드를 1장씩 맞교환했습니다/);
       if (swapMatch) {
         const p1Name = swapMatch[1];
         const p2Name = swapMatch[2];
@@ -349,6 +373,28 @@ export function MidgeoraeOnlineGame() {
             fromPlayerId: p1.id,
             toPlayerId: p2.id,
           });
+
+          // If I am a participant in this swap, calculate which items changed
+          if (me && (me.name === p1Name || me.name === p2Name)) {
+            const partnerName = me.name === p1Name ? p2Name : p1Name;
+            const prevHand = prev.me?.hand ?? [];
+            const currentHand = current.me?.hand ?? [];
+
+            const sentItem = prevHand.find(
+              (prevItem) => !currentHand.some((currItem) => currItem.instanceId === prevItem.instanceId)
+            );
+            const receivedItem = currentHand.find(
+              (currItem) => !prevHand.some((prevItem) => prevItem.instanceId === currItem.instanceId)
+            );
+
+            if (sentItem && receivedItem) {
+              setBarterResult({
+                sentItem,
+                receivedItem,
+                partnerName,
+              });
+            }
+          }
         }
       }
 
@@ -981,6 +1027,86 @@ export function MidgeoraeOnlineGame() {
                       })
                     }
                   />
+                </div>
+              </div>
+            )}
+
+            {barterResult && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center p-2 rounded-xl bg-stone-950/80 backdrop-blur-md border border-orange-500/20">
+                <div className="w-full max-w-[480px] p-6 bg-gradient-to-b from-stone-900 to-stone-950 border border-orange-500/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(249,115,22,0.15)] text-center animate-fade-in relative select-text">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-[3px] bg-gradient-to-r from-transparent via-orange-500 to-transparent rounded-full"></div>
+                  
+                  <div className="mb-4 mt-1">
+                    <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-orange-500/10 text-orange-400 mb-2 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+                      <span className="text-xl">🔄</span>
+                    </div>
+                    <h3 className="text-[15px] font-black text-white tracking-wide">물물교환 완료!</h3>
+                    <p className="text-[11px] text-stone-400 mt-1">{barterResult.partnerName}님과 카드가 한 장씩 교환되었습니다.</p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 py-4 px-3 bg-stone-950/50 border border-white/5 rounded-xl mb-5">
+                    
+                    <div className="flex-1 flex flex-col items-center min-w-0">
+                      <span className="text-[9px] font-black text-amber-500/80 uppercase tracking-widest mb-2 truncate max-w-full">보낸 물건 (나 ➔ {barterResult.partnerName})</span>
+                      <div className={`w-[98px] h-[132px] p-2 rounded-xl border ${
+                        barterResult.sentItem.isBrick
+                          ? brickTheme
+                          : (barterResult.sentItem.category ? categoryColors[barterResult.sentItem.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40")
+                      } flex flex-col items-center justify-between text-center select-none`}>
+                        <div className={`text-[32px] leading-none flex-1 flex items-center justify-center ${
+                          barterResult.sentItem.isBrick ? "text-red-400" : (barterResult.sentItem.category ? categoryTextColors[barterResult.sentItem.category as keyof typeof categoryTextColors] : "text-stone-300")
+                        }`}>
+                          {productIcon(barterResult.sentItem, 30)}
+                        </div>
+                        <div className="w-full">
+                          <div className="text-[11px] font-black text-white leading-tight truncate w-full" title={barterResult.sentItem.name}>{barterResult.sentItem.name}</div>
+                          <div className="text-[10px] font-black text-orange-400 mt-0.5">{barterResult.sentItem.isBrick ? "0원" : (barterResult.sentItem.marketPrice > 0 ? moneyLabel(barterResult.sentItem.marketPrice) : "정가 미공개")}</div>
+                          {!barterResult.sentItem.isBrick && barterResult.sentItem.condition && (
+                            <div className="text-[8px] font-bold text-stone-400 mt-0.5 truncate">{conditionLabel(barterResult.sentItem.condition)}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center shrink-0 px-1">
+                      <div className="text-xl text-orange-500 font-black select-none animate-pulse">
+                        ⇆
+                      </div>
+                      <span className="text-[8px] font-bold text-orange-400/50 mt-1">교환</span>
+                    </div>
+
+                    <div className="flex-1 flex flex-col items-center min-w-0">
+                      <span className="text-[9px] font-black text-green-500/80 uppercase tracking-widest mb-2 truncate max-w-full">받은 물건 ({barterResult.partnerName} ➔ 나)</span>
+                      <div className={`w-[98px] h-[132px] p-2 rounded-xl border ${
+                        barterResult.receivedItem.isBrick
+                          ? brickTheme
+                          : (barterResult.receivedItem.category ? categoryColors[barterResult.receivedItem.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40")
+                      } flex flex-col items-center justify-between text-center select-none`}>
+                        <div className={`text-[32px] leading-none flex-1 flex items-center justify-center ${
+                          barterResult.receivedItem.isBrick ? "text-red-400" : (barterResult.receivedItem.category ? categoryTextColors[barterResult.receivedItem.category as keyof typeof categoryTextColors] : "text-stone-300")
+                        }`}>
+                          {productIcon(barterResult.receivedItem, 30)}
+                        </div>
+                        <div className="w-full">
+                          <div className="text-[11px] font-black text-white leading-tight truncate w-full" title={barterResult.receivedItem.name}>{barterResult.receivedItem.name}</div>
+                          <div className="text-[10px] font-black text-orange-400 mt-0.5">{barterResult.receivedItem.isBrick ? "0원" : (barterResult.receivedItem.marketPrice > 0 ? moneyLabel(barterResult.receivedItem.marketPrice) : "정가 미공개")}</div>
+                          {!barterResult.receivedItem.isBrick && barterResult.receivedItem.condition && (
+                            <div className="text-[8px] font-bold text-stone-400 mt-0.5 truncate">{conditionLabel(barterResult.receivedItem.condition)}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <button 
+                    type="button" 
+                    onClick={() => setBarterResult(null)}
+                    className="w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-stone-950 font-black text-sm rounded-xl shadow-[0_4px_15px_rgba(234,88,12,0.4)] cursor-pointer transition-all border border-orange-500/20 active:scale-98"
+                  >
+                    확인 후 거래 계속하기
+                  </button>
+
                 </div>
               </div>
             )}
