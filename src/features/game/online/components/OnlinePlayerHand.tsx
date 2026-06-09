@@ -254,7 +254,7 @@ export function MyDashboard({
             <div className="text-xs text-stone-500 font-bold select-none">게임 시작 대기 중...</div>
           ) : (
             sortedHand.map((item, index) => {
-              const selected = selectedItemId === item.instanceId;
+              const selected = selectedItemId === item.instanceId && (activeActionType === "saleRequest" || activeActionType === "recycle");
               const isDragging = draggedIndex === index;
               const categoryColors = {
                 electronics: "border-amber-500/40 bg-amber-950/20 shadow-[0_0_8px_rgba(245,158,11,0.15)]",
