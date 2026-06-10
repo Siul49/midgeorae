@@ -103,16 +103,16 @@ export function PriceListModal({ isOpen, onClose }: PriceListModalProps) {
       title="📋 모든 물건 정가표"
       maxWidth="1100px"
     >
-      <div className="themed-panel border border-orange-500/20 p-2.5 rounded-lg mb-3 text-[13px] leading-relaxed mx-1 flex-shrink-0 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+      <div className="themed-panel border border-orange-500/20 p-3 rounded-lg mb-3 text-[13px] leading-relaxed mx-1 flex-shrink-0 flex flex-col gap-2.5 bg-stone-900/40">
         <div>
           <p className="font-black text-orange-300 mb-0.5 text-[14px]">💡 물건 상태 &amp; 자산 가치 시스템</p>
           <p className="text-stone-300">모든 물건 카드의 상태는 게임 시작 시 무작위로 부여됩니다. 각 상태에 따라 총 자산에 반영되는 가치가 다릅니다:</p>
         </div>
-        <ul className="flex items-center gap-4 font-bold text-[12px] shrink-0 bg-stone-950/40 px-3 py-1.5 rounded-md border border-white/5">
-          <li>🟢 <span className="text-emerald-400">미개봉 새상품 (Unopened)</span>: 정가의 <span className="text-orange-300">95%</span> 가치 반영</li>
-          <li>🔵 <span className="text-blue-400">민트급 (Mint)</span>: 정가의 <span className="text-orange-300">80%</span> 가치 반영</li>
-          <li>🟡 <span className="text-amber-400">사용감 있음 (Used)</span>: 정가의 <span className="text-orange-300">60%</span> 가치 반영</li>
-          <li>🔴 <span className="text-red-400">하자 있음 (Broken)</span>: 정가의 <span className="text-orange-300">40%</span> 가치 반영</li>
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 font-bold text-[12px] bg-stone-950/40 px-3 py-1.5 rounded-md border border-white/5">
+          <li className="flex items-center gap-1">🟢 <span className="text-emerald-400">미개봉 새상품 (Unopened)</span>: 정가의 <span className="text-orange-300">95%</span> 가치 반영</li>
+          <li className="flex items-center gap-1">🔵 <span className="text-blue-400">민트급 (Mint)</span>: 정가의 <span className="text-orange-300">80%</span> 가치 반영</li>
+          <li className="flex items-center gap-1">🟡 <span className="text-amber-400">사용감 있음 (Used)</span>: 정가의 <span className="text-orange-300">60%</span> 가치 반영</li>
+          <li className="flex items-center gap-1">🔴 <span className="text-red-400">하자 있음 (Broken)</span>: 정가의 <span className="text-orange-300">40%</span> 가치 반영</li>
         </ul>
       </div>
       
