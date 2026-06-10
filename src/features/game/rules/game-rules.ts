@@ -63,7 +63,7 @@ export const JOB_CARDS: JobCardSnapshot[] = [
   {
     id: "citizen",
     title: "일반 시민",
-    description: "게임 종료 시 총 자산이 200만 원 이상이어야 합니다.",
+    description: "게임 종료 시 총 자산이 250만 원 이상이어야 합니다.",
     startingMoney: DEFAULT_STARTING_MONEY,
   },
 ];
