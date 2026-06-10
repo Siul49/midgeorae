@@ -1266,6 +1266,70 @@ export function MidgeoraeOnlineGame() {
         </div>
       )}
 
+      {/* Action Notification Modal Overlay (for Swap / Donation results) */}
+      {snapshot.me?.lastActionNotification && (
+        <div className="settings-menu-overlay" onClick={() => submitAction({ type: "clearNotification" })}>
+          <div 
+            className="themed-board-modal flex flex-col relative !p-6 max-w-[360px] w-full mx-4 text-left border-2 border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.45)]"
+            style={{ outline: "none" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-orange-500/20 flex-shrink-0">
+              <h3 className="text-lg font-black text-orange-400 flex items-center gap-1.5 select-none">
+                {snapshot.me.lastActionNotification.type === "swap" ? "🔄 물물교환 완료!" : "😇 기부천사 발생!"}
+              </h3>
+              <button
+                onClick={() => submitAction({ type: "clearNotification" })}
+                className="text-stone-400 hover:text-white cursor-pointer font-black text-sm h-6 w-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4 pt-1">
+              <p className="text-[13px] text-stone-300 font-medium leading-relaxed">
+                {snapshot.me.lastActionNotification.type === "swap" ? (
+                  <>
+                    <strong className="text-orange-300">{snapshot.me.lastActionNotification.counterPlayerName}</strong>님과 카드를 1장씩 맞교환했습니다.
+                  </>
+                ) : (
+                  <>
+                    <strong className="text-orange-300">{snapshot.me.lastActionNotification.counterPlayerName}</strong>님과의 사이에서 기부천사(강탈) 카드가 실행되었습니다.
+                  </>
+                )}
+              </p>
+
+              <div className="themed-panel p-3.5 rounded-xl border border-white/5 space-y-3 bg-stone-950/45">
+                {snapshot.me.lastActionNotification.lostItemName && (
+                  <div className="flex items-center justify-between text-xs border-b border-white/5 pb-2.5">
+                    <span className="text-stone-400 flex items-center gap-1">📤 보낸 물품</span>
+                    <span className="font-extrabold text-red-400 bg-red-950/20 px-2 py-0.5 rounded border border-red-900/30">
+                      {snapshot.me.lastActionNotification.lostItemName}
+                    </span>
+                  </div>
+                )}
+                
+                {snapshot.me.lastActionNotification.gainedItemName && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-stone-400 flex items-center gap-1">📥 받은 물품</span>
+                    <span className="font-extrabold text-emerald-400 bg-emerald-950/20 px-2 py-0.5 rounded border border-emerald-900/30">
+                      {snapshot.me.lastActionNotification.gainedItemName}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => submitAction({ type: "clearNotification" })}
+                className="motion-button w-full py-2.5 bg-orange-600 hover:bg-orange-500 text-stone-950 font-black text-sm rounded-xl shadow-lg cursor-pointer transition-all border border-orange-500/20"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
 
       {/* Settings menu Modal overlay */}

@@ -25,6 +25,13 @@ export type ActionCardType =
   | "repair";
 export type DealCardChoice = "cool" | "cancel";
 
+export interface ActionNotification {
+  type: "swap" | "donation";
+  lostItemName: string | null;
+  gainedItemName: string | null;
+  counterPlayerName: string;
+}
+
 export interface JobCardSnapshot {
   id: string;
   title: string;
@@ -105,6 +112,7 @@ export interface ServerPlayer {
   hand: ServerItemCard[];
   dealCards: DealCards;
   connectedAt: number;
+  lastActionNotification?: ActionNotification | null;
 }
 
 export interface PublicPlayer {
@@ -180,6 +188,7 @@ export interface PlayerSnapshot {
   hand?: ItemCardSnapshot[];
   dealCards?: DealCards;
   assetRank?: number;
+  lastActionNotification?: ActionNotification | null;
 }
 
 export interface RoomSnapshot {
@@ -241,7 +250,8 @@ export type RoomAction =
   | { type: "leaveRoom" }
   | { type: "toggleRevealAllItems" }
   | { type: "toggleShowBrickDisguise" }
-  | { type: "renamePlayer"; name: string };
+  | { type: "renamePlayer"; name: string }
+  | { type: "clearNotification" };
 
 export interface RoomSessionResult {
   room: RoomSnapshot;

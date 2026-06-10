@@ -418,6 +418,7 @@ export function toSnapshot(room: Room, viewer: ServerPlayer | null): RoomSnapsho
           ),
           dealCards: viewer.dealCards,
           assetRank: ranks[viewer.id],
+          lastActionNotification: viewer.lastActionNotification,
         }
       : null,
     currentTurnPlayerId: room.currentTurnPlayerId,

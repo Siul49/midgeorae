@@ -154,6 +154,9 @@ export async function submitRoomAction(
       case "swapRandomItem":
         actions.swapRandomItem(room, actor, action.targetPlayerId);
         break;
+      case "clearNotification":
+        actions.clearNotification(room, actor);
+        break;
       case "rollDice":
         actions.assertPlaying(room);
         actions.assertCurrentTurn(room, actor);

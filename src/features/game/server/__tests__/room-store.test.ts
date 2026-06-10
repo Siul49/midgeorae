@@ -1485,6 +1485,18 @@ describe("room-store", () => {
     expect(hostPlayer.hand.length).toBe(1);
     expect(hostPlayer.hand[0]!.instanceId).toBe("donation-test-item");
 
+    // Check lastActionNotification was created
+    expect(hostPlayer.lastActionNotification).toBeDefined();
+    expect(hostPlayer.lastActionNotification?.type).toBe("donation");
+    expect(hostPlayer.lastActionNotification?.gainedItemName).toBe("아이폰 15");
+    expect(p2Player.lastActionNotification?.lostItemName).toBe("아이폰 15");
+
+    // Clear notification
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "clearNotification",
+    });
+    expect(hostPlayer.lastActionNotification).toBeNull();
+
     // Check that round ended / action card is null
     expect(room.currentActionCard).toBeNull();
 

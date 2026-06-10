@@ -563,6 +563,20 @@ export function requestDonation(room: Room, actor: ServerPlayer, targetPlayerId:
     revealedToPlayerIds: [actor.id],
   });
 
+  const stolenItemName = item.isBrick ? "벽돌" : item.name;
+  actor.lastActionNotification = {
+    type: "donation",
+    lostItemName: null,
+    gainedItemName: stolenItemName,
+    counterPlayerName: target.name,
+  };
+  target.lastActionNotification = {
+    type: "donation",
+    lostItemName: stolenItemName,
+    gainedItemName: null,
+    counterPlayerName: actor.name,
+  };
+
   room.logs.push(`${actor.name}님이 기부천사 카드로 ${target.name}님의 손패에서 물품 [${getDisguisedItemName(item)}]을(를) 기부(강탈)받아 왔습니다! 😇`);
   room.currentActionCard = null;
   nextTurn(room);
@@ -618,6 +632,22 @@ export function swapRandomItem(room: Room, actor: ServerPlayer, targetPlayerId: 
     ...actorItem,
     revealed: false,
     revealedToPlayerIds: [target.id],
+  };
+
+  const actorLostName = actorItem.isBrick ? "벽돌" : actorItem.name;
+  const actorGainedName = targetItem.isBrick ? "벽돌" : targetItem.name;
+
+  actor.lastActionNotification = {
+    type: "swap",
+    lostItemName: actorLostName,
+    gainedItemName: actorGainedName,
+    counterPlayerName: target.name,
+  };
+  target.lastActionNotification = {
+    type: "swap",
+    lostItemName: actorGainedName,
+    gainedItemName: actorLostName,
+    counterPlayerName: actor.name,
   };
   
   room.logs.push(`${actor.name}님과 ${target.name}님이 설레는 물물교환으로 카드를 1장씩 맞교환했습니다! 🔄`);
@@ -751,4 +781,8 @@ export function renamePlayer(room: Room, actor: ServerPlayer, newName: string) {
   }
   actor.name = sanitized;
   room.logs.push(`${oldName}님이 이름을 ${sanitized}(으)로 변경했습니다.`);
+}
+
+export function clearNotification(room: Room, actor: ServerPlayer) {
+  actor.lastActionNotification = null;
 }
