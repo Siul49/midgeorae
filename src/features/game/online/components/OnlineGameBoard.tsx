@@ -235,28 +235,33 @@ export function SidePlayerSeat({
           <span>물건 {player.itemCount}</span>
 
           {showRepHelp && (
-            <div className="settings-menu-overlay" onClick={() => setShowRepHelp(false)}>
-              <div 
-                className="themed-board-modal flex flex-col relative !p-5 max-w-[320px] w-full mx-4 text-left" 
-                style={{ outline: "none" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between border-b border-orange-500/20 pb-2 flex-shrink-0">
-                  <span className="text-[14px] text-orange-400 font-black flex items-center gap-1 select-none">💡 평판 토큰 규칙</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowRepHelp(false)}
-                    className="text-stone-400 hover:text-white cursor-pointer font-black text-sm h-6 w-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="space-y-2 pt-3 text-xs leading-relaxed text-stone-300">
-                  <p>• <span className="text-orange-300 font-bold">평판 획득:</span> 거래 완료 후 상대방이 나에게 '만족' 후기를 남기면 1 증가</p>
-                  <p>• <span className="text-orange-300 font-bold">평판 감소:</span> 상대방이 나에게 '불만족' 후기를 남기면 내 평판이 1 감소 (불만족 후기를 남긴 상대방의 평판은 소모되지 않음)</p>
-                  <p>• <span className="text-orange-300 font-bold">평판 무소모:</span> 내가 상대방에게 '만족' 후기를 남겨도 내 평판은 차감되지 않습니다.</p>
-                  <p>• <span className="text-orange-300 font-bold">탈락 조건:</span> 평판이 0이 되면 즉시 탈락 및 패배합니다. (초기값: 3)</p>
-                </div>
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className={`absolute z-[9999] w-[240px] p-2.5 bg-stone-950/95 backdrop-blur-sm border border-orange-500/35 rounded-lg text-left shadow-2xl text-[11px] font-medium space-y-1 text-stone-300 pointer-events-auto ${
+                helpPlacement === "bottom"
+                  ? "top-full mt-2 left-1/2 -translate-x-1/2"
+                  : helpPlacement === "right"
+                  ? "top-0 left-[calc(100%+12px)]"
+                  : helpPlacement === "left"
+                  ? "top-0 right-[calc(100%+12px)]"
+                  : "bottom-full mb-2 left-1/2 -translate-x-1/2"
+              }`}
+            >
+              <div className="font-bold text-orange-400 text-[12px] border-b border-white/5 pb-1 flex justify-between items-center">
+                <span>💡 평판 토큰 규칙</span>
+                <button
+                  type="button"
+                  onClick={() => setShowRepHelp(false)}
+                  className="text-stone-400 hover:text-white cursor-pointer font-black text-[10px]"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-1 pt-1 leading-relaxed text-stone-300">
+                <p>• <span className="text-orange-300 font-bold">평판 획득:</span> 거래 완료 후 상대방이 나에게 '만족' 후기를 남기면 1 증가</p>
+                <p>• <span className="text-orange-300 font-bold">평판 감소:</span> 상대방이 나에게 '불만족' 후기를 남기면 내 평판이 1 감소 (불만족 후기를 남긴 상대방의 평판은 소모되지 않음)</p>
+                <p>• <span className="text-orange-300 font-bold">평판 무소모:</span> 내가 상대방에게 '만족' 후기를 남겨도 내 평판은 차감되지 않습니다.</p>
+                <p>• <span className="text-orange-300 font-bold">탈락 조건:</span> 평판이 0이 되면 즉시 탈락 및 패배합니다. (초기값: 3)</p>
               </div>
             </div>
           )}
