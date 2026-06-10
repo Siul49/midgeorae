@@ -14,6 +14,7 @@ import {
   Gamepad2,
   Guitar,
   Headphones,
+  Heart,
   Keyboard,
   Laptop,
   MessageCircleWarning,
@@ -45,6 +46,7 @@ import type {
   ActionCardType,
   RoomSnapshot,
 } from "@/features/game/server/types";
+import { CONDITION_MULTIPLIERS } from "../../rules/game-rules";
 
 // --- 디자인 시스템 기반 공용 컴포넌트 ---
 
@@ -88,14 +90,10 @@ export function moneyLabel(value: number) {
 export function getScamThreshold(item: ItemCardSnapshot | null): number {
   if (!item) return 0;
   if (item.isBrick) return 1;
-  let multiplier = 1.0;
-  if (item.condition === "mint") {
-    multiplier = 0.8;
-  } else if (item.condition === "used") {
-    multiplier = 0.6;
-  } else if (item.condition === "broken" || item.condition === "defective") {
-    multiplier = 0.4;
-  }
+  const cond = item.condition;
+  const multiplier = cond && cond in CONDITION_MULTIPLIERS
+    ? CONDITION_MULTIPLIERS[cond as keyof typeof CONDITION_MULTIPLIERS]
+    : 1.0;
   return Math.floor((item.marketPrice ?? 0) * multiplier) + 1;
 }
 
@@ -113,7 +111,8 @@ const CATEGORY_LABELS = {
 } as const;
 
 const CONDITION_LABELS = {
-  mint: "미개봉",
+  unopened: "미개봉 새상품",
+  mint: "민트급",
   used: "사용감 있음",
   defective: "하자 있음",
   broken: "하자 있음",
@@ -140,8 +139,8 @@ export function actionIcon(type: ActionCardType) {
       return <Eye size={18} />;
     case "badReview":
       return <MessageCircleWarning size={18} />;
-    case "recycle":
-      return <Recycle size={18} />;
+    case "donation":
+      return <Heart size={18} className="text-red-400" />;
     case "swap":
       return <Repeat2 size={18} />;
     case "tradeRequest":

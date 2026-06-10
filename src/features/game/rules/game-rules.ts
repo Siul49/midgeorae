@@ -9,15 +9,16 @@ export const STARTING_MANNER = 36.5;
 export const MARKET_ACTIONS_PER_PLAYER = 5;
 
 // 중앙 도메인 상수 정의
-export const DEFAULT_STARTING_MONEY = 1500000;
+export const DEFAULT_STARTING_MONEY = 2000000;
 export const MAX_MANNER = 42;
 export const MIN_MANNER = 30;
 export const MANNER_SATISFIED_INCREMENT = 0.5;
 export const MANNER_UNSATISFIED_DECREMENT = 1.0;
-export const CITIZEN_VICTORY_ASSET_GOAL = 2000000;
+export const CITIZEN_VICTORY_ASSET_GOAL = 2500000;
 export const VILLAIN_SCAM_VICTORY_LIMIT = 2;
 
 export const CONDITION_MULTIPLIERS = {
+  unopened: 0.95,
   mint: 0.8,
   used: 0.6,
   broken: 0.4,

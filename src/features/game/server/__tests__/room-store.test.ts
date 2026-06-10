@@ -218,7 +218,7 @@ describe("room-store", () => {
 
     expect(firstItem).toBeDefined();
     expect(firstItem!.category).toMatch(/electronics|fashion|hobby|living/);
-    expect(firstItem!.condition).toMatch(/mint|used|defective|broken/);
+    expect(firstItem!.condition).toMatch(/unopened|mint|used|defective|broken/);
     expect(firstItem!.acquiredPrice).toBeNull();
     expect(hostView.players.every((player) => player.hand === undefined)).toBe(true);
   });
@@ -1437,22 +1437,120 @@ describe("room-store", () => {
     });
   });
 
-  it("allows players to recycle bricks or items and logs them correctly using disguised name for citizens", async () => {
+  it("allows players to request donation and transfers a random card from target's hand", async () => {
     const host = await createRoom("호스트");
+    const p2 = await joinRoom(host.room.code, "기부자");
+    const p3 = await joinRoom(host.room.code, "관전자");
     const room = rooms.get(host.room.code)!;
     room.status = "playing";
     room.currentTurnPlayerId = host.playerId;
 
-    // Set the action card to recycle
+    // Set the action card to donation
     room.currentActionCard = {
-      type: "recycle",
-      title: "분리수거 ♻️",
-      description: "내 손패에 필요 없는 벽돌이나 잡동사니 카드 1장을 폐기해 정리합니다.",
-      imagePath: "/game-cards/actions/recycle.svg",
+      type: "donation",
+      title: "기부천사 😇",
+      description: "이웃 중 1명을 지목해 그들의 손패 중 무작위 물품 1장을 일방적으로 기부(강탈)받아 옵니다.",
+      imagePath: "/game-cards/actions/donation.svg",
     };
 
-    // Add a brick card to the host's hand
-    const brickInstanceId = "recycle-test-brick";
+    const hostPlayer = room.players.find((p) => p.id === host.playerId)!;
+    const p2Player = room.players.find((p) => p.id === p2.playerId)!;
+
+    // Empty hands first to control sizes
+    hostPlayer.hand = [];
+    p2Player.hand = [
+      {
+        id: "iphone",
+        name: "아이폰 15",
+        marketPrice: 500000,
+        category: "electronics" as const,
+        condition: "mint" as const,
+        acquiredPrice: null,
+        isBrick: false,
+        imagePath: "/game-cards/backs/item-back.svg",
+        instanceId: "donation-test-item",
+        revealed: false,
+        revealedToPlayerIds: [p2.playerId],
+      }
+    ];
+
+    // Call submitRoomAction with requestDonation action
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "requestDonation",
+      targetPlayerId: p2.playerId,
+    });
+
+    // Check hand sizes
+    expect(p2Player.hand.length).toBe(0);
+    expect(hostPlayer.hand.length).toBe(1);
+    expect(hostPlayer.hand[0]!.instanceId).toBe("donation-test-item");
+
+    // Check that round ended / action card is null
+    expect(room.currentActionCard).toBeNull();
+
+    // Check that the log is present
+    const donationLog = room.logs.find((log) => log.includes("기부천사 카드로"));
+    expect(donationLog).toBeDefined();
+  });
+
+  it("repairItem action upgrades item/disguise condition to mint", async () => {
+    const host = await createRoom("test-player", "botTest");
+    await joinRoom(host.room.code, "player-2");
+    await joinRoom(host.room.code, "player-3");
+    const room = rooms.get(host.room.code)!;
+    
+    // Start game so players are initialized and hands dealt
+    await submitRoomAction(host.room.code, host.playerToken, { type: "startGame" });
+    
+    // Set current turn and force current action card to 'repair'
+    room.currentTurnPlayerId = host.playerId;
+    room.currentActionCard = {
+      type: "repair",
+      title: "자가 수리 🛠️",
+      description: "내 손패의 물건 중 원하는 카드 1장을 '민트급' 상태로 업그레이드합니다.",
+      imagePath: "/game-cards/actions/repair.svg",
+    };
+
+    // 1. Test normal item repair
+    const normalItem = {
+      id: "iphone",
+      name: "아이폰 15",
+      marketPrice: 500000,
+      category: "electronics" as const,
+      condition: "broken" as const,
+      acquiredPrice: null,
+      isBrick: false,
+      imagePath: "/game-cards/backs/item-back.svg",
+      instanceId: "repair-test-item",
+      revealed: false,
+      revealedToPlayerIds: [host.playerId],
+    };
+    
+    const hostPlayer = room.players.find((p) => p.id === host.playerId)!;
+    hostPlayer.hand.push(normalItem);
+
+    // Call submitRoomAction with repairItem action
+    await submitRoomAction(host.room.code, host.playerToken, {
+      type: "repairItem",
+      itemInstanceId: "repair-test-item",
+    });
+
+    // Verify condition changed to mint
+    expect(normalItem.condition).toBe("mint");
+    
+    // Check that round ended / action card is null
+    expect(room.currentActionCard).toBeNull();
+
+    // 2. Test brick disguiseCondition repair
+    // Force repair card again
+    room.currentTurnPlayerId = host.playerId;
+    room.currentActionCard = {
+      type: "repair",
+      title: "자가 수리 🛠️",
+      description: "내 손패의 물건 중 원하는 카드 1장을 '민트급' 상태로 업그레이드합니다.",
+      imagePath: "/game-cards/actions/repair.svg",
+    };
+
     const brickItem = {
       id: "brick-1",
       name: "벽돌",
@@ -1462,26 +1560,29 @@ describe("room-store", () => {
       acquiredPrice: null,
       isBrick: true,
       imagePath: "/game-cards/actions/brick.svg",
-      instanceId: brickInstanceId,
+      instanceId: "repair-test-brick",
       revealed: false,
       revealedToPlayerIds: [host.playerId],
+      disguiseId: "iphone",
+      disguiseName: "아이폰 15",
+      disguiseCategory: "electronics" as const,
+      disguiseCondition: "broken" as const,
+      disguiseMarketPrice: 500000,
+      disguiseImagePath: "/game-cards/backs/item-back.svg",
     };
-    const hostPlayer = room.players.find((p) => p.id === host.playerId)!;
     hostPlayer.hand.push(brickItem);
 
-    // Call submitRoomAction with recycleBrick action
+    // Call submitRoomAction with repairItem action
     await submitRoomAction(host.room.code, host.playerToken, {
-      type: "recycleBrick",
-      itemInstanceId: brickInstanceId,
+      type: "repairItem",
+      itemInstanceId: "repair-test-brick",
     });
 
-    // Check that card was removed from hand
-    expect(hostPlayer.hand.find((item) => item.instanceId === brickInstanceId)).toBeUndefined();
-    // Check that round ended / action card is null
-    expect(room.currentActionCard).toBeNull();
-    // Check that the log is disguised
-    const recycleLog = room.logs.find((log) => log.includes("분리수거함에 버렸습니다. ♻️"));
-    expect(recycleLog).toBeDefined();
-    expect(recycleLog).not.toContain("벽돌");
+    // Verify disguiseCondition changed to mint
+    expect(brickItem.disguiseCondition).toBe("mint");
+    
+    // Verify logs
+    const repairLog = room.logs.find((log) => log.includes("정성껏 수리하여 '민트급' 상태로 만들었습니다! 🛠️"));
+    expect(repairLog).toBeDefined();
   });
 });

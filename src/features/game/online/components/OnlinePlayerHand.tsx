@@ -11,6 +11,7 @@ import type {
 } from "@/features/game/server/types";
 import { moneyLabel, conditionLabel, productIcon, isTradeRequestAction, RankBadgeCircle } from "./OnlineHelpers";
 import { getFakeItemForBrick, getBrickFakeCondition } from "../../domain/results";
+import { CONDITION_MULTIPLIERS } from "../../rules/game-rules";
 
 // --- Sub-components for OnlinePlayerHand ---
 export function FrameStat({
@@ -255,7 +256,7 @@ export function MyDashboard({
             <div className="text-xs text-stone-500 font-bold select-none">게임 시작 대기 중...</div>
           ) : (
             sortedHand.map((item, index) => {
-              const selected = selectedItemId === item.instanceId && (activeActionType === "saleRequest" || activeActionType === "recycle");
+              const selected = selectedItemId === item.instanceId && (activeActionType === "saleRequest" || activeActionType === "repair");
               const isDragging = draggedIndex === index;
               const categoryColors = {
                 electronics: "border-amber-500 bg-amber-950/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] text-amber-200",
@@ -277,7 +278,7 @@ export function MyDashboard({
                 ? brickTheme
                 : (item.category ? categoryColors[item.category as keyof typeof categoryColors] : "border-stone-700 bg-stone-900/40");
 
-              const isHandCardInteractive = isMyTurn && (activeActionType === "saleRequest" || activeActionType === "recycle");
+              const isHandCardInteractive = isMyTurn && (activeActionType === "saleRequest" || activeActionType === "repair");
               const isThisCardInteractive = isHandCardInteractive && (!selectedItemId || selected);
 
               return (
@@ -313,10 +314,16 @@ export function MyDashboard({
                     <div className="text-[11px] font-black text-orange-400 truncate w-full mt-0.5 leading-none">
                       {item.isBrick ? "0원" : (item.marketPrice > 0 ? moneyLabel(item.marketPrice) : "정가 미공개")}
                     </div>
-                    {!item.isBrick && item.condition && (
+                    {item.isBrick ? (
                       <div className="text-[10px] font-bold text-stone-400 truncate w-full leading-none mt-1">
-                        {conditionLabel(item.condition)}
+                        위장: {conditionLabel(item.disguiseCondition ?? getBrickFakeCondition(item.instanceId))}
                       </div>
+                    ) : (
+                      item.condition && (
+                        <div className="text-[10px] font-bold text-stone-400 truncate w-full leading-none mt-1">
+                          {conditionLabel(item.condition)}
+                        </div>
+                      )
                     )}
                   </div>
                 </button>
@@ -373,25 +380,16 @@ export function OnlinePlayerHand({
         if (isVillain && !isLastTurns && !isFinished) {
           const fakePrice = item.disguiseMarketPrice ?? getFakeItemForBrick(item.instanceId).marketPrice;
           const fakeCond = item.disguiseCondition ?? getBrickFakeCondition(item.instanceId);
-          let multiplier = 1.0;
-          if (fakeCond === "mint") {
-            multiplier = 0.8;
-          } else if (fakeCond === "used") {
-            multiplier = 0.6;
-          } else if (fakeCond === "broken" || fakeCond === "defective") {
-            multiplier = 0.4;
-          }
+          const multiplier = fakeCond && fakeCond in CONDITION_MULTIPLIERS
+            ? CONDITION_MULTIPLIERS[fakeCond as keyof typeof CONDITION_MULTIPLIERS]
+            : 1.0;
           bValue += fakePrice * multiplier;
         }
       } else {
-        let multiplier = 1.0;
-        if (item.condition === "mint") {
-          multiplier = 0.8;
-        } else if (item.condition === "used") {
-          multiplier = 0.6;
-        } else if (item.condition === "broken" || item.condition === "defective") {
-          multiplier = 0.4;
-        }
+        const cond = item.condition;
+        const multiplier = cond && cond in CONDITION_MULTIPLIERS
+          ? CONDITION_MULTIPLIERS[cond as keyof typeof CONDITION_MULTIPLIERS]
+          : 1.0;
         nInfo.push({
           name: item.name,
           value: (item.marketPrice ?? 0) * multiplier

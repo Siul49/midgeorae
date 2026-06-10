@@ -202,8 +202,9 @@ const ACTION_CARD_WEIGHTS = [
   { type: "freeGive", weight: 2 },
   { type: "directTrade", weight: 2 },
   { type: "badReview", weight: 2 },
-  { type: "recycle", weight: 1 },
+  { type: "donation", weight: 1 },
   { type: "swap", weight: 1 },
+  { type: "repair", weight: 1 },
 ];
 
 function getRandomActionCardByProbability(): ActionCardSnapshot {
@@ -245,8 +246,9 @@ export function drawActionCard(room: Room, actor: ServerPlayer) {
         "directTrade",
         "freeGive",
         "badReview",
-        "recycle",
+        "donation",
         "swap",
+        "repair",
       ];
       const targetType = hostSequence[(room.hostDrawCount - 1) % hostSequence.length];
       const found = ACTION_CARDS.find((c) => c.type === targetType);
@@ -259,6 +261,8 @@ export function drawActionCard(room: Room, actor: ServerPlayer) {
         "tradeRequest",
         "saleRequest",
         "directTrade",
+        "repair",
+        "donation",
       ];
       const targetType = botSequence[(room.botDrawCount - 1) % botSequence.length] || "tradeRequest";
       const found = ACTION_CARDS.find((c) => c.type === targetType);
@@ -535,16 +539,55 @@ export function terrorReview(room: Room, actor: ServerPlayer, targetPlayerId: st
   nextTurn(room);
 }
 
-export function recycleBrick(room: Room, actor: ServerPlayer, itemInstanceId: string) {
+export function requestDonation(room: Room, actor: ServerPlayer, targetPlayerId: string) {
   assertPlaying(room);
   assertCurrentTurn(room, actor);
-  if (room.currentActionCard?.type !== "recycle") {
-    throw new Error("분리수거 행동카드에서만 사용할 수 있습니다.");
+  if (room.currentActionCard?.type !== "donation") {
+    throw new Error("기부천사 행동카드에서만 사용할 수 있습니다.");
+  }
+  const target = findPlayerById(room, targetPlayerId);
+  if (target.id === actor.id) throw new Error("자기 자신에게 기부를 요청할 수 없습니다.");
+  if (target.hand.length === 0) {
+    throw new Error("지목된 플레이어의 손패가 비어있습니다.");
+  }
+
+  // Pick a random card from target's hand
+  const randomIndex = Math.floor(Math.random() * target.hand.length);
+  const item = target.hand[randomIndex]!;
+
+  // Transfer item from target to actor
+  target.hand.splice(randomIndex, 1);
+  actor.hand.push({
+    ...item,
+    revealed: false,
+    revealedToPlayerIds: [actor.id],
+  });
+
+  room.logs.push(`${actor.name}님이 기부천사 카드로 ${target.name}님의 손패에서 물품 [${getDisguisedItemName(item)}]을(를) 기부(강탈)받아 왔습니다! 😇`);
+  room.currentActionCard = null;
+  nextTurn(room);
+}
+
+export function repairItem(room: Room, actor: ServerPlayer, itemInstanceId: string) {
+  assertPlaying(room);
+  assertCurrentTurn(room, actor);
+  if (room.currentActionCard?.type !== "repair") {
+    throw new Error("자가 수리 행동카드에서만 사용할 수 있습니다.");
   }
   const item = actor.hand.find((owned) => owned.instanceId === itemInstanceId);
-  if (!item) throw new Error("분리수거할 물건 카드가 없습니다.");
-  actor.hand = actor.hand.filter((owned) => owned.instanceId !== itemInstanceId);
-  room.logs.push(`${actor.name}님이 물품 카드 [${getDisguisedItemName(item)}]을(를) 분리수거함에 버렸습니다. ♻️`);
+  if (!item) throw new Error("수리할 물건 카드가 없습니다.");
+  
+  if (item.isBrick) {
+    item.disguiseCondition = "mint";
+  } else {
+    item.condition = "mint";
+  }
+  
+  const itemName = getDisguisedItemName(item);
+  room.logs.push(
+    `${actor.name}님이 물품 [${itemName}]을(를) 정성껏 수리하여 '민트급' 상태로 만들었습니다! 🛠️`
+  );
+  
   room.currentActionCard = null;
   nextTurn(room);
 }

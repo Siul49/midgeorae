@@ -15,12 +15,12 @@ export function getFakeItemForBrick(instanceId: string) {
   return ALL_ITEMS[index]!;
 }
 
-export function getBrickFakeCondition(instanceId: string): "mint" | "used" | "broken" {
+export function getBrickFakeCondition(instanceId: string): "unopened" | "mint" | "used" | "broken" {
   let hash = 0;
   for (let i = 0; i < instanceId.length; i++) {
     hash = instanceId.charCodeAt(i) + ((hash << 5) - hash);
   }
-  const conditions = ["mint", "used", "broken"] as const;
+  const conditions = ["unopened", "mint", "used", "broken"] as const;
   const index = Math.abs(hash) % conditions.length;
   return conditions[index];
 }

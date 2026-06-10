@@ -79,15 +79,22 @@ export async function joinRoom(code: string, name: string): Promise<RoomSessionR
 }
 
 export async function getRoomSnapshot(code: string, token: string): Promise<RoomSnapshot> {
-  let viewerId: string = "";
-  const { room } = await mutateRoomWithRetry(code, (room) => {
-    const viewer = findPlayer(room, token);
-    viewerId = viewer.id;
-    if (autoPlayBots(room)) {
-      touch(room);
-    }
-  });
-  const viewer = room.players.find((p) => p.id === viewerId) || null;
+  const room = await findRoom(code);
+  const viewer = findPlayer(room, token);
+
+  if (room.mode === "botTest") {
+    let viewerId = viewer.id;
+    const { room: mutatedRoom } = await mutateRoomWithRetry(code, (r) => {
+      const v = findPlayer(r, token);
+      viewerId = v.id;
+      if (autoPlayBots(r)) {
+        touch(r);
+      }
+    });
+    const updatedViewer = mutatedRoom.players.find((p) => p.id === viewerId) || null;
+    return toSnapshot(mutatedRoom, updatedViewer);
+  }
+
   return toSnapshot(room, viewer);
 }
 
@@ -138,8 +145,11 @@ export async function submitRoomAction(
         room.showBrickDisguise = !room.showBrickDisguise;
         room.logs.push(`방장이 내 벽돌 위장 보기 설정을 ${room.showBrickDisguise ? "켬" : "끔"}으로 변경했습니다.`);
         break;
-      case "recycleBrick":
-        actions.recycleBrick(room, actor, action.itemInstanceId);
+      case "requestDonation":
+        actions.requestDonation(room, actor, action.targetPlayerId);
+        break;
+      case "repairItem":
+        actions.repairItem(room, actor, action.itemInstanceId);
         break;
       case "swapRandomItem":
         actions.swapRandomItem(room, actor, action.targetPlayerId);

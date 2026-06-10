@@ -15,7 +15,8 @@ import {
   reviewTrade,
   reportSuspiciousPlayer,
   terrorReview,
-  recycleBrick,
+  requestDonation,
+  repairItem,
   swapRandomItem,
   getDisguisedItemName,
 } from "./room-actions";
@@ -201,10 +202,30 @@ export function autoRunCurrentBotTurn(room: Room) {
     return true;
   }
 
-  if (card.type === "recycle") {
-    const brick = actor.hand.find((item) => item.isBrick);
-    if (brick) {
-      recycleBrick(room, actor, brick.instanceId);
+  if (card.type === "donation") {
+    const target = chooseBotTarget(
+      room,
+      actor,
+      (player) => player.hand.length > 0,
+    );
+    if (target) {
+      requestDonation(room, actor, target.id);
+    } else {
+      botEndTurn(room, actor);
+    }
+    return true;
+  }
+
+  if (card.type === "repair") {
+    const repairTarget = actor.hand.find((item) => {
+      if (item.isBrick) {
+        return item.disguiseCondition !== "mint";
+      }
+      return item.condition !== "mint";
+    }) || actor.hand[0];
+
+    if (repairTarget) {
+      repairItem(room, actor, repairTarget.instanceId);
     } else {
       botEndTurn(room, actor);
     }

@@ -59,10 +59,10 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
     imagePath: "/game-cards/cards/event-11-e11.svg",
   },
   {
-    type: "recycle",
-    title: "분리수거 ♻️",
-    description: "내 손패에 필요 없는 벽돌이나 잡동사니 카드 1장을 폐기해 정리합니다.",
-    imagePath: "/game-cards/actions/recycle.svg",
+    type: "donation",
+    title: "기부천사 😇",
+    description: "이웃 중 1명을 지목해 그들의 손패 중 무작위 물품 1장을 일방적으로 기부(강탈)받아 옵니다.",
+    imagePath: "/game-cards/actions/donation.svg",
   },
   {
     type: "swap",
@@ -76,27 +76,33 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
     description: "내 멋진 물품 1장을 선택하고 직접 가격을 책정해 이웃에게 제안해 봐요.",
     imagePath: "/game-cards/actions/direct-trade.svg",
   },
+  {
+    type: "repair",
+    title: "자가 수리 🛠️",
+    description: "내 손패의 물건 중 원하는 카드 1장을 '미개봉' 상태로 업그레이드합니다.",
+    imagePath: "/game-cards/actions/repair.svg",
+  },
 ];
 
 export function makeActionDeck() {
   return [
-    ACTION_CARDS[0], // tradeRequest (50%)
+    ACTION_CARDS[0], // tradeRequest
     ACTION_CARDS[0],
     ACTION_CARDS[0],
     ACTION_CARDS[0],
     ACTION_CARDS[0],
-    ACTION_CARDS[0],
-    ACTION_CARDS[6], // saleRequest (8.3%)
-    ACTION_CARDS[1], // freeGive (8.3%)
-    ACTION_CARDS[2], // directTrade (8.3%)
-    ACTION_CARDS[3], // badReview (8.3%)
-    ACTION_CARDS[4], // recycle (8.3%)
-    ACTION_CARDS[5], // swap (8.3%)
+    ACTION_CARDS[6], // saleRequest
+    ACTION_CARDS[1], // freeGive
+    ACTION_CARDS[2], // directTrade
+    ACTION_CARDS[3], // badReview
+    ACTION_CARDS[4], // donation
+    ACTION_CARDS[5], // swap
+    ACTION_CARDS[7], // repair
   ].map((card) => ({ ...card }));
 }
 
 export function makeItemDeck() {
-  const conditions = ["mint", "used", "broken"] as const;
+  const conditions = ["unopened", "mint", "used", "broken"] as const;
   const normalCards = ALL_ITEMS.map((item) => ({
     id: item.id,
     name: item.name,
@@ -126,7 +132,7 @@ export function dealItemHands(
   villainId?: string,
   cardsPerPlayer = CARDS_PER_PLAYER,
 ): Record<string, ServerItemCard[]> {
-  const conditions = ["mint", "used", "broken"] as const;
+  const conditions = ["unopened", "mint", "used", "broken"] as const;
 
   // 1. Shuffle ALL_ITEMS to select unique items for normal cards + brick disguises
   const shuffledItems = [...ALL_ITEMS].sort(() => Math.random() - 0.5);

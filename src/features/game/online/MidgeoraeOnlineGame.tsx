@@ -38,6 +38,7 @@ import {
   conditionLabel,
 } from "./components/OnlineHelpers";
 import { getFakeItemForBrick, getBrickFakeCondition } from "../domain/results";
+import { CONDITION_MULTIPLIERS } from "../rules/game-rules";
 
 interface Session {
   code: string;
@@ -169,26 +170,17 @@ export function MidgeoraeOnlineGame() {
           if (me.role === "villain" && !isFinished) {
             const fakePrice = item.disguiseMarketPrice ?? getFakeItemForBrick(item.instanceId).marketPrice;
             const fakeCond = item.disguiseCondition ?? getBrickFakeCondition(item.instanceId);
-            let multiplier = 1.0;
-            if (fakeCond === "mint") {
-              multiplier = 0.8;
-            } else if (fakeCond === "used") {
-              multiplier = 0.6;
-            } else if (fakeCond === "broken" || fakeCond === "defective") {
-              multiplier = 0.4;
-            }
+            const multiplier = fakeCond && fakeCond in CONDITION_MULTIPLIERS
+              ? CONDITION_MULTIPLIERS[fakeCond as keyof typeof CONDITION_MULTIPLIERS]
+              : 1.0;
             return sum + fakePrice * multiplier;
           }
           return sum;
         }
-        let multiplier = 1.0;
-        if (item.condition === "mint") {
-          multiplier = 0.8;
-        } else if (item.condition === "used") {
-          multiplier = 0.6;
-        } else if (item.condition === "broken" || item.condition === "defective") {
-          multiplier = 0.4;
-        }
+        const cond = item.condition;
+        const multiplier = cond && cond in CONDITION_MULTIPLIERS
+          ? CONDITION_MULTIPLIERS[cond as keyof typeof CONDITION_MULTIPLIERS]
+          : 1.0;
         return sum + (item.marketPrice ?? 0) * multiplier;
       }, 0)
     );
@@ -419,7 +411,17 @@ export function MidgeoraeOnlineGame() {
     if (!activeSession) return;
     const nextSnapshot = await requestSnapshot(activeSession);
     if (sessionRef.current?.playerToken === activeSession.playerToken) {
-      setSnapshot(nextSnapshot);
+      setSnapshot((prev) => {
+        if (
+          prev &&
+          prev.code === nextSnapshot.code &&
+          prev.version === nextSnapshot.version &&
+          prev.status === nextSnapshot.status
+        ) {
+          return prev;
+        }
+        return nextSnapshot;
+      });
       setError("");
     }
   }, []);
@@ -454,17 +456,50 @@ export function MidgeoraeOnlineGame() {
   useEffect(() => {
     if (!session) return;
     const activeSession = session;
-    const timer = window.setInterval(() => {
-      void fetchSnapshot(activeSession).catch((fetchError: unknown) => {
-        if (sessionRef.current?.playerToken !== activeSession.playerToken) return;
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "방 상태를 불러오지 못했습니다.",
-        );
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
+
+    let timer: number | undefined;
+
+    const startPolling = () => {
+      if (timer) return;
+      void fetchSnapshot(activeSession).catch(() => {});
+      timer = window.setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+        void fetchSnapshot(activeSession).catch((fetchError: unknown) => {
+          if (sessionRef.current?.playerToken !== activeSession.playerToken) return;
+          setError(
+            fetchError instanceof Error
+              ? fetchError.message
+              : "방 상태를 불러오지 못했습니다.",
+          );
+        });
+      }, 1000);
+    };
+
+    const stopPolling = () => {
+      if (timer) {
+        window.clearInterval(timer);
+        timer = undefined;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    if (document.visibilityState === "visible") {
+      startPolling();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [fetchSnapshot, session]);
 
   useEffect(() => {
@@ -493,11 +528,9 @@ export function MidgeoraeOnlineGame() {
     }
 
     void refreshInviteUrls();
-    const timer = window.setInterval(refreshInviteUrls, 5000);
 
     return () => {
       controller.abort();
-      window.clearInterval(timer);
     };
   }, [session]);
 
@@ -971,9 +1004,15 @@ export function MidgeoraeOnlineGame() {
                           targetPlayerId: actionTargetId,
                         })
                       }
-                      onRecycle={(itemInstanceId) =>
+                      onDonation={() =>
                         submitAction({
-                          type: "recycleBrick",
+                          type: "requestDonation",
+                          targetPlayerId: actionTargetId,
+                        })
+                      }
+                      onRepair={(itemInstanceId) =>
+                        submitAction({
+                          type: "repairItem",
                           itemInstanceId,
                         })
                       }

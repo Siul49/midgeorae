@@ -1,5 +1,5 @@
 export type ItemCategory = "electronics" | "fashion" | "hobby" | "living";
-export type ItemCondition = "mint" | "used" | "defective" | "broken";
+export type ItemCondition = "unopened" | "mint" | "used" | "defective" | "broken";
 
 export interface Item {
   id: string;
@@ -19,9 +19,10 @@ export type ActionCardType =
   | "freeGive"
   | "directTrade"
   | "badReview"
-  | "recycle"
+  | "donation"
   | "swap"
-  | "saleRequest";
+  | "saleRequest"
+  | "repair";
 export type DealCardChoice = "cool" | "cancel";
 
 export interface JobCardSnapshot {
@@ -226,8 +227,9 @@ export type RoomAction =
       satisfied: boolean;
     }
   | { type: "terrorReview"; targetPlayerId: string }
-  | { type: "recycleBrick"; itemInstanceId: string }
+  | { type: "requestDonation"; targetPlayerId: string }
   | { type: "swapRandomItem"; targetPlayerId: string }
+  | { type: "repairItem"; itemInstanceId: string }
   | { type: "rollDice" }
   | { type: "buyItem"; itemName: string; price: number }
   | { type: "sellItem"; itemName: string; targetPlayerId: string; price: number }

@@ -34,7 +34,7 @@ export const GOLDEN_ITEMS: Item[] = [
 ];
 
 export function getRandomItems(count: number, pool: Item[] = ALL_ITEMS): Item[] {
-  const conditions = ["mint", "used", "broken"] as const;
+  const conditions = ["unopened", "mint", "used", "broken"] as const;
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count).map((item) => ({
     ...item,
@@ -43,7 +43,7 @@ export function getRandomItems(count: number, pool: Item[] = ALL_ITEMS): Item[] 
 }
 
 export function getRandomItem(pool: Item[] = ALL_ITEMS): Item {
-  const conditions = ["mint", "used", "broken"] as const;
+  const conditions = ["unopened", "mint", "used", "broken"] as const;
   const item = pool[Math.floor(Math.random() * pool.length)];
   return {
     ...item,

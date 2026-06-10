@@ -12,6 +12,8 @@ import {
   Repeat2,
   Recycle,
   RotateCcw,
+  Wrench,
+  Heart,
 } from "lucide-react";
 import type {
   RoomSnapshot,
@@ -58,8 +60,9 @@ export function PriceInputControl({ value, onChange, disabled, marketPrice }: Pr
     }
   };
 
-  // 정가 기준 80%, 60%, 40% 계산 값 구하기
+  // 정가 기준 95%, 80%, 60%, 40% 계산 값 구하기
   const prices = marketPrice && marketPrice > 0 ? {
+    unopened: Math.round((marketPrice * 0.95) / 10000) * 10000,
     mint: Math.round((marketPrice * 0.8) / 10000) * 10000,
     used: Math.round((marketPrice * 0.6) / 10000) * 10000,
     broken: Math.round((marketPrice * 0.4) / 10000) * 10000,
@@ -100,11 +103,19 @@ export function PriceInputControl({ value, onChange, disabled, marketPrice }: Pr
         <div className="flex gap-1.5 mt-1">
           <button
             type="button"
+            onClick={() => onChange(prices.unopened)}
+            className="px-2 py-1 bg-teal-950/40 border border-teal-500/30 hover:border-teal-400 text-teal-400 hover:text-white text-[11px] font-bold rounded cursor-pointer transition-all"
+            title="정가의 95%"
+          >
+            미개봉({Math.round(prices.unopened / 10000)}만)
+          </button>
+          <button
+            type="button"
             onClick={() => onChange(prices.mint)}
             className="px-2 py-1 bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 hover:text-white text-[11px] font-bold rounded cursor-pointer transition-all"
             title="정가의 80%"
           >
-            미개봉({Math.round(prices.mint / 10000)}만)
+            민트급({Math.round(prices.mint / 10000)}만)
           </button>
           <button
             type="button"
@@ -568,7 +579,8 @@ interface ActionPanelProps {
   onDraw: () => void;
   onRequestTrade: () => void;
   onTerror: () => void;
-  onRecycle: (itemInstanceId: string) => void;
+  onDonation?: () => void;
+  onRepair?: (itemInstanceId: string) => void;
   onSwap: () => void;
   onSkip: () => void;
   compact?: boolean;
@@ -596,7 +608,8 @@ export function ActionPanel({
   onDraw,
   onRequestTrade,
   onTerror,
-  onRecycle,
+  onDonation,
+  onRepair,
   onSwap,
   onSkip,
   compact = false,
@@ -935,23 +948,91 @@ export function ActionPanel({
         </button>
       </>
     );
-  } else if (action.type === "recycle") {
+  } else if (action.type === "donation") {
+    const selectedPlayer = otherPlayers.find(p => p.id === actionTargetId);
     modalContent = (
       <div className="modal-details-panel w-full space-y-3">
-        {!recycleItemId ? (
+        {!actionTargetId ? (
           <div className="p-3 bg-red-950/20 border border-red-900/40 rounded text-center">
-            <span className="text-xs font-black text-red-400 block">⚠️ 물건 미선택</span>
+            <span className="text-xs font-black text-red-400 block">⚠️ 대상 미지목</span>
             <span className="text-xs font-bold text-stone-400 mt-1 block">
-              하단 내 손패에서 분리수거할 물건 카드를 직접 클릭하세요!
+              상대 프로필을 클릭하여 기부받을 대상을 선택하세요!
             </span>
           </div>
         ) : (
           <div className="space-y-2 text-left text-sm font-bold">
             <div className="flex justify-between">
-              <span className="text-stone-400">선택된 물건</span>
-              <span className="text-teal-400 font-black">
-                {myHand.find(item => item.instanceId === recycleItemId)?.name ?? "물건"}
+              <span className="text-stone-400">지목된 기부자</span>
+              <span className="text-amber-400 font-black">{selectedPlayer?.name ?? "알 수 없음"}</span>
+            </div>
+            <div className="text-xs text-stone-400 border-t border-white/5 pt-1.5 mt-1.5">
+              선택한 대상의 손패 중 **무작위 물품 1장**을 내 손패로 일방적 기부받아 옵니다. 😇
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col gap-1.5 mt-2.5">
+          <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest text-left">기부받을 이웃 선택</label>
+          <div className="flex gap-2">
+            {otherPlayers.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setActionTargetId(p.id)}
+                className={`flex-1 py-1.5 px-2 text-xs font-black rounded border transition-all cursor-pointer ${
+                  actionTargetId === p.id 
+                    ? "border-orange-500 bg-orange-950/40 text-orange-400 font-extrabold" 
+                    : "border-white/10 bg-black/20 text-stone-300 hover:bg-stone-800"
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+    modalActions = (
+      <>
+        <button
+          onClick={() => onDonation && onDonation()}
+          disabled={!actionTargetId || loading}
+          className="btn-flat-orange cursor-pointer"
+          style={{ backgroundColor: "#ef4444", color: "#1c1917" }} // red/orange
+        >
+          <Heart size={14} className="inline mr-1.5" />
+          {loading ? "처리 중..." : "기부 받기 😇"}
+        </button>
+        <button
+          onClick={onSkip}
+          disabled={loading}
+          className="btn-flat-cancel cursor-pointer"
+        >
+          넘기기
+        </button>
+      </>
+    );
+  } else if (action.type === "repair") {
+    const repairItemId = selectedItemId || "";
+    modalContent = (
+      <div className="modal-details-panel w-full space-y-3">
+        {!repairItemId ? (
+          <div className="p-3 bg-red-950/20 border border-red-900/40 rounded text-center">
+            <span className="text-xs font-black text-red-400 block">⚠️ 물건 미선택</span>
+            <span className="text-xs font-bold text-stone-400 mt-1 block">
+              하단 내 손패에서 수리하여 '민트급' 상태로 만들 카드를 직접 클릭하세요!
+            </span>
+          </div>
+        ) : (
+          <div className="space-y-2 text-left text-sm font-bold">
+            <div className="flex justify-between">
+              <span className="text-stone-400 font-extrabold">선택된 수리 대상 물건</span>
+              <span className="text-blue-400 font-black">
+                {myHand.find(item => item.instanceId === repairItemId)?.name ?? "물건"}
               </span>
+            </div>
+            <div className="flex justify-between text-xs text-stone-400 border-t border-white/5 pt-1.5 mt-1.5">
+              <span>수리 후 상태</span>
+              <span className="text-emerald-400 font-black">민트급 (Mint) ✨ (80% 가치)</span>
             </div>
           </div>
         )}
@@ -960,13 +1041,13 @@ export function ActionPanel({
     modalActions = (
       <>
         <button
-          onClick={() => onRecycle(recycleItemId)}
-          disabled={!recycleItemId || loading}
+          onClick={() => onRepair && onRepair(repairItemId)}
+          disabled={!repairItemId || loading}
           className="btn-flat-orange cursor-pointer"
-          style={{ backgroundColor: "#10b981", color: "#1c1917" }} // emerald/teal accent
+          style={{ backgroundColor: "#3b82f6", color: "#ffffff" }}
         >
-          <Recycle size={14} className="inline mr-1.5" />
-          {loading ? "처리 중..." : "분리수거"}
+          <Wrench size={14} className="inline mr-1.5" />
+          {loading ? "처리 중..." : "자가 수리 완료 🛠️"}
         </button>
         <button
           onClick={onSkip}
