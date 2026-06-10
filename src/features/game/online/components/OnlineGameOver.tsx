@@ -149,68 +149,71 @@ export function OnlineGameOver({
                             </div>
 
                             {activeAssetDetailsPlayerId === p.id && (
-                              <div className="absolute right-2 bottom-[calc(100%-8px)] z-[50] w-[260px] flex flex-col gap-2.5 p-3.5 bg-stone-950/95 backdrop-blur-md border border-orange-500/40 shadow-[0_0_25px_rgba(249,115,22,0.35)] rounded-xl text-left select-text pointer-events-auto">
-                                <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                                  <span className="text-[13px] text-orange-400 font-black flex items-center gap-1">💰 {p.name}님의 자산 정산 상세</span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveAssetDetailsPlayerId(null);
-                                    }}
-                                    className="text-stone-400 hover:text-white cursor-pointer font-black text-xs h-5 w-5 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                                <div className="space-y-2 pt-1 text-xs text-stone-300">
-                                  <div className="flex justify-between">
-                                    <span className="text-stone-400">💵 보유 현금</span>
-                                    <span className="font-bold text-orange-400">{p.money?.toLocaleString()}원</span>
+                              <div className="settings-menu-overlay" onClick={() => setActiveAssetDetailsPlayerId(null)}>
+                                <div 
+                                  className="themed-board-modal flex flex-col relative !p-5 max-w-[320px] w-full mx-4" 
+                                  style={{ outline: "none" }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="flex items-center justify-between border-b border-orange-500/20 pb-2 flex-shrink-0">
+                                    <span className="text-[14px] text-orange-400 font-black flex items-center gap-1 select-none">💰 {p.name}님의 자산 상세</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveAssetDetailsPlayerId(null)}
+                                      className="text-stone-400 hover:text-white cursor-pointer font-black text-sm h-6 w-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                                    >
+                                      ✕
+                                    </button>
                                   </div>
+                                  <div className="space-y-2.5 pt-3 text-xs text-stone-300">
+                                    <div className="flex justify-between">
+                                      <span className="text-stone-400">💵 보유 현금</span>
+                                      <span className="font-bold text-orange-400">{p.money?.toLocaleString()}원</span>
+                                    </div>
 
-                                  {(() => {
-                                    let bCount = 0;
-                                    let bValue = 0;
-                                    const nInfo: { name: string; value: number }[] = [];
+                                    {(() => {
+                                      let bCount = 0;
+                                      let bValue = 0;
+                                      const nInfo: { name: string; value: number }[] = [];
 
-                                    p.publicItems?.forEach((item) => {
-                                      if (item.isBrick) {
-                                        bCount += 1;
-                                        bValue += 0;
-                                      } else {
-                                        nInfo.push({
-                                          name: item.name,
-                                          value: getClientItemValue(item),
-                                        });
-                                      }
-                                    });
+                                      p.publicItems?.forEach((item) => {
+                                        if (item.isBrick) {
+                                          bCount += 1;
+                                          bValue += 0;
+                                        } else {
+                                          nInfo.push({
+                                            name: item.name,
+                                            value: getClientItemValue(item),
+                                          });
+                                        }
+                                      });
 
-                                    return (
-                                      <>
-                                        {bCount > 0 && (
-                                          <div className="flex justify-between border-t border-white/5 pt-1.5">
-                                            <span className="text-stone-400">🧱 벽돌 ({bCount}개 합산)</span>
-                                            <span className="font-bold text-stone-300">0원</span>
-                                          </div>
-                                        )}
-                                        {nInfo.length > 0 && (
-                                          <div className="border-t border-white/5 pt-1.5 space-y-1.5">
-                                            {nInfo.map((item, idx) => (
-                                              <div key={idx} className="flex justify-between gap-2">
-                                                <span className="truncate text-stone-400">🏷️ {item.name}</span>
-                                                <span className="font-semibold text-stone-200 shrink-0">{item.value.toLocaleString()}원</span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </>
-                                    );
-                                  })()}
+                                      return (
+                                        <>
+                                          {bCount > 0 && (
+                                            <div className="flex justify-between border-t border-white/5 pt-1.5">
+                                              <span className="text-stone-400">🧱 벽돌 ({bCount}개 합산)</span>
+                                              <span className="font-bold text-stone-300">0원</span>
+                                            </div>
+                                          )}
+                                          {nInfo.length > 0 && (
+                                            <div className="border-t border-white/5 pt-1.5 space-y-1.5">
+                                              {nInfo.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between gap-2">
+                                                  <span className="truncate text-stone-400">🏷️ {item.name}</span>
+                                                  <span className="font-semibold text-stone-200 shrink-0">{item.value.toLocaleString()}원</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
 
-                                  <div className="flex justify-between border-t border-orange-500/20 pt-2 font-black text-[13px] text-orange-300">
-                                    <span>🧮 최종 합계</span>
-                                    <span>{p.totalAssets.toLocaleString()}원</span>
+                                    <div className="flex justify-between border-t border-orange-500/20 pt-2 font-black text-[13px] text-orange-300">
+                                      <span>🧮 최종 합계</span>
+                                      <span>{p.totalAssets.toLocaleString()}원</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>

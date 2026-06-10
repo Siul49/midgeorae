@@ -201,50 +201,74 @@ export function MyDashboard({
 
         {/* Floating Reputation Help box */}
         {showRepHelp && (
-          <div className="absolute bottom-0 left-[calc(100%+12px)] z-30 w-[300px] flex flex-col gap-2 p-3 bg-stone-950/95 backdrop-blur-sm border border-orange-500/30 shadow-2xl rounded-lg select-text">
-            <div className="flex items-center justify-between border-b border-white/5 pb-1">
-              <span className="text-[13px] text-orange-400 font-bold">💡 평판 토큰 규칙</span>
-              <button
-                type="button"
-                onClick={() => setShowRepHelp(false)}
-                className="text-stone-400 hover:text-white cursor-pointer font-black text-xs"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-1.5 pt-1 text-xs leading-relaxed text-stone-300 text-left">
-              <p>• <span className="text-orange-300 font-bold">평판 획득:</span> 거래 완료 후 상대방이 나에게 '만족' 후기를 남기면 1 증가합니다.</p>
-              <p>• <span className="text-orange-300 font-bold">평판 감소:</span> 상대방이 나에게 '불만족' 후기를 남기면 내 평판이 1 감소합니다. (불만족 후기를 남긴 상대방의 평판은 소모되지 않음)</p>
-              <p>• <span className="text-orange-300 font-bold">평판 무소모:</span> 내가 상대방에게 '만족' 후기를 남겨도 내 평판은 차감되지 않습니다.</p>
-              <p>• <span className="text-orange-300 font-bold">탈락 조건:</span> 평판이 0이 되면 즉시 게임에서 탈락하고 패배합니다. (초기값: 3)</p>
+          <div className="settings-menu-overlay" onClick={() => setShowRepHelp(false)}>
+            <div 
+              className="themed-board-modal flex flex-col relative !p-5 max-w-[320px] w-full mx-4 text-left" 
+              style={{ outline: "none" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-orange-500/20 pb-2 flex-shrink-0">
+                <span className="text-[14px] text-orange-400 font-black flex items-center gap-1 select-none">💡 평판 토큰 규칙</span>
+                <button
+                  type="button"
+                  onClick={() => setShowRepHelp(false)}
+                  className="text-stone-400 hover:text-white cursor-pointer font-black text-sm h-6 w-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-2 pt-3 text-xs leading-relaxed text-stone-300">
+                <p>• <span className="text-orange-300 font-bold">평판 획득:</span> 거래 완료 후 상대방이 나에게 '만족' 후기를 남기면 1 증가합니다.</p>
+                <p>• <span className="text-orange-300 font-bold">평판 감소:</span> 상대방이 나에게 '불만족' 후기를 남기면 내 평판이 1 감소합니다. (불만족 후기를 남긴 상대방의 평판은 소모되지 않음)</p>
+                <p>• <span className="text-orange-300 font-bold">평판 무소모:</span> 내가 상대방에게 '만족' 후기를 남겨도 내 평판은 차감되지 않습니다.</p>
+                <p>• <span className="text-orange-300 font-bold">탈락 조건:</span> 평판이 0이 되면 즉시 게임에서 탈락하고 패배합니다. (초기값: 3)</p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Floating Job/Mission Info box - Rendered absolutely above the profile card to prevent shifting the hand cards */}
+        {/* Floating Job/Mission Info box */}
         {showJob && (
-          <div className="absolute bottom-[calc(100%+12px)] left-0 z-30 w-[348px] flex flex-col gap-2 p-3 bg-stone-950/95 backdrop-blur-sm border border-purple-500/30 shadow-2xl rounded-lg select-text max-h-[180px] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-white/5 pb-1">
-              <span className="text-[13px] text-stone-300 font-bold">
-                직업: <strong className="text-purple-400">{me.job?.title ?? "없음"}</strong>
-              </span>
-              <div className={`px-2 py-0.5 rounded text-[11.5px] font-black uppercase tracking-wider ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`}>
-                {roleLabel(me.role)}
+          <div className="settings-menu-overlay" onClick={() => setShowJob(false)}>
+            <div 
+              className="themed-board-modal flex flex-col relative !p-5 max-w-[340px] w-full mx-4 text-left" 
+              style={{ outline: "none" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-orange-500/20 pb-2 flex-shrink-0">
+                <span className="text-[14px] text-stone-300 font-black select-none">
+                  직업: <strong className="text-purple-400">{me.job?.title ?? "없음"}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowJob(false)}
+                  className="text-stone-400 hover:text-white cursor-pointer font-black text-sm h-6 w-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="space-y-2.5 pt-3 text-xs text-stone-300">
+                <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
+                  <span className="text-stone-400">나의 역할</span>
+                  <div className={`px-2 py-0.5 rounded text-[11px] font-black uppercase tracking-wider ${isVillain ? "bg-red-900/80 text-red-200" : "bg-blue-900/80 text-blue-200"}`}>
+                    {roleLabel(me.role)}
+                  </div>
+                </div>
+                {isVillain ? (
+                  <div className="text-[13px] leading-relaxed space-y-1.5">
+                    <div className="text-red-400 font-black">🔥 빌런 미션: {me.mission ?? "대기 중..."}</div>
+                    <div className="text-orange-400 font-extrabold">🎯 사기 판매 성공 횟수: {villainScamCount} / 2회</div>
+                    {me.job && <div className="text-[11.5px] text-stone-300 font-bold border-t border-red-900/20 pt-1">행동강령: {me.job.description}</div>}
+                  </div>
+                ) : (
+                  me.job && (
+                    <div className="text-[13px] font-black leading-relaxed text-purple-400">
+                      ✨ 시민 미션: {me.job.description}
+                    </div>
+                  )
+                )}
               </div>
             </div>
-            {isVillain ? (
-              <div className="text-[13px] leading-tight space-y-1">
-                <div className="text-red-400 font-black">🔥 빌런 미션: {me.mission ?? "대기 중..."}</div>
-                <div className="text-orange-400 font-extrabold">🎯 사기 판매 성공 횟수: {villainScamCount} / 2회</div>
-                {me.job && <div className="text-[11.5px] text-stone-300 font-bold border-t border-red-900/20 pt-0.5">행동강령: {me.job.description}</div>}
-              </div>
-            ) : (
-              me.job && (
-                <div className="text-[13px] font-black leading-tight text-purple-400">
-                  ✨ 시민 미션: {me.job.description}
-                </div>
-              )
-            )}
           </div>
         )}
       </div>
@@ -407,44 +431,50 @@ export function OnlinePlayerHand({
   return (
     <div className="seat-bottom relative">
       {showAssetDetails && (
-        <div className="absolute bottom-[calc(100%-4px)] left-1/2 -translate-x-1/2 z-[40] w-[260px] flex flex-col gap-2.5 p-3.5 bg-stone-950/95 backdrop-blur-md border border-amber-500/30 shadow-[0_0_25px_rgba(245,158,11,0.2)] rounded-xl text-left select-text">
-          <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-            <span className="text-[13px] text-amber-400 font-black flex items-center gap-1">💰 자산 정산 상세 내역</span>
-            <button
-              type="button"
-              onClick={() => setShowAssetDetails(false)}
-              className="text-stone-400 hover:text-white cursor-pointer font-black text-xs h-5 w-5 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-2 pt-1 text-xs text-stone-300">
-            <div className="flex justify-between">
-              <span className="text-stone-400">💵 보유 현금</span>
-              <span className="font-bold text-amber-400">{moneyLabel(me.money ?? 0)}</span>
+        <div className="settings-menu-overlay" onClick={() => setShowAssetDetails(false)}>
+          <div 
+            className="themed-board-modal flex flex-col relative !p-5 max-w-[320px] w-full mx-4 text-left" 
+            style={{ outline: "none" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-orange-500/20 pb-2 flex-shrink-0">
+              <span className="text-[14px] text-amber-400 font-black flex items-center gap-1 select-none">💰 나의 자산 상세 내역</span>
+              <button
+                type="button"
+                onClick={() => setShowAssetDetails(false)}
+                className="text-stone-400 hover:text-white cursor-pointer font-black text-sm h-6 w-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
             </div>
-
-            {brickCount > 0 && (
-              <div className="flex justify-between border-t border-white/5 pt-1.5">
-                <span className="text-stone-400">🧱 벽돌 ({brickCount}개 합산)</span>
-                <span className="font-bold text-stone-300">{moneyLabel(brickValue)}</span>
+            <div className="space-y-2.5 pt-3 text-xs text-stone-300">
+              <div className="flex justify-between">
+                <span className="text-stone-400">💵 보유 현금</span>
+                <span className="font-bold text-amber-400">{moneyLabel(me.money ?? 0)}</span>
               </div>
-            )}
 
-            {normalItemsInfo.length > 0 && (
-              <div className="border-t border-white/5 pt-1.5 space-y-1.5">
-                {normalItemsInfo.map((item, idx) => (
-                  <div key={idx} className="flex justify-between gap-2">
-                    <span className="truncate text-stone-400">🏷️ {item.name}</span>
-                    <span className="font-semibold text-stone-200 shrink-0">{moneyLabel(item.value)}</span>
-                  </div>
-                ))}
+              {brickCount > 0 && (
+                <div className="flex justify-between border-t border-white/5 pt-1.5">
+                  <span className="text-stone-400">🧱 벽돌 ({brickCount}개 합산)</span>
+                  <span className="font-bold text-stone-300">{moneyLabel(brickValue)}</span>
+                </div>
+              )}
+
+              {normalItemsInfo.length > 0 && (
+                <div className="border-t border-white/5 pt-1.5 space-y-1.5">
+                  {normalItemsInfo.map((item, idx) => (
+                    <div key={idx} className="flex justify-between gap-2">
+                      <span className="truncate text-stone-400">🏷️ {item.name}</span>
+                      <span className="font-semibold text-stone-200 shrink-0">{moneyLabel(item.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-between border-t border-amber-500/20 pt-2.5 font-black text-[13px] text-amber-300">
+                <span>🧮 총 합계</span>
+                <span>{moneyLabel(totalAssets)}</span>
               </div>
-            )}
-
-            <div className="flex justify-between border-t border-amber-500/20 pt-2 font-black text-[13px] text-amber-300">
-              <span>🧮 총 합계</span>
-              <span>{moneyLabel(totalAssets)}</span>
             </div>
           </div>
         </div>
