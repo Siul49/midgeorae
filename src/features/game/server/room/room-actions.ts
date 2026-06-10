@@ -197,14 +197,14 @@ export function startGame(room: Room, actor: ServerPlayer) {
 }
 
 const ACTION_CARD_WEIGHTS = [
-  { type: "tradeRequest", weight: 3 },
-  { type: "saleRequest", weight: 3 },
-  { type: "freeGive", weight: 2 },
-  { type: "directTrade", weight: 2 },
-  { type: "badReview", weight: 2 },
-  { type: "donation", weight: 1 },
-  { type: "swap", weight: 1 },
-  { type: "repair", weight: 1 },
+  { type: "tradeRequest", weight: 45 },
+  { type: "saleRequest", weight: 15 },
+  { type: "freeGive", weight: 40 / 6 },
+  { type: "directTrade", weight: 40 / 6 },
+  { type: "badReview", weight: 40 / 6 },
+  { type: "donation", weight: 40 / 6 },
+  { type: "swap", weight: 40 / 6 },
+  { type: "repair", weight: 40 / 6 },
 ];
 
 function getRandomActionCardByProbability(): ActionCardSnapshot {

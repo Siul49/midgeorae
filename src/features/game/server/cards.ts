@@ -86,18 +86,27 @@ export const ACTION_CARDS: ActionCardSnapshot[] = [
 
 export function makeActionDeck() {
   return [
-    ACTION_CARDS[0], // tradeRequest
-    ACTION_CARDS[0],
-    ACTION_CARDS[0],
-    ACTION_CARDS[0],
-    ACTION_CARDS[0],
-    ACTION_CARDS[6], // saleRequest
-    ACTION_CARDS[1], // freeGive
-    ACTION_CARDS[2], // directTrade
-    ACTION_CARDS[3], // badReview
-    ACTION_CARDS[4], // donation
-    ACTION_CARDS[5], // swap
-    ACTION_CARDS[7], // repair
+    ACTION_CARDS[0], // 1. tradeRequest (살게요!)
+    ACTION_CARDS[6], // 2. saleRequest (팔아요!)
+    ACTION_CARDS[1], // 3. freeGive (무료나눔)
+    ACTION_CARDS[2], // 4. directTrade (직거래)
+    ACTION_CARDS[3], // 5. badReview (비매너)
+    ACTION_CARDS[4], // 6. donation (기부천사)
+    ACTION_CARDS[5], // 7. swap (물물교환)
+    ACTION_CARDS[7], // 8. repair (자가수리)
+    // 9-20: Extra cards to match the 45% (9 cards) and 15% (3 cards) probabilities
+    ACTION_CARDS[0], // 9. tradeRequest
+    ACTION_CARDS[0], // 10. tradeRequest
+    ACTION_CARDS[6], // 11. saleRequest
+    ACTION_CARDS[0], // 12. tradeRequest
+    ACTION_CARDS[4], // 13. donation
+    ACTION_CARDS[0], // 14. tradeRequest
+    ACTION_CARDS[7], // 15. repair
+    ACTION_CARDS[0], // 16. tradeRequest
+    ACTION_CARDS[6], // 17. saleRequest
+    ACTION_CARDS[0], // 18. tradeRequest
+    ACTION_CARDS[0], // 19. tradeRequest
+    ACTION_CARDS[0], // 20. tradeRequest
   ].map((card) => ({ ...card }));
 }
 
